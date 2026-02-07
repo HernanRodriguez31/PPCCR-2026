@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PPCCR – Home Operativa</title>
+    <meta
+      name="description"
+      content="Home operativa del Programa de Prevención de Cáncer Colorrectal (PPCCR). Acceso a guías, registro, KPIs/reporte y cronograma."
+    />
+
+    <link rel="icon" href="assets/favicon.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+
+  <body>
+    <header class="site-header" id="top">
+      <div class="topbar">
+        <div class="brand" aria-label="Identidad del programa">
+          <div class="brand-mark brand-mark--left">
+            <img
+              class="brand-logo"
+              src="assets/logo-ppccr.png"
+              alt="Programa de Prevención de Cáncer Colorrectal (PPCCR)"
+              width="58"
+              height="58"
+              decoding="async"
+            />
+          </div>
+
+          <div class="brand-copy">
+            <p class="brand-kicker" id="brand-kicker" hidden></p>
+            <h1 class="brand-title" id="brand-title">
+              Programa de Prevención de Cáncer Colorrectal
+            </h1>
+          </div>
+
+          <div class="brand-mark brand-mark--right">
+            <img
+              class="brand-ribbon"
+              src="assets/logo%20cinta%20azul.png"
+              alt="Listón azul de concientización"
+              decoding="async"
+            />
+          </div>
+        </div>
+
+        <nav class="site-nav" aria-label="Navegación principal">
+          <button
+            class="nav-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="nav-list"
+            id="nav-toggle"
+          >
+            <span class="nav-toggle__icon" aria-hidden="true"></span>
+            <span class="nav-toggle__label">Menú</span>
+          </button>
+
+          <ul class="nav-list" id="nav-list">
+            <li>
+              <a class="nav-link" href="#inicio" data-nav="inicio">
+                <span class="nav-link__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M3 11.5 12 4l9 7.5"></path>
+                    <path d="M5.5 10.5V20h13V10.5"></path>
+                    <path d="M10 20v-5h4v5"></path>
+                  </svg>
+                </span>
+                <span class="nav-link__label">Inicio</span>
+              </a>
+            </li>
+            <li>
+              <a class="nav-link" href="#guias" data-nav="guias">
+                <span class="nav-link__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H11v15H5.5A2.5 2.5 0 0 0 3 21z"></path>
+                    <path d="M21 6.5A2.5 2.5 0 0 0 18.5 4H13v15h5.5A2.5 2.5 0 0 1 21 21z"></path>
+                    <path d="M11 6h2"></path>
+                  </svg>
+                </span>
+                <span class="nav-link__label">Guías</span>
+              </a>
+            </li>
+            <li>
+              <a class="nav-link" href="#registro" data-nav="registro">
+                <span class="nav-link__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <rect x="6" y="4" width="12" height="16" rx="2"></rect>
+                    <path d="M9 4.5h6"></path>
+                    <path d="M9 11h6"></path>
+                    <path d="M9 15h4"></path>
+                  </svg>
+                </span>
+                <span class="nav-link__label">Registro</span>
+              </a>
+            </li>
+            <li>
+              <a class="nav-link" href="#kpis" data-nav="kpis">
+                <span class="nav-link__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M4 20h16"></path>
+                    <rect x="6" y="11" width="3" height="7" rx="1"></rect>
+                    <rect x="11" y="8" width="3" height="10" rx="1"></rect>
+                    <rect x="16" y="6" width="3" height="12" rx="1"></rect>
+                  </svg>
+                </span>
+                <span class="nav-link__label">KPIs/Reporte</span>
+              </a>
+            </li>
+            <li>
+              <a class="nav-link" href="#teleconsulta" data-nav="teleconsulta">
+                <span class="nav-link__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <circle cx="12" cy="12" r="8"></circle>
+                    <path d="M12 8v8"></path>
+                    <path d="M8 12h8"></path>
+                  </svg>
+                </span>
+                <span class="nav-link__label">Teleconsulta</span>
+              </a>
+            </li>
+            <li>
+              <a class="nav-link" href="#cronograma" data-nav="cronograma">
+                <span class="nav-link__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <circle cx="12" cy="13" r="7"></circle>
+                    <path d="M12 9.5v4l2.8 1.8"></path>
+                    <path d="M8 3.5h8"></path>
+                    <path d="M6 6.5h12"></path>
+                  </svg>
+                </span>
+                <span class="nav-link__label">Cronograma</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="logo-strip" aria-label="Aliados del programa">
+        <div class="container">
+          <div class="logo-strip__inner" id="partner-logos">
+            <!-- Logos se renderizan desde CONFIG (app.js) -->
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main id="contenido">
+      <!-- HERO -->
+      <section class="section hero" id="inicio" aria-labelledby="hero-title">
+        <div class="container">
+          <div class="hero-card">
+            <div class="hero-left">
+              <p class="hero-badge" id="hero-badge">Home operativa</p>
+              <h2 class="hero-title" id="hero-title">
+                Accesos rápidos del programa
+              </h2>
+              <p class="hero-text" id="hero-text">
+                Entrá directo a protocolos, formularios por rol, KPIs del
+                programa y calendario de actividades. Este sitio
+                <strong>no</strong> almacena datos en el navegador.
+              </p>
+
+              <div
+                class="hero-cta"
+                role="group"
+                aria-label="Accesos principales"
+              >
+                <a class="btn btn-primary" href="#guias">Ir a Guías</a>
+                <a class="btn btn-secondary" href="#registro">Ir a Registro</a>
+                <a class="btn btn-ghost" href="#kpis">Ver KPIs</a>
+              </div>
+
+              <p class="hero-note" id="hero-note">
+                Tip: si un botón figura como
+                <span class="pill pill--tiny" aria-hidden="true">Pendiente</span
+                >, pegá la URL en <code>app.js</code> (CONFIG).
+              </p>
+            </div>
+
+            <div class="hero-right" aria-label="Resumen del sitio">
+              <div class="mini-panels">
+                <article class="mini-panel">
+                  <h3 class="mini-panel__title">Guías</h3>
+                  <p class="mini-panel__text">Protocolos y flujo operativo.</p>
+                </article>
+                <article class="mini-panel">
+                  <h3 class="mini-panel__title">Registro</h3>
+                  <p class="mini-panel__text">Formularios por rol.</p>
+                </article>
+                <article class="mini-panel">
+                  <h3 class="mini-panel__title">KPIs</h3>
+                  <p class="mini-panel__text">Reporte en tiempo real.</p>
+                </article>
+                <article class="mini-panel">
+                  <h3 class="mini-panel__title">Cronograma</h3>
+                  <p class="mini-panel__text">Calendario embebido.</p>
+                </article>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GUÍAS -->
+      <section class="section" id="guias" aria-labelledby="guias-title">
+        <div class="container">
+          <header class="section-header">
+            <h2 class="section-title" id="guias-title">Guías y Protocolos</h2>
+            <p class="section-subtitle">
+              Acceso directo a documentos operativos del programa.
+            </p>
+          </header>
+
+          <div
+            class="pill-grid"
+            id="guides-grid"
+            aria-label="Listado de guías y protocolos"
+          >
+            <!-- Render desde CONFIG -->
+          </div>
+        </div>
+      </section>
+
+      <!-- REGISTRO -->
+      <section
+        class="section section-muted"
+        id="registro"
+        aria-labelledby="registro-title"
+      >
+        <div class="container">
+          <header class="section-header">
+            <h2 class="section-title" id="registro-title">
+              Registro de información de salud
+            </h2>
+            <p class="section-subtitle">
+              Formularios ya confeccionados. Solo se abren enlaces (nueva
+              pestaña).
+            </p>
+          </header>
+
+          <div
+            class="role-grid"
+            id="roles-grid"
+            aria-label="Formularios por rol"
+          >
+            <!-- Render desde CONFIG -->
+          </div>
+        </div>
+      </section>
+
+      <!-- KPIs / REPORTE -->
+      <section class="section" id="kpis" aria-labelledby="kpis-title">
+        <div class="container">
+          <header class="section-header">
+            <h2 class="section-title section-title--with-live" id="kpis-title">
+              <span class="kpi-live" aria-hidden="true"></span>
+              KPIs / Reporte consolidado
+            </h2>
+            <p class="section-subtitle">
+              Visualización en tiempo real (Looker Studio). Botón para abrir en
+              pestaña nueva.
+            </p>
+          </header>
+
+          <div class="embed-actions">
+            <a
+              class="btn btn-primary"
+              id="looker-open"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Abrir reporte completo
+            </a>
+
+            <button
+              class="btn btn-secondary"
+              type="button"
+              id="looker-fullscreen"
+            >
+              Pantalla completa
+            </button>
+
+            <span class="embed-hint" id="looker-hint" aria-live="polite"></span>
+          </div>
+
+          <div class="embed-card" aria-label="Reporte Looker Studio embebido">
+            <div class="responsive-embed report-shell" id="looker-embed-wrap">
+              <iframe
+                id="looker-iframe"
+                title="Reporte consolidado PPCCR (Looker Studio)"
+                loading="lazy"
+                allowfullscreen
+                referrerpolicy="no-referrer"
+              ></iframe>
+            </div>
+
+            <div class="embed-fallback" id="looker-fallback" hidden>
+              <p>
+                El embed de Looker aún no está configurado o no es visible
+                (permisos / URL de embed).
+              </p>
+              <p>
+                Pegá la URL correcta en
+                <code>CONFIG.embeds.looker.embedUrl</code> (app.js) y verificá
+                que el reporte esté compartido para visualización.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TELECONSULTA -->
+      <section
+        class="section section-muted"
+        id="teleconsulta"
+        aria-labelledby="teleconsulta-title"
+      >
+        <div class="container">
+          <header class="section-header">
+            <h2 class="section-title" id="teleconsulta-title">Teleconsulta</h2>
+            <p class="section-subtitle">
+              Sección preparada para una fase posterior.
+            </p>
+          </header>
+
+          <div class="placeholder">
+            <div class="placeholder__badge">Próximamente</div>
+            <h3 class="placeholder__title">En construcción</h3>
+            <p class="placeholder__text">
+              Esta sección será habilitada más adelante para flujos de
+              teleconsulta/derivación y agenda. Por ahora, no brinda atención
+              clínica ni captura datos.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- CRONOGRAMA -->
+      <section
+        class="section"
+        id="cronograma"
+        aria-labelledby="cronograma-title"
+      >
+        <div class="container">
+          <header class="section-header">
+            <h2 class="section-title" id="cronograma-title">
+              Cronograma / Calendario
+            </h2>
+            <p class="section-subtitle">Calendario embebido del programa.</p>
+          </header>
+
+          <section
+            class="timeline-placeholder"
+            id="timeline-placeholder"
+            aria-labelledby="timeline-placeholder-title"
+            hidden
+          >
+            <header class="timeline-placeholder__header">
+              <h3
+                class="timeline-placeholder__title"
+                id="timeline-placeholder-title"
+              >
+                Línea de tiempo operativa
+              </h3>
+              <p
+                class="timeline-placeholder__subtitle"
+                id="timeline-placeholder-subtitle"
+              >
+                Hitos del programa hasta la conexión del calendario en vivo.
+              </p>
+            </header>
+            <ol class="timeline" id="timeline-list">
+              <!-- Render desde CONFIG -->
+            </ol>
+          </section>
+
+          <div class="embed-actions">
+            <a
+              class="btn btn-primary"
+              id="calendar-open"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Abrir calendario
+            </a>
+            <span
+              class="embed-hint"
+              id="calendar-hint"
+              aria-live="polite"
+            ></span>
+          </div>
+
+          <div class="embed-card" aria-label="Calendario embebido">
+            <div
+              class="responsive-embed responsive-embed--calendar"
+              id="calendar-embed-wrap"
+            >
+              <iframe
+                id="calendar-iframe"
+                title="Calendario del Programa PPCCR"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+              ></iframe>
+            </div>
+
+            <div class="embed-fallback" id="calendar-fallback" hidden>
+              <p>
+                El calendario aún no está configurado. Pegá la URL en
+                <code>CONFIG.embeds.calendar.embedUrl</code> (app.js).
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer" aria-label="Pie de página">
+      <div class="container footer-grid">
+        <div class="footer-col">
+          <p class="footer-title">PPCCR – Sitio operativo</p>
+          <p class="footer-text" id="footer-disclaimer">
+            Acceso interno para equipos y aliados del programa. No reemplaza una
+            consulta médica.
+          </p>
+          <p class="footer-text">
+            Soporte: <a href="#" id="support-email">PEGAR_EMAIL_SOPORTE</a>
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <p class="footer-title">Aliados</p>
+          <div
+            class="footer-logos"
+            id="footer-logos"
+            aria-label="Logos de aliados"
+          >
+            <!-- Render desde CONFIG -->
+          </div>
+        </div>
+
+        <div class="footer-col footer-col--right">
+          <a class="btn btn-ghost" href="#top">Volver arriba</a>
+          <p class="footer-meta">© <span id="year"></span> – PPCCR</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- MODAL FULLSCREEN: Looker -->
+    <div class="modal" id="modal" aria-hidden="true">
+      <div class="modal__overlay" data-close="true"></div>
+
+      <div
+        class="modal__dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
+        <div class="modal__header">
+          <h2 class="modal__title" id="modal-title">
+            Reporte consolidado (pantalla completa)
+          </h2>
+          <button
+            class="icon-btn"
+            type="button"
+            id="modal-close"
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="modal__body">
+          <iframe
+            id="modal-iframe"
+            title="Reporte consolidado PPCCR (Looker Studio) – Pantalla completa"
+            loading="lazy"
+            allowfullscreen
+            referrerpolicy="no-referrer"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+
+    <noscript>
+      <div class="noscript">
+        <div class="container">
+          <p>
+            Este sitio requiere JavaScript para renderizar los enlaces desde
+            configuración (<code>app.js</code>).
+          </p>
+        </div>
+      </div>
+    </noscript>
+  </body>
+</html>
