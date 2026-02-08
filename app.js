@@ -725,13 +725,15 @@ function setMetaText() {
   $("#hero-title").textContent = `Accesos rápidos del programa${heroSuffix}`;
 
   const supportEmailEl = $("#support-email");
-  supportEmailEl.textContent = CONFIG.meta.supportEmail;
-  if (!isPlaceholderUrl(CONFIG.meta.supportEmail)) {
-    supportEmailEl.setAttribute("href", `mailto:${CONFIG.meta.supportEmail}`);
-  } else {
-    supportEmailEl.setAttribute("href", "#");
-    supportEmailEl.setAttribute("aria-disabled", "true");
-    supportEmailEl.setAttribute("tabindex", "-1");
+  if (supportEmailEl) {
+    supportEmailEl.textContent = CONFIG.meta.supportEmail;
+    if (!isPlaceholderUrl(CONFIG.meta.supportEmail)) {
+      supportEmailEl.setAttribute("href", `mailto:${CONFIG.meta.supportEmail}`);
+    } else {
+      supportEmailEl.setAttribute("href", "#");
+      supportEmailEl.setAttribute("aria-disabled", "true");
+      supportEmailEl.setAttribute("tabindex", "-1");
+    }
   }
 }
 
@@ -787,6 +789,8 @@ function setupActiveNavObserver() {
 
 function setupSmoothAnchorScroll() {
   document.addEventListener("click", (e) => {
+    if (e.defaultPrevented) return;
+
     const a = e.target.closest("a[href^='#']");
     if (!a) return;
 
@@ -857,6 +861,63 @@ function setupRevealAnimations() {
   );
 
   targets.forEach((el) => observer.observe(el));
+}
+
+function setupBackToTopButton() {
+  const btn = $("#back-to-top");
+  if (!btn) return;
+
+  const threshold = 130;
+  let lastY = window.scrollY;
+  let ticking = false;
+
+  const sync = () => {
+    const currentY = window.scrollY;
+    const scrollingDown = currentY > lastY + 2;
+    const scrollingUp = currentY < lastY - 2;
+
+    if (currentY <= threshold) {
+      btn.classList.remove("is-visible");
+    } else if (scrollingDown) {
+      btn.classList.add("is-visible");
+    } else if (scrollingUp) {
+      btn.classList.remove("is-visible");
+    }
+
+    lastY = currentY;
+  };
+
+  sync();
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        sync();
+        ticking = false;
+      });
+    },
+    { passive: true },
+  );
+
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+
+    // Evita dejar "#top" en la URL al usar el botón flotante.
+    if (location.hash === "#top") {
+      history.replaceState(null, "", `${location.pathname}${location.search}`);
+    }
+  });
 }
 
 /* ----------------------------- Modal (Looker fullscreen) ----------------------------- */
@@ -968,10 +1029,12 @@ function init() {
   setupActiveNavObserver();
   setupSmoothAnchorScroll();
   setupRevealAnimations();
+  setupBackToTopButton();
   setupLookerModal();
 
-  // Footer year
-  $("#year").textContent = String(new Date().getFullYear());
+  // Footer year (si existe nodo dinámico)
+  const yearEl = $("#year");
+  if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 }
 
 document.addEventListener("DOMContentLoaded", init);

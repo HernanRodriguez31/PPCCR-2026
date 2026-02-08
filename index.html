@@ -145,7 +145,7 @@
         </nav>
       </div>
 
-      <div class="logo-strip" aria-label="Aliados del programa">
+      <div class="logo-strip" aria-label="Partners del programa">
         <div class="container">
           <div class="logo-strip__inner" id="partner-logos">
             <!-- Logos se renderizan desde CONFIG (app.js) -->
@@ -423,34 +423,35 @@
       </section>
     </main>
 
+    <a
+      class="back-to-top"
+      id="back-to-top"
+      href="#top"
+      aria-label="Volver arriba"
+    >
+      <span class="back-to-top__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <path d="M12 18V6"></path>
+          <path d="m7 11 5-5 5 5"></path>
+        </svg>
+      </span>
+    </a>
+
     <footer class="site-footer" aria-label="Pie de página">
       <div class="container footer-grid">
-        <div class="footer-col">
-          <p class="footer-title">PPCCR – Sitio operativo</p>
-          <p class="footer-text" id="footer-disclaimer">
-            Acceso interno para equipos y aliados del programa. No reemplaza una
-            consulta médica.
-          </p>
-          <p class="footer-text">
-            Soporte: <a href="#" id="support-email">PEGAR_EMAIL_SOPORTE</a>
-          </p>
-        </div>
-
-        <div class="footer-col">
-          <p class="footer-title">Aliados</p>
+        <div class="footer-partners">
+          <p class="footer-title">Partners</p>
           <div
             class="footer-logos"
             id="footer-logos"
-            aria-label="Logos de aliados"
+            aria-label="Logos de partners"
           >
             <!-- Render desde CONFIG -->
           </div>
         </div>
-
-        <div class="footer-col footer-col--right">
-          <a class="btn btn-ghost" href="#top">Volver arriba</a>
-          <p class="footer-meta">© <span id="year"></span> – PPCCR</p>
-        </div>
+        <p class="footer-meta">
+          © PPCCR 2026 | Powered by <strong>FEP</strong> | © Derechos Reservados.
+        </p>
       </div>
     </footer>
 

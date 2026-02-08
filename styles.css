@@ -1692,26 +1692,150 @@ code {
 }
 
 /* Footer */
+.back-to-top {
+  position: fixed;
+  right: clamp(18px, 2.2vw, 30px);
+  bottom: clamp(92px, 10vh, 122px);
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(15, 95, 166, 0.34);
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.94),
+    rgba(228, 243, 255, 0.9)
+  );
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  color: var(--blue-950);
+  box-shadow:
+    0 14px 28px rgba(6, 33, 67, 0.2),
+    0 1px 0 rgba(255, 255, 255, 0.88) inset,
+    0 -1px 0 rgba(205, 230, 252, 0.64) inset;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(12px) scale(0.93);
+  transition:
+    opacity 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 260ms linear,
+    box-shadow 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease;
+  z-index: 92;
+}
+
+.back-to-top::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.46),
+    rgba(63, 139, 214, 0.14)
+  );
+  opacity: 0.85;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.back-to-top::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.back-to-top.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.back-to-top:hover {
+  border-color: rgba(15, 95, 166, 0.46);
+  box-shadow:
+    0 18px 32px rgba(6, 33, 67, 0.24),
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 -1px 0 rgba(196, 224, 248, 0.74) inset;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.99),
+    rgba(214, 237, 255, 0.94)
+  );
+  transform: translateY(-1px) scale(1.02);
+}
+
+.back-to-top:focus-visible {
+  outline: var(--focus);
+  outline-offset: 3px;
+}
+
+.back-to-top__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+}
+
+.back-to-top__icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  stroke: currentColor;
+  stroke-width: 2.35;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 180ms ease;
+}
+
+.back-to-top:hover .back-to-top__icon svg {
+  transform: translateY(-1px);
+}
+
 .site-footer {
   border-top: 1px solid rgba(15, 95, 166, 0.12);
   background: linear-gradient(
     180deg,
-    rgba(232, 242, 252, 0.62),
-    rgba(255, 255, 255, 0.5)
+    rgba(236, 246, 255, 0.62),
+    rgba(255, 255, 255, 0.7)
   );
-  padding: var(--space-7) 0;
+  padding: 16px 0 18px;
 }
 
 .footer-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1fr auto;
-  gap: 18px;
-  align-items: start;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  align-items: center;
+  justify-items: center;
+}
+
+.footer-partners {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .footer-title {
-  margin: 0 0 10px;
-  font-weight: 900;
+  margin: 0;
+  font-weight: 780;
+  font-size: 0.8rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
   color: var(--blue-900);
 }
 
@@ -1723,7 +1847,8 @@ code {
 .footer-logos {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  align-items: center;
+  gap: 8px 10px;
 }
 
 .footer-logos img {
@@ -1738,16 +1863,17 @@ code {
   height: 34px;
 }
 
-.footer-col--right {
-  display: grid;
-  justify-items: end;
-  gap: 10px;
-}
-
 .footer-meta {
   margin: 0;
   color: rgba(71, 85, 105, 0.9);
-  font-size: 0.95rem;
+  font-size: 0.84rem;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.footer-meta strong {
+  font-weight: 860;
+  color: var(--blue-900);
 }
 
 /* Modal */
@@ -2147,8 +2273,8 @@ code {
     grid-template-columns: 1fr;
   }
 
-  .footer-col--right {
-    justify-items: start;
+  .footer-partners {
+    justify-content: center;
   }
 
   #looker-embed-wrap {
@@ -2162,6 +2288,23 @@ code {
   body::before,
   body::after {
     display: none;
+  }
+
+  .back-to-top {
+    width: 48px;
+    height: 48px;
+    bottom: 78px;
+    right: 14px;
+  }
+
+  .back-to-top__icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .back-to-top__icon svg {
+    width: 18px;
+    height: 18px;
   }
 
   .nav-toggle {
