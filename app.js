@@ -85,7 +85,7 @@ const CONFIG = {
      */
     formularios: {
       enfermeria: {
-        title: "Enfermería",
+        title: "Enfermeros/as \"Navigators\"",
         desc: "Registro operativo de kits, muestras y resultados.",
         items: [
           {

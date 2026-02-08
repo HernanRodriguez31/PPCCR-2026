@@ -76,6 +76,9 @@ function bindEvents() {
     refreshWizardState();
   });
 
+  document.addEventListener("keydown", onWizardKeydown);
+  ui.form.addEventListener("submit", onWizardSubmit);
+
   ui.criterionSwitch.addEventListener("change", refreshWizardState);
 
   ui.step1Next.addEventListener("click", () => {
@@ -118,6 +121,52 @@ function bindEvents() {
   ui.modalCopyButton.addEventListener("click", copySummaryTextFromModal);
   ui.modalDownloadButton.addEventListener("click", downloadSummaryImage);
   ui.modalCloseButton.addEventListener("click", closeSummaryModal);
+}
+
+function onWizardKeydown(event) {
+  if (!ui.summaryModal.hidden) return;
+  if (!shouldHandleWizardEnter(event)) return;
+
+  const actionButton = getPrimaryActionButtonForCurrentStep();
+  if (!canActivateButton(actionButton)) return;
+
+  event.preventDefault();
+  actionButton.click();
+}
+
+function onWizardSubmit(event) {
+  event.preventDefault();
+
+  const actionButton = getPrimaryActionButtonForCurrentStep();
+  if (!canActivateButton(actionButton)) return;
+
+  actionButton.click();
+}
+
+function shouldHandleWizardEnter(event) {
+  if (event.key !== "Enter") return false;
+  if (event.defaultPrevented || event.isComposing) return false;
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return false;
+
+  const target = event.target;
+  if (!(target instanceof Element)) return false;
+  if (target.closest("button, a, summary, textarea")) return false;
+
+  return true;
+}
+
+function getPrimaryActionButtonForCurrentStep() {
+  if (currentStep === STEP.AGE) return ui.step1Next;
+  if (currentStep === STEP.EXCLUSIONS) return ui.step2Next;
+  if (currentStep === STEP.RISK) return ui.openSummaryModalButton;
+  return null;
+}
+
+function canActivateButton(button) {
+  if (!button) return false;
+  if (button.hidden || button.disabled) return false;
+  if (button.getAttribute("aria-disabled") === "true") return false;
+  return true;
 }
 
 function getInclusionThreshold() {
@@ -460,7 +509,7 @@ function buildSummaryText() {
   const summary = getSummaryState();
 
   return [
-    "Resumen de clasificación - PPCCR",
+    "Estratificación de Riesgo - PPCCR",
     `Edad ingresada: ${summary.age === null ? "No informada" : `${summary.age} años`}`,
     `Estado Paso 1: ${summary.step1Status}`,
     `Estado Paso 2: ${summary.step2Status}`,
@@ -647,7 +696,7 @@ async function buildSummaryCanvas() {
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "800 44px 'Avenir Next', 'Segoe UI', sans-serif";
-  ctx.fillText("Resumen de clasificación", card.x + 126, card.y + 85);
+  ctx.fillText("Estratificación de Riesgo", card.x + 126, card.y + 85);
   ctx.font = "600 24px 'Avenir Next', 'Segoe UI', sans-serif";
   ctx.fillText(
     "Programa de Prevención de Cáncer Colorrectal",
@@ -791,7 +840,7 @@ async function downloadSummaryImage() {
 
         const image = newTab.document.createElement("img");
         image.src = dataUrl;
-        image.alt = "Resumen de clasificación PPCCR";
+        image.alt = "Estratificación de Riesgo PPCCR";
         image.style.maxWidth = "100vw";
         image.style.maxHeight = "100vh";
         image.style.objectFit = "contain";
