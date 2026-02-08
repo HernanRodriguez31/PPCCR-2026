@@ -135,7 +135,7 @@ const CONFIG = {
       },
 
       pacientes: {
-        title: "Pacientes",
+        title: "Participantes",
         desc: "Cuestionario / evaluación inicial del programa.",
         items: [
           {

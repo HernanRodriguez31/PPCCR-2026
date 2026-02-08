@@ -1023,6 +1023,11 @@ code {
 
 .role-card__header {
   padding: 16px 16px 14px;
+  min-height: 122px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  align-content: start;
+  gap: 6px;
   background: linear-gradient(
     180deg,
     rgba(15, 95, 166, 0.1),
@@ -1032,8 +1037,9 @@ code {
 }
 
 .role-card__title {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: 1.2rem;
+  line-height: 1.2;
   color: var(--blue-900);
 }
 
@@ -1041,6 +1047,7 @@ code {
   margin: 0;
   color: var(--muted);
   font-size: 0.95rem;
+  line-height: 1.4;
 }
 
 .role-card__body {
@@ -2129,6 +2136,11 @@ code {
 
   .role-grid {
     grid-template-columns: 1fr;
+  }
+
+  .role-card__header {
+    min-height: unset;
+    grid-template-rows: auto auto;
   }
 
   .footer-grid {
