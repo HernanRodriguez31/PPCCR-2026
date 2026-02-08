@@ -1170,7 +1170,7 @@ code {
 
 .responsive-embed--calendar {
   aspect-ratio: 16 / 10;
-  min-height: 520px;
+  min-height: 600px;
 }
 
 .report-shell {
@@ -1236,7 +1236,7 @@ code {
 
 .timeline-placeholder {
   margin: 0 0 var(--space-5);
-  padding: 20px 20px 18px;
+  padding: 22px 22px 20px;
   border-radius: var(--radius-20);
   border: 1px solid rgba(15, 95, 166, 0.16);
   background: linear-gradient(
@@ -1250,19 +1250,20 @@ code {
 }
 
 .timeline-placeholder__header {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .timeline-placeholder__title {
   margin: 0 0 6px;
   color: var(--blue-900);
-  font-size: 1.18rem;
+  font-size: 1.2rem;
 }
 
 .timeline-placeholder__subtitle {
   margin: 0;
   color: var(--muted);
-  max-width: 78ch;
+  max-width: 72ch;
+  font-size: 0.95rem;
 }
 
 .timeline {
@@ -1271,7 +1272,7 @@ code {
   margin: 0;
   padding: 6px 0 2px 22px;
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .timeline::before {
@@ -1291,7 +1292,7 @@ code {
 
 .phase-card {
   position: relative;
-  padding: 14px 16px 14px;
+  padding: 16px 16px 14px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(15, 95, 166, 0.14);
@@ -1312,43 +1313,56 @@ code {
   box-shadow: 0 0 0 6px rgba(15, 95, 166, 0.18);
 }
 
+.phase-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  margin-bottom: 10px;
+}
+
 .phase-stage {
-  display: block;
-  font-size: 0.76rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(15, 95, 166, 0.2);
+  background: rgba(15, 95, 166, 0.08);
+  font-size: 0.73rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 800;
+  letter-spacing: 0.07em;
+  font-weight: 820;
   color: var(--blue-800);
-  margin-bottom: 8px;
+  margin: 0;
 }
 
 .phase-period {
-  margin: 0 0 10px;
+  margin: 0;
 }
 
 .phase-period time {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 10px;
+  padding: 8px 14px;
   border-radius: var(--radius-pill);
-  background: linear-gradient(
-    145deg,
-    rgba(15, 95, 166, 0.16),
-    rgba(124, 184, 255, 0.22)
-  );
-  border: 1px solid rgba(15, 95, 166, 0.22);
-  color: var(--blue-900);
-  font-size: 0.95rem;
-  font-weight: 850;
-  letter-spacing: 0.01em;
+  background: var(--brand-gradient);
+  border: 1px solid rgba(11, 58, 102, 0.35);
+  box-shadow: 0 8px 16px rgba(15, 95, 166, 0.18);
+  color: #fff;
+  font-size: 1.03rem;
+  font-weight: 880;
+  letter-spacing: 0.015em;
+  line-height: 1.2;
+  max-width: 100%;
 }
 
 .phase-title {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: var(--blue-950);
   font-weight: 880;
-  font-size: 1.08rem;
+  font-size: 1.1rem;
   line-height: 1.25;
 }
 
@@ -1356,6 +1370,7 @@ code {
   margin: 0 0 10px;
   color: var(--muted);
   font-size: 0.92rem;
+  line-height: 1.45;
 }
 
 .phase-objective strong {
@@ -1363,11 +1378,12 @@ code {
 }
 
 .phase-highlights-label {
-  margin: 0 0 6px;
+  margin: 0 0 5px;
   color: var(--blue-900);
-  font-size: 0.84rem;
-  font-weight: 820;
-  letter-spacing: 0.02em;
+  font-size: 0.8rem;
+  font-weight: 860;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .phase-highlights {
@@ -1385,21 +1401,21 @@ code {
 }
 
 .phase-details {
-  margin-top: 12px;
-  padding-top: 10px;
+  margin-top: 10px;
+  padding-top: 9px;
   border-top: 1px dashed rgba(15, 95, 166, 0.24);
 }
 
 .phase-details__summary {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
   color: var(--blue-900);
-  font-size: 0.86rem;
-  font-weight: 760;
+  font-size: 0.84rem;
+  font-weight: 780;
   text-decoration: none;
 }
 
@@ -1883,6 +1899,10 @@ code {
     scroll-snap-type: x proximity;
   }
 
+  .phase-top {
+    gap: 6px 8px;
+  }
+
   .timeline {
     padding-left: 18px;
   }
@@ -1896,7 +1916,7 @@ code {
   }
 
   .phase-period time {
-    font-size: 0.9rem;
+    font-size: 0.94rem;
     white-space: normal;
   }
 
@@ -1984,6 +2004,12 @@ code {
     padding: 12px 12px 12px;
   }
 
+  .phase-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 7px;
+  }
+
   .phase-card::before {
     left: -14px;
     top: 16px;
@@ -1995,8 +2021,10 @@ code {
   .phase-period time {
     font-size: 0.84rem;
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 6px 10px;
+    white-space: normal;
+    text-align: left;
   }
 
   .phase-title {

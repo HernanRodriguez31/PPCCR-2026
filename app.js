@@ -167,8 +167,10 @@ const CONFIG = {
     },
 
     calendar: {
-      openUrl: "PEGAR_AQUI_URL_CALENDARIO_ABRIR",
-      embedUrl: "PEGAR_AQUI_URL_CALENDARIO_EMBED",
+      openUrl:
+        "https://calendar.google.com/calendar/embed?src=6a56f786245ebf6eef16d66f6207ece6ac91120fd3ed6a60505d77020b73779f%40group.calendar.google.com&ctz=America%2FArgentina%2FBuenos_Aires",
+      embedUrl:
+        "https://calendar.google.com/calendar/embed?height=600&wkst=2&bgcolor=%23ffffff&ctz=America%2FArgentina%2FBuenos_Aires&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=1&showCalendars=0&src=6a56f786245ebf6eef16d66f6207ece6ac91120fd3ed6a60505d77020b73779f%40group.calendar.google.com&color=%23F6BF26&src=6b266ba27c58230fd212794413a7c7596bca9276278ddad124cc682b6c0a93c9%40group.calendar.google.com&color=%23039BE5&src=60266d5c54150e7d3e2903e3c70956ebc932fae4df94a9284fccfe898d832078%40group.calendar.google.com&color=%233F51B5",
     },
   },
 
@@ -181,18 +183,18 @@ const CONFIG = {
   timeline: {
     title: "Línea de tiempo operativa",
     subtitle:
-      "Períodos críticos del despliegue qFIT mientras se integra el calendario en vivo.",
+      "Resumen ejecutivo por etapas con foco en períodos críticos del despliegue qFIT.",
     phases: [
       {
         id: "etapa-1",
         stageLabel: "Etapa 1",
-        periodLabel: "Semana 1 · 01-07 Mar",
+        periodLabel: "Semana 1 · 01–07 Mar",
         startDate: "2026-03-01",
         endDate: "2026-03-07",
         title: "Capacitación y alistamiento operativo",
         objective: "Asegurar capacidades, materiales y circuitos validados.",
         highlights: [
-          "Capacitación técnica completada para personal y referentes operativos.",
+          "Capacitación técnica completada para personal y referentes.",
           "Materiales operativos y stock qFIT listos para despliegue.",
           "Circuito de registro y derivación validado y comunicado.",
         ],
@@ -206,7 +208,7 @@ const CONFIG = {
       {
         id: "etapa-2",
         stageLabel: "Etapa 2",
-        periodLabel: "09-22 Mar",
+        periodLabel: "09–22 Mar",
         startDate: "2026-03-09",
         endDate: "2026-03-22",
         title: "Difusión y educación",
@@ -227,7 +229,7 @@ const CONFIG = {
       {
         id: "etapa-3",
         stageLabel: "Etapa 3",
-        periodLabel: "23 Mar-01 Abr",
+        periodLabel: "23 Mar–01 Abr",
         startDate: "2026-03-23",
         endDate: "2026-04-01",
         title: "Operativo de testeo qFIT",
@@ -536,10 +538,20 @@ function renderTimelinePlaceholder() {
         }))
       : [];
 
+  if (phases.length === 0) {
+    wrap.hidden = true;
+    return;
+  }
+
+  wrap.hidden = false;
+
   phases.forEach((phaseCfg, index) => {
     const item = document.createElement("li");
     item.className = "phase-card";
     item.id = phaseCfg.id || `etapa-${index + 1}`;
+
+    const top = document.createElement("div");
+    top.className = "phase-top";
 
     const stage = document.createElement("span");
     stage.className = "phase-stage";
@@ -549,13 +561,16 @@ function renderTimelinePlaceholder() {
     period.className = "phase-period";
 
     const periodTime = document.createElement("time");
-    periodTime.textContent = phaseCfg.periodLabel || "";
+    const periodLabel = String(phaseCfg.periodLabel || "").trim();
+    periodTime.textContent = periodLabel || "Período por confirmar";
     if (phaseCfg.startDate && phaseCfg.endDate) {
       periodTime.dateTime = `${phaseCfg.startDate}/${phaseCfg.endDate}`;
     } else if (phaseCfg.startDate) {
       periodTime.dateTime = phaseCfg.startDate;
     }
     period.appendChild(periodTime);
+    top.appendChild(period);
+    top.appendChild(stage);
 
     const titleEl = document.createElement("h3");
     titleEl.className = "phase-title";
@@ -563,17 +578,16 @@ function renderTimelinePlaceholder() {
 
     const objective = document.createElement("p");
     objective.className = "phase-objective";
-    const objectiveLabel = document.createElement("strong");
-    objectiveLabel.textContent = "Objetivo:";
-    objective.appendChild(objectiveLabel);
-    objective.appendChild(document.createTextNode(` ${phaseCfg.objective || ""}`));
+    objective.textContent = phaseCfg.objective || "";
 
     const highlightsLabel = document.createElement("p");
     highlightsLabel.className = "phase-highlights-label";
     highlightsLabel.textContent = "Hitos clave";
+    highlightsLabel.id = `${item.id}-highlights`;
 
     const highlightsList = document.createElement("ul");
     highlightsList.className = "phase-highlights";
+    highlightsList.setAttribute("aria-labelledby", highlightsLabel.id);
     (Array.isArray(phaseCfg.highlights) ? phaseCfg.highlights : [])
       .slice(0, 3)
       .forEach((highlight) => {
@@ -582,8 +596,7 @@ function renderTimelinePlaceholder() {
         highlightsList.appendChild(li);
       });
 
-    item.appendChild(stage);
-    item.appendChild(period);
+    item.appendChild(top);
     item.appendChild(titleEl);
     item.appendChild(objective);
     if (highlightsList.children.length > 0) {
@@ -597,7 +610,7 @@ function renderTimelinePlaceholder() {
 
       const summary = document.createElement("summary");
       summary.className = "phase-details__summary";
-      summary.textContent = "Ver detalles operativos";
+      summary.textContent = "Ver detalle operativo";
       details.appendChild(summary);
 
       const detailList = document.createElement("ul");
@@ -655,7 +668,6 @@ function renderEmbeds() {
   const calWrap = $("#calendar-embed-wrap");
   const calFallback = $("#calendar-fallback");
   const calHint = $("#calendar-hint");
-  const timelineWrap = $("#timeline-placeholder");
 
   safeSetLink(calOpen, CONFIG.embeds.calendar.openUrl, { newTab: true });
 
@@ -666,15 +678,13 @@ function renderEmbeds() {
     calWrap.hidden = false;
     loadEmbedWithSkeleton(calIframe, calWrap, CONFIG.embeds.calendar.embedUrl);
     calFallback.hidden = true;
-    calHint.textContent = "";
-    if (timelineWrap) timelineWrap.hidden = true;
+    calHint.textContent = "Vista mensual disponible en el calendario embebido.";
   } else {
     calIframe.removeAttribute("src");
     calWrap.hidden = true;
     updateEmbedLoadState(calWrap, "idle");
     calFallback.hidden = false;
     calHint.textContent = "Falta pegar URL de calendario (embed).";
-    if (timelineWrap) timelineWrap.hidden = false;
   }
 }
 
