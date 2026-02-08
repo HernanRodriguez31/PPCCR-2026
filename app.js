@@ -18,7 +18,7 @@ const CONFIG = {
     logos: {
       ppccr: { src: "assets/logo-ppccr.png", alt: "Logo PPCCR" },
       fep: {
-        src: "assets/logo-fep.png",
+        src: "assets/logo-fep.png?v=20260208",
         alt: "Fundación Enfermeros Protagonistas",
       },
       gedyt: { src: "assets/logo-gedyt.png", alt: "Fundación GEDyT" },

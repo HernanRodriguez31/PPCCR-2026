@@ -402,7 +402,8 @@ code {
   letter-spacing: -0.015em;
   font-weight: 900;
   color: var(--blue-900);
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 .brand-subtitle {
@@ -1631,7 +1632,7 @@ code {
   }
 
   .brand-title {
-    font-size: clamp(1.46rem, 1.95vw, 1.96rem);
+    font-size: clamp(1.18rem, 1.35vw, 1.42rem);
     line-height: 1.1;
   }
 
@@ -2039,7 +2040,7 @@ code {
   }
 
   .brand-title {
-    font-size: 0.94rem;
+    font-size: 0.88rem;
     line-height: 1.1;
   }
 
