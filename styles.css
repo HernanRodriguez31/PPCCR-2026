@@ -863,6 +863,8 @@ code {
   text-decoration: none;
   line-height: 1.1;
   -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   user-select: none;
   box-shadow: var(--shadow-sm);
   transition:
