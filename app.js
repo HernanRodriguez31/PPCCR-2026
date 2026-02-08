@@ -97,22 +97,22 @@ const CONFIG = {
           {
             key: "entregaKitFIT",
             label: "Entrega de Kit de FIT a pacientes",
-            url: "https://kitfit.programadeprevencion.com/",
+            url: "https://9kxsjveuebz.typeform.com/to/CA9UQXTK",
           },
           {
             key: "recepcionMuestraFIT",
             label: "Recepción de Muestra de Test FIT",
-            url: "https://recepcionmuestra.programadeprevencion.com/",
+            url: "https://9kxsjveuebz.typeform.com/to/ICgvwiBh",
           },
           {
             key: "envioMuestrasLaboratorio",
             label: "Envío de Muestras de FIT al Laboratorio",
-            url: "https://enviolab.programadeprevencion.com/",
+            url: "https://9kxsjveuebz.typeform.com/to/EDtlnghR",
           },
           {
             key: "recepcionResultadosFIT",
             label: "Recepción de Resultados de FIT",
-            url: "https://recepcionresultados.programadeprevencion.com/",
+            url: "https://9kxsjveuebz.typeform.com/to/zbS6LWx7",
           },
         ],
       },
@@ -124,12 +124,12 @@ const CONFIG = {
           {
             key: "entrevistaMedica",
             label: "Entrevista médica (presencial)",
-            url: "https://entrevista.programadeprevencion.com/",
+            url: "https://9kxsjveuebz.typeform.com/to/xP8fOLC4",
           },
           {
             key: "informePacienteResultadoFIT",
             label: "Informe al paciente del resultado del Test FIT",
-            url: "https://informeprograma.programadeprevencion.com/",
+            url: "https://9kxsjveuebz.typeform.com/to/CPDHPjyy",
           },
         ],
       },
@@ -141,7 +141,7 @@ const CONFIG = {
           {
             key: "evaluacionInicialSalud",
             label: "Formularios de evaluación inicial de salud",
-            url: "https://cuestionario.programadeprevencion.com/",
+            url: "https://9kxsjveuebz.typeform.com/to/X2jtQ7NT",
           },
         ],
       },
@@ -439,11 +439,24 @@ function renderRoles() {
   const grid = $("#roles-grid");
   if (!grid) return;
 
-  const roles = [
-    { key: "enfermeria", icon: "🧑‍⚕️" },
-    { key: "medicos", icon: "🩺" },
-    { key: "pacientes", icon: "🧾" },
-  ];
+  const roleFormIcons = {
+    entregaKitFIT:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 10.2h15v8.3a1.8 1.8 0 0 1-1.8 1.8H6.3a1.8 1.8 0 0 1-1.8-1.8z"></path><path d="M8.2 10.2V7.8a2.2 2.2 0 0 1 2.2-2.2h3.2a2.2 2.2 0 0 1 2.2 2.2v2.4"></path><path d="M12 12.6v4"></path><path d="M10 14.6h4"></path></svg>',
+    recepcionMuestraFIT:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9.8 4.5h4.4"></path><path d="M10.4 4.5v3.6l-2.8 4.7a5 5 0 0 0 4.4 7.2 5 5 0 0 0 4.4-7.2l-2.8-4.7V4.5"></path><path d="M9.4 13.1h5.2"></path><path d="M12 17.8v.01"></path></svg>',
+    envioMuestrasLaboratorio:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 9h11.5v7.8H3.5z"></path><path d="M15 11h3.3l2.2 2.2v3.6H15z"></path><path d="M6.8 18.2h.1"></path><path d="M17.8 18.2h.1"></path><path d="M6.8 18.2a1.7 1.7 0 1 0 0 .01"></path><path d="M17.8 18.2a1.7 1.7 0 1 0 0 .01"></path><path d="M6 6.3h5.6"></path></svg>',
+    recepcionResultadosFIT:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="4.5" width="12" height="15" rx="2"></rect><path d="M9 9h6"></path><path d="M9 12h6"></path><path d="m9.2 15.2 1.6 1.6 3.2-3.2"></path></svg>',
+    entrevistaMedica:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 4.2v4.2a3.1 3.1 0 0 0 3.1 3.1h1.8A3.1 3.1 0 0 0 16 8.4V4.2"></path><path d="M12 11.5v2.4a4.2 4.2 0 1 0 8.4 0v-2.5"></path><circle cx="16.2" cy="17.9" r="2.1"></circle></svg>',
+    informePacienteResultadoFIT:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4.5h8l4 4v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"></path><path d="M14 4.5V9h4"></path><circle cx="10.2" cy="12.7" r="1.8"></circle><path d="M7.9 17.2a2.8 2.8 0 0 1 4.6 0"></path></svg>',
+    evaluacionInicialSalud:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5.5" y="4.5" width="13" height="15" rx="2"></rect><path d="M9 8h6"></path><path d="M9 11h6"></path><path d="M10.1 15.4h3.8"></path><path d="M12 13.5v3.8"></path></svg>',
+  };
+
+  const roles = [{ key: "enfermeria" }, { key: "medicos" }, { key: "pacientes" }];
 
   roles.forEach((r) => {
     const roleCfg = CONFIG.links.formularios[r.key];
@@ -480,9 +493,12 @@ function renderRoles() {
       const icon = document.createElement("span");
       icon.className = "role-link__icon";
       icon.setAttribute("aria-hidden", "true");
-      icon.textContent = r.icon;
+      icon.innerHTML =
+        roleFormIcons[item.key] ||
+        '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="4.5" width="12" height="15" rx="2"></rect><path d="M9 9h6"></path><path d="M9 12.5h6"></path></svg>';
 
       const label = document.createElement("span");
+      label.className = "role-link__label";
       label.textContent = item.label;
 
       const chev = document.createElement("span");
