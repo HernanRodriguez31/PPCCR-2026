@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PPCCR | Formulario</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="assets/favicon.png" />
+    <style>
+      :root {
+        --bg: #eef4fb;
+        --surface: #ffffff;
+        --text: #0f172a;
+        --muted: #475569;
+        --blue-900: #0b3a66;
+        --blue-700: #0f5fa6;
+        --border: rgba(15, 95, 166, 0.18);
+        --radius: 14px;
+        --shadow: 0 14px 30px rgba(2, 6, 23, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100svh;
+        font-family: "Avenir Next", Montserrat, "Segoe UI", Helvetica, Arial,
+          sans-serif;
+        color: var(--text);
+        background: linear-gradient(165deg, #f6fbff 0%, #eaf2fb 55%, #f7f9fc 100%);
+      }
+
+      .page {
+        min-height: 100svh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px clamp(14px, 3vw, 34px);
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(
+          110deg,
+          rgba(255, 255, 255, 0.9),
+          rgba(232, 244, 255, 0.8)
+        );
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .brand img {
+        width: 44px;
+        height: 44px;
+        object-fit: contain;
+      }
+
+      .brand__kicker {
+        margin: 0;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--blue-700);
+        font-weight: 800;
+      }
+
+      .brand__title {
+        margin: 0;
+        color: var(--blue-900);
+        font-size: clamp(1rem, 1.8vw, 1.28rem);
+        line-height: 1.2;
+      }
+
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--blue-900);
+        background: rgba(255, 255, 255, 0.85);
+        text-decoration: none;
+        font-weight: 750;
+        white-space: nowrap;
+      }
+
+      .back-link:hover {
+        background: #fff;
+      }
+
+      .content {
+        width: min(100% - 28px, 1180px);
+        margin: 14px auto;
+      }
+
+      .embed-shell {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        min-height: calc(100svh - 130px);
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      .embed-head {
+        padding: 14px 16px 12px;
+        border-bottom: 1px solid rgba(15, 95, 166, 0.12);
+        background: linear-gradient(
+          150deg,
+          rgba(255, 255, 255, 0.98),
+          rgba(236, 246, 255, 0.9)
+        );
+      }
+
+      .embed-head h1 {
+        margin: 0 0 4px;
+        color: var(--blue-900);
+        font-size: clamp(1.02rem, 1.3vw, 1.24rem);
+      }
+
+      .embed-head p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .embed-status {
+        padding: 12px 16px 0;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      #typeform-container {
+        min-height: calc(100svh - 230px);
+      }
+
+      #typeform-container iframe {
+        border: 0;
+        width: 100%;
+        min-height: calc(100svh - 230px);
+      }
+
+      .embed-fallback {
+        padding: 12px 16px 18px;
+        color: var(--muted);
+      }
+
+      .embed-fallback[hidden] {
+        display: none;
+      }
+
+      :focus-visible {
+        outline: 3px solid rgba(42, 137, 230, 0.7);
+        outline-offset: 3px;
+      }
+
+      @media (max-width: 760px) {
+        .header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .content {
+          width: min(100% - 16px, 1180px);
+          margin: 8px auto;
+        }
+
+        .embed-shell {
+          min-height: calc(100svh - 160px);
+        }
+
+        #typeform-container,
+        #typeform-container iframe {
+          min-height: calc(100svh - 270px);
+        }
+      }
+    </style>
+    <script src="typeform.js" defer></script>
+  </head>
+  <body>
+    <div class="page">
+      <header class="header" aria-label="Encabezado de formulario">
+        <div class="brand">
+          <img
+            src="assets/logo-ppccr.png"
+            alt="Programa de Prevención de Cáncer Colorrectal"
+            width="44"
+            height="44"
+            decoding="async"
+          />
+          <div>
+            <p class="brand__kicker">Programa institucional</p>
+            <p class="brand__title">Programa de Prevención de Cáncer Colorrectal</p>
+          </div>
+        </div>
+        <a class="back-link" href="https://programadeprevencion.com/"
+          >Volver al portal</a
+        >
+      </header>
+
+      <main class="content" id="main-content">
+        <section class="embed-shell" aria-labelledby="form-title">
+          <header class="embed-head">
+            <h1 id="form-title">Formulario operativo</h1>
+            <p id="form-subtitle">Preparando formulario...</p>
+          </header>
+
+          <p class="embed-status" id="form-status" role="status" aria-live="polite">
+            Cargando formulario...
+          </p>
+
+          <div id="typeform-container" aria-label="Formulario Typeform"></div>
+
+          <div class="embed-fallback" id="form-fallback" hidden>
+            <p>No pudimos cargar el formulario embebido.</p>
+            <p>
+              Abrilo directamente en
+              <a id="form-direct-link" href="#" rel="noopener noreferrer" target="_blank"
+                >Typeform</a
+              >.
+            </p>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

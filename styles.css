@@ -1143,6 +1143,10 @@ code {
   font-size: 0.95rem;
 }
 
+.embed-hint:empty {
+  display: none;
+}
+
 .embed-card {
   background: linear-gradient(
     160deg,
@@ -1175,14 +1179,26 @@ code {
 
 .report-shell {
   overflow: hidden;
-  border-radius: 20px;
+  border-radius: 9px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
 }
 
 #looker-embed-wrap {
   aspect-ratio: auto;
-  min-height: 780px;
-  height: clamp(780px, 82vh, 980px);
+  min-height: 820px;
+  height: clamp(820px, 83vh, 980px);
+  padding: 0;
+  border-radius: 7px;
+  border: 1px solid rgba(15, 95, 166, 0.18);
+  background: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 12px 28px rgba(2, 6, 23, 0.12);
+}
+
+#looker-embed-wrap iframe {
+  border-radius: 7px;
+  background: #fff;
 }
 
 .responsive-embed::before {
@@ -1945,8 +1961,9 @@ code {
   }
 
   #looker-embed-wrap {
-    min-height: 640px;
-    height: clamp(640px, 78vh, 820px);
+    min-height: 740px;
+    height: clamp(740px, 79vh, 900px);
+    padding: 0;
   }
 }
 
@@ -2093,7 +2110,8 @@ code {
   }
 
   #looker-embed-wrap {
-    min-height: 520px;
-    height: clamp(520px, 72vh, 680px);
+    min-height: 590px;
+    height: clamp(590px, 73vh, 730px);
+    padding: 0;
   }
 }

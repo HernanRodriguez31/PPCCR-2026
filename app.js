@@ -97,22 +97,22 @@ const CONFIG = {
           {
             key: "entregaKitFIT",
             label: "Entrega de Kit de FIT a pacientes",
-            url: "PEGAR_AQUI_URL_FORM_ENTREGA_KIT_FIT",
+            url: "https://kitfit.programadeprevencion.com/",
           },
           {
             key: "recepcionMuestraFIT",
             label: "Recepción de Muestra de Test FIT",
-            url: "PEGAR_AQUI_URL_FORM_RECEPCION_MUESTRA_FIT",
+            url: "https://recepcionmuestra.programadeprevencion.com/",
           },
           {
             key: "envioMuestrasLaboratorio",
             label: "Envío de Muestras de FIT al Laboratorio",
-            url: "PEGAR_AQUI_URL_FORM_ENVIO_MUESTRAS_LAB",
+            url: "https://enviolab.programadeprevencion.com/",
           },
           {
             key: "recepcionResultadosFIT",
             label: "Recepción de Resultados de FIT",
-            url: "PEGAR_AQUI_URL_FORM_RECEPCION_RESULTADOS_FIT",
+            url: "https://recepcionresultados.programadeprevencion.com/",
           },
         ],
       },
@@ -124,12 +124,12 @@ const CONFIG = {
           {
             key: "entrevistaMedica",
             label: "Entrevista médica (presencial)",
-            url: "PEGAR_AQUI_URL_FORM_ENTREVISTA_MEDICA",
+            url: "https://entrevista.programadeprevencion.com/",
           },
           {
             key: "informePacienteResultadoFIT",
             label: "Informe al paciente del resultado del Test FIT",
-            url: "PEGAR_AQUI_URL_FORM_INFORME_PACIENTE_RESULTADO_FIT",
+            url: "https://informeprograma.programadeprevencion.com/",
           },
         ],
       },
@@ -141,7 +141,7 @@ const CONFIG = {
           {
             key: "evaluacionInicialSalud",
             label: "Formularios de evaluación inicial de salud",
-            url: "PEGAR_AQUI_URL_FORM_EVALUACION_INICIAL",
+            url: "https://cuestionario.programadeprevencion.com/",
           },
         ],
       },
@@ -649,15 +649,20 @@ function renderEmbeds() {
   if (lookerOk) {
     loadEmbedWithSkeleton(lookerIframe, lookerWrap, lookerEmbedUrl);
     lookerFallback.hidden = true;
-    lookerHint.textContent =
-      "Si ves “permiso requerido”, revisá la compartición del reporte.";
+    if (lookerHint) {
+      lookerHint.textContent = "";
+      lookerHint.hidden = true;
+    }
     lookerFullscreenBtn.removeAttribute("aria-disabled");
     lookerFullscreenBtn.disabled = false;
   } else {
     lookerIframe.removeAttribute("src");
     updateEmbedLoadState(lookerWrap, "idle");
     lookerFallback.hidden = false;
-    lookerHint.textContent = "Falta configurar URL de embed.";
+    if (lookerHint) {
+      lookerHint.hidden = false;
+      lookerHint.textContent = "Falta configurar URL de embed.";
+    }
     lookerFullscreenBtn.setAttribute("aria-disabled", "true");
     lookerFullscreenBtn.disabled = true;
   }
