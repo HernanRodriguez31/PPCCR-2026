@@ -179,38 +179,67 @@ const CONFIG = {
   },
 
   timeline: {
-    title: "Línea de tiempo operativa: activación qFIT",
+    title: "Línea de tiempo operativa",
     subtitle:
-      "Etapas clave de capacitación, difusión y testeo en estaciones saludables.",
-    milestones: [
+      "Períodos críticos del despliegue qFIT mientras se integra el calendario en vivo.",
+    phases: [
       {
-        phase: "Etapa 1 · Primera semana de marzo",
-        title: "Capacitación y preparación",
-        description:
-          "Capacitación técnica dictada por la Fundación GEDyT para todo el personal de estaciones.",
+        id: "etapa-1",
+        stageLabel: "Etapa 1",
+        periodLabel: "Semana 1 · 01-07 Mar",
+        startDate: "2026-03-01",
+        endDate: "2026-03-07",
+        title: "Capacitación y alistamiento operativo",
+        objective: "Asegurar capacidades, materiales y circuitos validados.",
+        highlights: [
+          "Capacitación técnica completada para personal y referentes operativos.",
+          "Materiales operativos y stock qFIT listos para despliegue.",
+          "Circuito de registro y derivación validado y comunicado.",
+        ],
         details: [
-          "Prevención general de cáncer colorrectal.",
-          "Uso operativo del test qFIT en terreno.",
+          "Capacitación técnica dictada por Fundación GEDyT para el personal de estaciones.",
+          "Cobertura de prevención general de cáncer colorrectal.",
+          "Práctica de uso operativo del test qFIT en terreno.",
+          "Alineamiento de roles, trazabilidad y criterios de derivación.",
         ],
       },
       {
-        phase: "Etapa 2 · 9 al 22 de marzo",
+        id: "etapa-2",
+        stageLabel: "Etapa 2",
+        periodLabel: "09-22 Mar",
+        startDate: "2026-03-09",
+        endDate: "2026-03-22",
         title: "Difusión y educación",
-        description:
-          "Sensibilización poblacional con acciones digitales y presenciales en estaciones.",
+        objective:
+          "Impulsar la participación y asegurar comprensión del proceso.",
+        highlights: [
+          "Campaña multicanal coordinada con aliados institucionales.",
+          "Acciones en estaciones con material impreso y digital para convocatoria.",
+          "Webinars breves con Q&A para equipos y población objetivo.",
+        ],
         details: [
           "9 al 15 de marzo: campaña intensiva en redes (Fundación, LALCEC, Bienestar Ciudadano, Ministerio de Salud, AAOC y SAGE).",
-          "16 al 22 de marzo: educación presencial, reparto de folletería y formularios digitales para detectar interesados.",
+          "16 al 22 de marzo: educación presencial en estaciones, reparto de folletería y formularios digitales para personas interesadas.",
           "Webinars Estaciones Saludables Clic: charlas de 35 minutos con Q&A por Zoom junto a especialista médico.",
-          "31 de marzo (Día Mundial del Cáncer de Colon): evento presencial en la estación de mayor concurrencia.",
+          "31 de marzo (Día Mundial del Cáncer de Colon): evento presencial en la estación de mayor concurrencia con charlas y actividades de prevención.",
         ],
       },
       {
-        phase: "Etapa 3 · 23 de marzo al 1 de abril",
+        id: "etapa-3",
+        stageLabel: "Etapa 3",
+        periodLabel: "23 Mar-01 Abr",
+        startDate: "2026-03-23",
+        endDate: "2026-04-01",
         title: "Operativo de testeo qFIT",
-        description:
-          "Implementación del operativo con stock de 300 qFIT en estaciones de mayor concurrencia.",
+        objective:
+          "Ejecutar entrega, recepción y gestión de muestras con trazabilidad.",
+        highlights: [
+          "Distribución de kits y orientación al participante en estaciones priorizadas.",
+          "Recepción y devolución de muestras según ventana logística definida.",
+          "Consolidación de resultados y seguimiento según protocolo.",
+        ],
         details: [
+          "Stock operativo: 300 qFIT para despliegue en estaciones de mayor concurrencia.",
           "Estaciones priorizadas: Parque Saavedra, Aristóbulo del Valle, Parque Rivadavia y Parque Chacabuco.",
           "Entrega de kits: del lunes 23 al sábado 28 de marzo.",
           "Recepción y devolución de muestras: del domingo 29 de marzo al miércoles 1 de abril.",
@@ -493,43 +522,95 @@ function renderTimelinePlaceholder() {
   }
 
   list.innerHTML = "";
-  const milestones = Array.isArray(CONFIG.timeline?.milestones)
-    ? CONFIG.timeline.milestones
-    : [];
+  const phases = Array.isArray(CONFIG.timeline?.phases)
+    ? CONFIG.timeline.phases
+    : Array.isArray(CONFIG.timeline?.milestones)
+      ? CONFIG.timeline.milestones.map((milestone, index) => ({
+          id: `etapa-${index + 1}`,
+          stageLabel: milestone.phase || `Etapa ${index + 1}`,
+          periodLabel: milestone.phase || "",
+          title: milestone.title || "",
+          objective: milestone.description || "",
+          highlights: [],
+          details: Array.isArray(milestone.details) ? milestone.details : [],
+        }))
+      : [];
 
-  milestones.forEach((milestone) => {
+  phases.forEach((phaseCfg, index) => {
     const item = document.createElement("li");
-    item.className = "timeline-item";
+    item.className = "phase-card";
+    item.id = phaseCfg.id || `etapa-${index + 1}`;
 
-    const phase = document.createElement("span");
-    phase.className = "timeline-item__phase";
-    phase.textContent = milestone.phase || "";
+    const stage = document.createElement("span");
+    stage.className = "phase-stage";
+    stage.textContent = phaseCfg.stageLabel || `Etapa ${index + 1}`;
 
-    const titleEl = document.createElement("span");
-    titleEl.className = "timeline-item__title";
-    titleEl.textContent = milestone.title || "";
+    const period = document.createElement("p");
+    period.className = "phase-period";
 
-    item.appendChild(phase);
+    const periodTime = document.createElement("time");
+    periodTime.textContent = phaseCfg.periodLabel || "";
+    if (phaseCfg.startDate && phaseCfg.endDate) {
+      periodTime.dateTime = `${phaseCfg.startDate}/${phaseCfg.endDate}`;
+    } else if (phaseCfg.startDate) {
+      periodTime.dateTime = phaseCfg.startDate;
+    }
+    period.appendChild(periodTime);
+
+    const titleEl = document.createElement("h3");
+    titleEl.className = "phase-title";
+    titleEl.textContent = phaseCfg.title || "";
+
+    const objective = document.createElement("p");
+    objective.className = "phase-objective";
+    const objectiveLabel = document.createElement("strong");
+    objectiveLabel.textContent = "Objetivo:";
+    objective.appendChild(objectiveLabel);
+    objective.appendChild(document.createTextNode(` ${phaseCfg.objective || ""}`));
+
+    const highlightsLabel = document.createElement("p");
+    highlightsLabel.className = "phase-highlights-label";
+    highlightsLabel.textContent = "Hitos clave";
+
+    const highlightsList = document.createElement("ul");
+    highlightsList.className = "phase-highlights";
+    (Array.isArray(phaseCfg.highlights) ? phaseCfg.highlights : [])
+      .slice(0, 3)
+      .forEach((highlight) => {
+        const li = document.createElement("li");
+        li.textContent = highlight;
+        highlightsList.appendChild(li);
+      });
+
+    item.appendChild(stage);
+    item.appendChild(period);
     item.appendChild(titleEl);
-
-    if (milestone.description) {
-      const desc = document.createElement("p");
-      desc.className = "timeline-item__desc";
-      desc.textContent = milestone.description;
-      item.appendChild(desc);
+    item.appendChild(objective);
+    if (highlightsList.children.length > 0) {
+      item.appendChild(highlightsLabel);
+      item.appendChild(highlightsList);
     }
 
-    if (Array.isArray(milestone.details) && milestone.details.length > 0) {
-      const detailList = document.createElement("ul");
-      detailList.className = "timeline-item__details";
+    if (Array.isArray(phaseCfg.details) && phaseCfg.details.length > 0) {
+      const details = document.createElement("details");
+      details.className = "phase-details";
 
-      milestone.details.forEach((detail) => {
+      const summary = document.createElement("summary");
+      summary.className = "phase-details__summary";
+      summary.textContent = "Ver detalles operativos";
+      details.appendChild(summary);
+
+      const detailList = document.createElement("ul");
+      detailList.className = "phase-details__list";
+
+      phaseCfg.details.forEach((detail) => {
         const detailItem = document.createElement("li");
         detailItem.textContent = detail;
         detailList.appendChild(detailItem);
       });
 
-      item.appendChild(detailList);
+      details.appendChild(detailList);
+      item.appendChild(details);
     }
 
     list.appendChild(item);
