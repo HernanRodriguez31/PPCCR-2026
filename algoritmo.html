@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Algoritmo / Criterios de Riesgo | PPCCR</title>
+    <meta
+      name="description"
+      content="Wizard clínico para criterios de riesgo y elegibilidad en el Programa de Prevención de Cáncer Colorrectal."
+    />
+    <link
+      rel="canonical"
+      href="https://programadeprevencion.com/algoritmo.html"
+    />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <link rel="icon" href="assets/favicon.png" />
+    <script src="host-guard.js"></script>
+    <link rel="stylesheet" href="algoritmo.css" />
+    <script src="algoritmo.js" defer></script>
+  </head>
+  <body>
+    <header class="page-header">
+      <div class="container page-header__inner">
+        <a class="link-back" href="/index.html#guias">Volver al portal</a>
+
+        <div class="brandline" aria-label="Programa PPCCR">
+          <img
+            src="assets/logo-ppccr.png"
+            alt="Programa de Prevención de Cáncer Colorrectal"
+            width="52"
+            height="52"
+          />
+          <p class="brandline__text">
+            Programa de Prevención de Cáncer Colorrectal
+          </p>
+        </div>
+
+        <h1 class="page-title">Algoritmo / Criterios de Riesgo</h1>
+        <p class="page-subtitle">
+          Entrevista estructurada para clasificación operativa del paciente.
+        </p>
+        <p class="page-disclaimer">
+          Herramienta de apoyo. No reemplaza criterio clínico.
+        </p>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="wizard-shell" aria-label="Wizard clínico de riesgo">
+        <nav aria-label="Progreso de pasos">
+          <ol class="stepper" id="stepper">
+            <li class="stepper__item">
+              <button
+                type="button"
+                class="stepper__button"
+                data-step-target="1"
+                aria-controls="step-1"
+              >
+                <span class="stepper__index" aria-hidden="true">1</span>
+                <span class="stepper__label">Edad</span>
+              </button>
+            </li>
+            <li class="stepper__item">
+              <button
+                type="button"
+                class="stepper__button"
+                data-step-target="2"
+                aria-controls="step-2"
+              >
+                <span class="stepper__index" aria-hidden="true">2</span>
+                <span class="stepper__label">Exclusiones</span>
+              </button>
+            </li>
+            <li class="stepper__item">
+              <button
+                type="button"
+                class="stepper__button"
+                data-step-target="3"
+                aria-controls="step-3"
+              >
+                <span class="stepper__index" aria-hidden="true">3</span>
+                <span class="stepper__label">Riesgo elevado</span>
+              </button>
+            </li>
+          </ol>
+        </nav>
+
+        <form id="risk-wizard" novalidate>
+          <section class="wizard-step" data-step="1" id="step-1">
+            <h2 class="step-title">Paso 1 — Edad</h2>
+            <p class="step-text">Criterio mínimo de inclusión: 50 años.</p>
+
+            <label class="field-label" for="edad-input">Edad del paciente</label>
+            <input
+              class="field-input"
+              id="edad-input"
+              name="edad"
+              type="number"
+              min="0"
+              max="120"
+              inputmode="numeric"
+              autocomplete="off"
+              required
+            />
+            <p class="field-feedback" id="edad-feedback" aria-live="polite"></p>
+
+            <article
+              class="status-card status-card--stop"
+              id="step1-stop"
+              role="alert"
+              hidden
+            >
+              <div class="status-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M8 8l8 8"></path>
+                  <path d="M16 8l-8 8"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="status-card__title">STOP de inclusión</h3>
+                <p class="status-card__text">
+                  No cumple criterio de inclusión por edad. Fin de la
+                  entrevista.
+                </p>
+              </div>
+            </article>
+
+            <div class="step-actions">
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="step1-next"
+                disabled
+              >
+                Continuar
+              </button>
+            </div>
+          </section>
+
+          <section class="wizard-step" data-step="2" id="step-2" hidden>
+            <h2 class="step-title">
+              Paso 2 — Exclusiones (ventana de vigilancia / seguimiento)
+            </h2>
+            <p class="step-text">Marcar solo si aplica.</p>
+
+            <fieldset class="check-group">
+              <legend class="sr-only">Exclusiones</legend>
+              <label class="check-item" for="exclusion-colonoscopia-normal">
+                <input
+                  type="checkbox"
+                  id="exclusion-colonoscopia-normal"
+                  class="exclusion-check"
+                  data-label="Colonoscopía normal en los últimos 10 años"
+                />
+                <span>Colonoscopía normal en los últimos 10 años</span>
+              </label>
+
+              <label class="check-item" for="exclusion-adenoma-bajo">
+                <input
+                  type="checkbox"
+                  id="exclusion-adenoma-bajo"
+                  class="exclusion-check"
+                  data-label="Adenomas bajo grado (pequeños) con vigilancia vigente (últimos 5 años)"
+                />
+                <span>
+                  Adenomas bajo grado (pequeños) con vigilancia vigente
+                  (últimos 5 años)
+                </span>
+              </label>
+
+              <label class="check-item" for="exclusion-adenoma-alto">
+                <input
+                  type="checkbox"
+                  id="exclusion-adenoma-alto"
+                  class="exclusion-check"
+                  data-label="Adenomas de alto riesgo con vigilancia vigente (últimos 3 años)"
+                />
+                <span>
+                  Adenomas de alto riesgo con vigilancia vigente (últimos 3
+                  años)
+                </span>
+              </label>
+
+              <label class="check-item" for="exclusion-polipos-grandes">
+                <input
+                  type="checkbox"
+                  id="exclusion-polipos-grandes"
+                  class="exclusion-check"
+                  data-label="Pólipos grandes / resección incompleta con control pendiente o reciente (últimos 6 meses)"
+                />
+                <span>
+                  Pólipos grandes / resección incompleta con control pendiente o
+                  reciente (últimos 6 meses)
+                </span>
+              </label>
+            </fieldset>
+
+            <article
+              class="status-card status-card--warning"
+              id="step2-stop"
+              role="alert"
+              hidden
+            >
+              <div class="status-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M12 3.5 21 20H3z"></path>
+                  <path d="M12 9v5"></path>
+                  <circle cx="12" cy="17.2" r="0.9"></circle>
+                </svg>
+              </div>
+              <div>
+                <h3 class="status-card__title">STOP por vigilancia vigente</h3>
+                <p class="status-card__text">
+                  Paciente en seguimiento activo o ventana de vigilancia
+                  vigente. No aplica al programa masivo.
+                </p>
+              </div>
+            </article>
+
+            <div class="step-actions">
+              <button
+                type="button"
+                class="btn btn-ghost"
+                id="step2-prev"
+                data-step-prev
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="step2-next"
+                disabled
+              >
+                Continuar
+              </button>
+            </div>
+          </section>
+
+          <section class="wizard-step" data-step="3" id="step-3" hidden>
+            <h2 class="step-title">
+              Paso 3 — Evaluación de Riesgo Elevado (Derivación directa)
+            </h2>
+            <p class="step-text">
+              Si se marca al menos un criterio, corresponde derivación primaria
+              a Colonoscopía (VCC).
+            </p>
+
+            <fieldset class="check-group">
+              <legend class="group-title">A) Antecedentes heredofamiliares</legend>
+              <label class="check-item" for="riesgo-familiar">
+                <input
+                  type="checkbox"
+                  id="riesgo-familiar"
+                  class="risk-check"
+                  data-label="Familiar 1º o 2º grado con Cáncer Colorrectal o Adenoma"
+                />
+                <span>
+                  Familiar 1º o 2º grado con Cáncer Colorrectal o Adenoma
+                </span>
+              </label>
+              <label class="check-item" for="riesgo-sindromes">
+                <input
+                  type="checkbox"
+                  id="riesgo-sindromes"
+                  class="risk-check"
+                  data-label="Síndromes hereditarios (FAP, Lynch)"
+                />
+                <span>Síndromes hereditarios (FAP, Lynch)</span>
+              </label>
+            </fieldset>
+
+            <fieldset class="check-group">
+              <legend class="group-title">B) Antecedentes personales</legend>
+              <label class="check-item" for="riesgo-eii">
+                <input
+                  type="checkbox"
+                  id="riesgo-eii"
+                  class="risk-check"
+                  data-label="Enfermedad inflamatoria intestinal (Colitis Ulcerosa / Crohn)"
+                />
+                <span>
+                  Enfermedad inflamatoria intestinal (Colitis Ulcerosa / Crohn)
+                </span>
+              </label>
+              <label class="check-item" for="riesgo-polipos-previos">
+                <input
+                  type="checkbox"
+                  id="riesgo-polipos-previos"
+                  class="risk-check"
+                  data-label="Pólipos adenomatosos previos (múltiples o grandes)"
+                />
+                <span>Pólipos adenomatosos previos (múltiples o grandes)</span>
+              </label>
+              <label class="check-item" for="riesgo-ccr-previo">
+                <input
+                  type="checkbox"
+                  id="riesgo-ccr-previo"
+                  class="risk-check"
+                  data-label="Cáncer colorrectal previo"
+                />
+                <span>Cáncer colorrectal previo</span>
+              </label>
+            </fieldset>
+
+            <fieldset class="check-group">
+              <legend class="group-title">C) Signos y síntomas de alerta</legend>
+              <label class="check-item" for="riesgo-fatiga">
+                <input
+                  type="checkbox"
+                  id="riesgo-fatiga"
+                  class="risk-check"
+                  data-label="Debilidad/fatiga marcada (sospecha de anemia)"
+                />
+                <span>Debilidad/fatiga marcada (sospecha de anemia)</span>
+              </label>
+              <label class="check-item" for="riesgo-dolor-abdominal">
+                <input
+                  type="checkbox"
+                  id="riesgo-dolor-abdominal"
+                  class="risk-check"
+                  data-label="Dolor o calambres abdominales persistentes"
+                />
+                <span>Dolor o calambres abdominales persistentes</span>
+              </label>
+              <label class="check-item" for="riesgo-sangrado">
+                <input
+                  type="checkbox"
+                  id="riesgo-sangrado"
+                  class="risk-check"
+                  data-label="Sangrado rectal (heces oscuras, mezcladas o goteo)"
+                />
+                <span>
+                  Sangrado rectal (heces oscuras, mezcladas o goteo)
+                </span>
+              </label>
+              <label class="check-item" for="riesgo-cambio-habito">
+                <input
+                  type="checkbox"
+                  id="riesgo-cambio-habito"
+                  class="risk-check"
+                  data-label="Cambio del hábito evacuatorio persistente (diarrea/estreñimiento)"
+                />
+                <span>
+                  Cambio del hábito evacuatorio persistente
+                  (diarrea/estreñimiento)
+                </span>
+              </label>
+              <label class="check-item" for="riesgo-heces-estrechas">
+                <input
+                  type="checkbox"
+                  id="riesgo-heces-estrechas"
+                  class="risk-check"
+                  data-label="Heces estrechas/acintadas"
+                />
+                <span>Heces estrechas/acintadas</span>
+              </label>
+              <label class="check-item" for="riesgo-perdida-peso">
+                <input
+                  type="checkbox"
+                  id="riesgo-perdida-peso"
+                  class="risk-check"
+                  data-label="Pérdida de peso no intencionada"
+                />
+                <span>Pérdida de peso no intencionada</span>
+              </label>
+            </fieldset>
+
+            <article
+              class="result-card result-card--fit"
+              id="risk-result"
+              role="status"
+              aria-live="polite"
+            >
+              <div class="result-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="m5 12 4.2 4.2L19 6.5"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="result-card__title" id="risk-result-title">
+                  RIESGO PROMEDIO → Candidato a Test FIT.
+                </h3>
+                <p class="result-card__text" id="risk-result-text">
+                  No se detectaron criterios de riesgo elevado en esta
+                  entrevista.
+                </p>
+              </div>
+            </article>
+
+            <div class="step-actions">
+              <button
+                type="button"
+                class="btn btn-ghost"
+                id="step3-prev"
+                data-step-prev
+              >
+                Volver
+              </button>
+            </div>
+          </section>
+        </form>
+
+        <section class="utility-panel" aria-label="Acciones de la evaluación">
+          <div class="utility-panel__actions">
+            <button type="button" class="btn btn-primary" id="copy-summary">
+              Copiar resumen
+            </button>
+            <button type="button" class="btn btn-secondary" id="reset-wizard">
+              Reiniciar
+            </button>
+            <a class="btn btn-ghost" href="/index.html#guias">Volver al portal</a>
+          </div>
+          <p class="copy-feedback" id="copy-feedback" aria-live="polite"></p>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

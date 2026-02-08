@@ -45,8 +45,8 @@ const CONFIG = {
       {
         key: "algoritmoRiesgo",
         title: "Algoritmo / Criterios de riesgo",
-        meta: "PDF / Documento",
-        url: "PEGAR_AQUI_URL_ALGORITMO_CRITERIOS_RIESGO",
+        meta: "Herramienta clínica",
+        url: "/algoritmo.html",
       },
       {
         key: "rolesResponsabilidades",
@@ -265,6 +265,19 @@ function isAnchor(url) {
   return typeof url === "string" && url.startsWith("#");
 }
 
+function isInternalPage(url) {
+  if (typeof url !== "string") return false;
+  const normalized = url.trim();
+  if (!normalized || isAnchor(normalized)) return false;
+
+  return (
+    normalized.startsWith("/") ||
+    normalized.startsWith("./") ||
+    normalized.startsWith("../") ||
+    /^[\w-]+\.html(?:[?#].*)?$/.test(normalized)
+  );
+}
+
 function safeSetLink(anchorEl, url, { newTab = false } = {}) {
   if (!anchorEl) return;
 
@@ -432,9 +445,8 @@ function renderGuides() {
     a.appendChild(icon);
     a.appendChild(text);
 
-    // Guías: si son documentos externos/PDF, suele convenir nueva pestaña.
-    // Si es ancla (#...), queda en la misma.
-    const openInNewTab = !isAnchor(g.url);
+    // Guías externas abren en nueva pestaña. Anclas y páginas internas no.
+    const openInNewTab = !isAnchor(g.url) && !isInternalPage(g.url);
     safeSetLink(a, g.url, { newTab: openInNewTab });
 
     if (!g.url || isPlaceholderUrl(g.url)) {
