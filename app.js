@@ -97,22 +97,22 @@ const CONFIG = {
           {
             key: "entregaKitFIT",
             label: "Entrega de Kit de FIT a pacientes",
-            url: "https://9kxsjveuebz.typeform.com/to/CA9UQXTK",
+            url: "https://kitfit.programadeprevencion.com",
           },
           {
             key: "recepcionMuestraFIT",
             label: "Recepción de Muestra de Test FIT",
-            url: "https://9kxsjveuebz.typeform.com/to/ICgvwiBh",
+            url: "https://recepcionmuestra.programadeprevencion.com",
           },
           {
             key: "envioMuestrasLaboratorio",
             label: "Envío de Muestras de FIT al Laboratorio",
-            url: "https://9kxsjveuebz.typeform.com/to/EDtlnghR",
+            url: "https://enviolab.programadeprevencion.com",
           },
           {
             key: "recepcionResultadosFIT",
             label: "Recepción de Resultados de FIT",
-            url: "https://9kxsjveuebz.typeform.com/to/zbS6LWx7",
+            url: "https://recepcionresultados.programadeprevencion.com",
           },
         ],
       },
@@ -124,12 +124,12 @@ const CONFIG = {
           {
             key: "entrevistaMedica",
             label: "Entrevista médica (presencial)",
-            url: "https://9kxsjveuebz.typeform.com/to/xP8fOLC4",
+            url: "https://entrevista.programadeprevencion.com",
           },
           {
             key: "informePacienteResultadoFIT",
             label: "Informe al paciente del resultado del Test FIT",
-            url: "https://9kxsjveuebz.typeform.com/to/CPDHPjyy",
+            url: "https://informeprograma.programadeprevencion.com",
           },
         ],
       },
@@ -141,7 +141,7 @@ const CONFIG = {
           {
             key: "evaluacionInicialSalud",
             label: "Formularios de evaluación inicial de salud",
-            url: "https://9kxsjveuebz.typeform.com/to/X2jtQ7NT",
+            url: "https://cuestionario.programadeprevencion.com",
           },
         ],
       },
@@ -385,14 +385,22 @@ function renderGuides() {
   if (!grid) return;
 
   const iconMap = {
-    estructuraPrograma: "📁",
-    algoritmoRiesgo: "🧭",
-    rolesResponsabilidades: "👥",
-    manejoKitFIT: "🧪",
-    entregaMuestras: "📦",
-    workflow: "🔁",
-    kpis: "📊",
-    reporteConsolidado: "🧾",
+    estructuraPrograma:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 7.4a1.9 1.9 0 0 1 1.9-1.9h4l1.3 1.3h7.8a1.9 1.9 0 0 1 1.9 1.9v8.8a1.9 1.9 0 0 1-1.9 1.9H5.4a1.9 1.9 0 0 1-1.9-1.9z"></path><path d="M8 12h8"></path></svg>',
+    algoritmoRiesgo:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.2"></circle><path d="M12 12 16 9"></path><circle cx="12" cy="12" r="1.2"></circle><path d="M12 5.5v1.3"></path><path d="M18.5 12h-1.3"></path></svg>',
+    rolesResponsabilidades:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="8.2" cy="9" r="2.4"></circle><circle cx="15.8" cy="9" r="2.4"></circle><path d="M4.8 16.8a3.4 3.4 0 0 1 6.8 0"></path><path d="M12.4 16.8a3.4 3.4 0 0 1 6.8 0"></path></svg>',
+    manejoKitFIT:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7.8 7.3h8.4"></path><path d="M8.6 7.3v3.5l-2.8 4.8A4.7 4.7 0 0 0 9.9 22h4.2a4.7 4.7 0 0 0 4.1-6.4l-2.8-4.8V7.3"></path><path d="M9.1 14.2h5.8"></path></svg>',
+    entregaMuestras:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 3.6 7.2 4.1v8.2L12 20l-7.2-4.1V7.7z"></path><path d="m12 3.6 7.2 4.1L12 11.8 4.8 7.7z"></path><path d="M12 11.8V20"></path></svg>',
+    workflow:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4.5" y="5" width="15" height="14" rx="2.5"></rect><path d="M8.5 9.2h7"></path><path d="M8.5 12h4.8"></path><path d="m9.1 15.2 1.8 1.7 3.9-3.9"></path></svg>',
+    kpis:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19.5h16"></path><rect x="5.5" y="10.5" width="3.2" height="7" rx="1"></rect><rect x="10.4" y="7.8" width="3.2" height="9.7" rx="1"></rect><rect x="15.3" y="5.5" width="3.2" height="12" rx="1"></rect></svg>',
+    reporteConsolidado:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5.2" y="4.3" width="13.6" height="15.4" rx="2"></rect><path d="M8.5 8.3h7"></path><path d="M8.5 11.5h7"></path><path d="M8.5 14.7h5.2"></path></svg>',
   };
 
   CONFIG.links.guias.forEach((g) => {
@@ -403,7 +411,9 @@ function renderGuides() {
     const icon = document.createElement("span");
     icon.className = "pill__icon";
     icon.setAttribute("aria-hidden", "true");
-    icon.textContent = iconMap[g.key] || "📄";
+    icon.innerHTML =
+      iconMap[g.key] ||
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="4.5" width="12" height="15" rx="2"></rect><path d="M9 9h6"></path><path d="M9 12.5h6"></path></svg>';
 
     const text = document.createElement("span");
     text.className = "pill__text";
