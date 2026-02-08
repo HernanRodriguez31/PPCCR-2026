@@ -18,81 +18,108 @@
     <link rel="stylesheet" href="algoritmo.css" />
     <script src="algoritmo.js" defer></script>
   </head>
-  <body>
-    <header class="page-header">
-      <div class="container page-header__inner">
-        <a class="link-back" href="/index.html#guias">Volver al portal</a>
+  <body class="page-algoritmo">
+    <header class="page-algoritmo__header">
+      <div class="page-algoritmo__container page-algoritmo__header-inner">
+        <a class="page-algoritmo__portal-link" href="/index.html#guias"
+          >Volver al portal</a
+        >
 
-        <div class="brandline" aria-label="Programa PPCCR">
+        <div class="page-algoritmo__brandline" aria-label="Programa PPCCR">
           <img
-            src="assets/logo-ppccr.png"
-            alt="Programa de Prevención de Cáncer Colorrectal"
-            width="52"
-            height="52"
+            class="page-algoritmo__brand-logo"
+            src="assets/logo-cinta-azul.png"
+            alt="Cinta azul de concientización"
+            width="60"
+            height="60"
+            decoding="async"
           />
-          <p class="brandline__text">
+          <p class="page-algoritmo__program-name">
             Programa de Prevención de Cáncer Colorrectal
           </p>
         </div>
 
-        <h1 class="page-title">Algoritmo / Criterios de Riesgo</h1>
-        <p class="page-subtitle">
+        <h1 class="page-algoritmo__title">Algoritmo / Criterios de Riesgo</h1>
+        <p class="page-algoritmo__subtitle">
           Entrevista estructurada para clasificación operativa del paciente.
-        </p>
-        <p class="page-disclaimer">
-          Herramienta de apoyo. No reemplaza criterio clínico.
         </p>
       </div>
     </header>
 
-    <main class="container">
-      <section class="wizard-shell" aria-label="Wizard clínico de riesgo">
+    <main class="page-algoritmo__container page-algoritmo__main">
+      <section class="page-algoritmo__wizard" aria-label="Wizard clínico de riesgo">
         <nav aria-label="Progreso de pasos">
-          <ol class="stepper" id="stepper">
-            <li class="stepper__item">
+          <ol class="page-algoritmo__stepper" id="stepper">
+            <li class="page-algoritmo__stepper-item">
               <button
                 type="button"
-                class="stepper__button"
+                class="page-algoritmo__stepper-button"
                 data-step-target="1"
                 aria-controls="step-1"
               >
-                <span class="stepper__index" aria-hidden="true">1</span>
-                <span class="stepper__label">Edad</span>
+                <span class="page-algoritmo__stepper-index" aria-hidden="true">1</span>
+                <span class="page-algoritmo__stepper-label">Criterio por Edad</span>
               </button>
             </li>
-            <li class="stepper__item">
+            <li class="page-algoritmo__stepper-item">
               <button
                 type="button"
-                class="stepper__button"
+                class="page-algoritmo__stepper-button"
                 data-step-target="2"
                 aria-controls="step-2"
               >
-                <span class="stepper__index" aria-hidden="true">2</span>
-                <span class="stepper__label">Exclusiones</span>
+                <span class="page-algoritmo__stepper-index" aria-hidden="true">2</span>
+                <span class="page-algoritmo__stepper-label">Vigilancia</span>
               </button>
             </li>
-            <li class="stepper__item">
+            <li class="page-algoritmo__stepper-item">
               <button
                 type="button"
-                class="stepper__button"
+                class="page-algoritmo__stepper-button"
                 data-step-target="3"
                 aria-controls="step-3"
               >
-                <span class="stepper__index" aria-hidden="true">3</span>
-                <span class="stepper__label">Riesgo elevado</span>
+                <span class="page-algoritmo__stepper-index" aria-hidden="true">3</span>
+                <span class="page-algoritmo__stepper-label"
+                  >Criterios de Riesgo Elevado</span
+                >
               </button>
             </li>
           </ol>
         </nav>
 
         <form id="risk-wizard" novalidate>
-          <section class="wizard-step" data-step="1" id="step-1">
-            <h2 class="step-title">Paso 1 — Edad</h2>
-            <p class="step-text">Criterio mínimo de inclusión: 50 años.</p>
+          <section class="page-algoritmo__step" data-step="1" id="step-1">
+            <h2 class="page-algoritmo__step-title">Paso 1 — Criterio por Edad</h2>
+            <p class="page-algoritmo__step-text" id="step1-threshold-copy">
+              Criterio mínimo de inclusión: 50 años.
+            </p>
 
-            <label class="field-label" for="edad-input">Edad del paciente</label>
+            <div class="page-algoritmo__switch-block">
+              <label class="page-algoritmo__switch-field" for="criterion45-switch">
+                <input
+                  type="checkbox"
+                  id="criterion45-switch"
+                  aria-describedby="criterion45-help"
+                />
+                <span class="page-algoritmo__switch-ui" aria-hidden="true">
+                  <span class="page-algoritmo__switch-thumb"></span>
+                </span>
+                <span class="page-algoritmo__switch-text"
+                  >Uso de nuevo criterio de inclusión a partir de los 45 años de
+                  edad</span
+                >
+              </label>
+              <p class="page-algoritmo__switch-help" id="criterion45-help">
+                Criterio actual: inclusión desde 50 años.
+              </p>
+            </div>
+
+            <label class="page-algoritmo__field-label" for="edad-input"
+              >Edad del paciente</label
+            >
             <input
-              class="field-input"
+              class="page-algoritmo__field-input"
               id="edad-input"
               name="edad"
               type="number"
@@ -102,15 +129,19 @@
               autocomplete="off"
               required
             />
-            <p class="field-feedback" id="edad-feedback" aria-live="polite"></p>
+            <p
+              class="page-algoritmo__field-feedback"
+              id="edad-feedback"
+              aria-live="polite"
+            ></p>
 
             <article
-              class="status-card status-card--stop"
+              class="page-algoritmo__status-banner page-algoritmo__status-banner--danger"
               id="step1-stop"
               role="alert"
               hidden
             >
-              <div class="status-card__icon" aria-hidden="true">
+              <div class="page-algoritmo__status-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
                   <circle cx="12" cy="12" r="10"></circle>
                   <path d="M8 8l8 8"></path>
@@ -118,35 +149,65 @@
                 </svg>
               </div>
               <div>
-                <h3 class="status-card__title">STOP de inclusión</h3>
-                <p class="status-card__text">
-                  No cumple criterio de inclusión por edad. Fin de la
+                <h3 class="page-algoritmo__status-title">STOP de inclusión</h3>
+                <p class="page-algoritmo__status-text" id="step1-stop-text">
+                  No cumple criterio de inclusión por edad (&lt;50). Fin de la
                   entrevista.
+                </p>
+                <p class="page-algoritmo__status-note">
+                  No es necesario continuar el algoritmo.
                 </p>
               </div>
             </article>
 
-            <div class="step-actions">
+            <article
+              class="page-algoritmo__status-banner page-algoritmo__status-banner--success"
+              id="step1-ok"
+              role="status"
+              hidden
+            >
+              <div class="page-algoritmo__status-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="m5 12 4.2 4.2L19 6.5"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="page-algoritmo__status-title">Criterio cumplido</h3>
+                <p class="page-algoritmo__status-text" id="step1-ok-text">
+                  Cumple criterio de inclusión (≥50). Puede continuar.
+                </p>
+              </div>
+            </article>
+
+            <div class="page-algoritmo__actions">
               <button
                 type="button"
-                class="btn btn-primary"
+                class="page-algoritmo__btn page-algoritmo__btn--primary"
                 id="step1-next"
-                disabled
+                hidden
               >
                 Continuar
               </button>
             </div>
           </section>
 
-          <section class="wizard-step" data-step="2" id="step-2" hidden>
-            <h2 class="step-title">
-              Paso 2 — Exclusiones (ventana de vigilancia / seguimiento)
+          <section
+            class="page-algoritmo__step"
+            data-step="2"
+            id="step-2"
+            hidden
+          >
+            <h2 class="page-algoritmo__step-title">
+              Paso 2 – Criterios de Vigilancia Activa
             </h2>
-            <p class="step-text">Marcar solo si aplica.</p>
+            <p class="page-algoritmo__step-text">Marcar solo si aplica.</p>
 
-            <fieldset class="check-group">
-              <legend class="sr-only">Exclusiones</legend>
-              <label class="check-item" for="exclusion-colonoscopia-normal">
+            <fieldset class="page-algoritmo__check-group">
+              <legend class="page-algoritmo__sr-only">
+                Otros criterios de exclusión
+              </legend>
+
+              <label class="page-algoritmo__check-item" for="exclusion-colonoscopia-normal">
                 <input
                   type="checkbox"
                   id="exclusion-colonoscopia-normal"
@@ -156,53 +217,72 @@
                 <span>Colonoscopía normal en los últimos 10 años</span>
               </label>
 
-              <label class="check-item" for="exclusion-adenoma-bajo">
+              <label class="page-algoritmo__check-item" for="exclusion-adenoma-bajo">
                 <input
                   type="checkbox"
                   id="exclusion-adenoma-bajo"
                   class="exclusion-check"
-                  data-label="Adenomas bajo grado (pequeños) con vigilancia vigente (últimos 5 años)"
+                  data-label="Colonoscopía con adenomas bajo grado (pequeños) con vigilancia vigente (últimos 5 años)"
                 />
                 <span>
-                  Adenomas bajo grado (pequeños) con vigilancia vigente
-                  (últimos 5 años)
+                  Colonoscopía con adenomas bajo grado (pequeños) con vigilancia
+                  vigente (últimos 5 años)
                 </span>
               </label>
 
-              <label class="check-item" for="exclusion-adenoma-alto">
+              <label class="page-algoritmo__check-item" for="exclusion-adenoma-alto">
                 <input
                   type="checkbox"
                   id="exclusion-adenoma-alto"
                   class="exclusion-check"
-                  data-label="Adenomas de alto riesgo con vigilancia vigente (últimos 3 años)"
+                  data-label="Colonoscopía con adenomas de alto riesgo con vigilancia vigente (últimos 3 años)"
                 />
                 <span>
-                  Adenomas de alto riesgo con vigilancia vigente (últimos 3
-                  años)
+                  Colonoscopía con adenomas de alto riesgo con vigilancia vigente
+                  (últimos 3 años)
                 </span>
               </label>
 
-              <label class="check-item" for="exclusion-polipos-grandes">
+              <label class="page-algoritmo__check-item" for="exclusion-polipos-grandes">
                 <input
                   type="checkbox"
                   id="exclusion-polipos-grandes"
                   class="exclusion-check"
-                  data-label="Pólipos grandes / resección incompleta con control pendiente o reciente (últimos 6 meses)"
+                  data-label="Colonoscopía con pólipos grandes / resección incompleta con control pendiente o reciente (últimos 6 meses)"
                 />
                 <span>
-                  Pólipos grandes / resección incompleta con control pendiente o
-                  reciente (últimos 6 meses)
+                  Colonoscopía con pólipos grandes / resección incompleta con
+                  control pendiente o reciente (últimos 6 meses)
                 </span>
               </label>
             </fieldset>
 
             <article
-              class="status-card status-card--warning"
+              class="page-algoritmo__status-banner page-algoritmo__status-banner--success"
+              id="step2-ok"
+              role="status"
+              hidden
+            >
+              <div class="page-algoritmo__status-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="m5 12 4.2 4.2L19 6.5"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="page-algoritmo__status-title">Sin exclusión activa</h3>
+                <p class="page-algoritmo__status-text">
+                  Sin criterios de exclusión. Continuar a evaluación de riesgo.
+                </p>
+              </div>
+            </article>
+
+            <article
+              class="page-algoritmo__status-banner page-algoritmo__status-banner--warning"
               id="step2-stop"
               role="alert"
               hidden
             >
-              <div class="status-card__icon" aria-hidden="true">
+              <div class="page-algoritmo__status-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
                   <path d="M12 3.5 21 20H3z"></path>
                   <path d="M12 9v5"></path>
@@ -210,46 +290,52 @@
                 </svg>
               </div>
               <div>
-                <h3 class="status-card__title">STOP por vigilancia vigente</h3>
-                <p class="status-card__text">
-                  Paciente en seguimiento activo o ventana de vigilancia
-                  vigente. No aplica al programa masivo.
+                <h3 class="page-algoritmo__status-title">STOP por vigilancia</h3>
+                <p class="page-algoritmo__status-text">
+                  Paciente en seguimiento activo / ventana de vigilancia vigente.
+                  No aplica al programa masivo.
                 </p>
               </div>
             </article>
 
-            <div class="step-actions">
+            <div class="page-algoritmo__actions">
               <button
                 type="button"
-                class="btn btn-ghost"
+                class="page-algoritmo__btn page-algoritmo__btn--ghost"
                 id="step2-prev"
-                data-step-prev
               >
                 Volver
               </button>
               <button
                 type="button"
-                class="btn btn-primary"
+                class="page-algoritmo__btn page-algoritmo__btn--primary"
                 id="step2-next"
-                disabled
+                hidden
               >
                 Continuar
               </button>
             </div>
           </section>
 
-          <section class="wizard-step" data-step="3" id="step-3" hidden>
-            <h2 class="step-title">
-              Paso 3 — Evaluación de Riesgo Elevado (Derivación directa)
+          <section
+            class="page-algoritmo__step"
+            data-step="3"
+            id="step-3"
+            hidden
+          >
+            <h2 class="page-algoritmo__step-title">
+              Paso 3 — Criterios de Riesgo Elevado
             </h2>
-            <p class="step-text">
+            <p class="page-algoritmo__step-text">
               Si se marca al menos un criterio, corresponde derivación primaria
               a Colonoscopía (VCC).
             </p>
 
-            <fieldset class="check-group">
-              <legend class="group-title">A) Antecedentes heredofamiliares</legend>
-              <label class="check-item" for="riesgo-familiar">
+            <fieldset class="page-algoritmo__check-group">
+              <legend class="page-algoritmo__group-title">
+                A) Antecedentes heredofamiliares
+              </legend>
+              <label class="page-algoritmo__check-item" for="riesgo-familiar">
                 <input
                   type="checkbox"
                   id="riesgo-familiar"
@@ -260,7 +346,7 @@
                   Familiar 1º o 2º grado con Cáncer Colorrectal o Adenoma
                 </span>
               </label>
-              <label class="check-item" for="riesgo-sindromes">
+              <label class="page-algoritmo__check-item" for="riesgo-sindromes">
                 <input
                   type="checkbox"
                   id="riesgo-sindromes"
@@ -271,9 +357,11 @@
               </label>
             </fieldset>
 
-            <fieldset class="check-group">
-              <legend class="group-title">B) Antecedentes personales</legend>
-              <label class="check-item" for="riesgo-eii">
+            <fieldset class="page-algoritmo__check-group">
+              <legend class="page-algoritmo__group-title">
+                B) Antecedentes personales
+              </legend>
+              <label class="page-algoritmo__check-item" for="riesgo-eii">
                 <input
                   type="checkbox"
                   id="riesgo-eii"
@@ -284,7 +372,7 @@
                   Enfermedad inflamatoria intestinal (Colitis Ulcerosa / Crohn)
                 </span>
               </label>
-              <label class="check-item" for="riesgo-polipos-previos">
+              <label class="page-algoritmo__check-item" for="riesgo-polipos-previos">
                 <input
                   type="checkbox"
                   id="riesgo-polipos-previos"
@@ -293,7 +381,7 @@
                 />
                 <span>Pólipos adenomatosos previos (múltiples o grandes)</span>
               </label>
-              <label class="check-item" for="riesgo-ccr-previo">
+              <label class="page-algoritmo__check-item" for="riesgo-ccr-previo">
                 <input
                   type="checkbox"
                   id="riesgo-ccr-previo"
@@ -304,9 +392,11 @@
               </label>
             </fieldset>
 
-            <fieldset class="check-group">
-              <legend class="group-title">C) Signos y síntomas de alerta</legend>
-              <label class="check-item" for="riesgo-fatiga">
+            <fieldset class="page-algoritmo__check-group">
+              <legend class="page-algoritmo__group-title">
+                C) Signos y síntomas de alerta
+              </legend>
+              <label class="page-algoritmo__check-item" for="riesgo-fatiga">
                 <input
                   type="checkbox"
                   id="riesgo-fatiga"
@@ -315,7 +405,7 @@
                 />
                 <span>Debilidad/fatiga marcada (sospecha de anemia)</span>
               </label>
-              <label class="check-item" for="riesgo-dolor-abdominal">
+              <label class="page-algoritmo__check-item" for="riesgo-dolor-abdominal">
                 <input
                   type="checkbox"
                   id="riesgo-dolor-abdominal"
@@ -324,7 +414,7 @@
                 />
                 <span>Dolor o calambres abdominales persistentes</span>
               </label>
-              <label class="check-item" for="riesgo-sangrado">
+              <label class="page-algoritmo__check-item" for="riesgo-sangrado">
                 <input
                   type="checkbox"
                   id="riesgo-sangrado"
@@ -335,7 +425,7 @@
                   Sangrado rectal (heces oscuras, mezcladas o goteo)
                 </span>
               </label>
-              <label class="check-item" for="riesgo-cambio-habito">
+              <label class="page-algoritmo__check-item" for="riesgo-cambio-habito">
                 <input
                   type="checkbox"
                   id="riesgo-cambio-habito"
@@ -347,7 +437,7 @@
                   (diarrea/estreñimiento)
                 </span>
               </label>
-              <label class="check-item" for="riesgo-heces-estrechas">
+              <label class="page-algoritmo__check-item" for="riesgo-heces-estrechas">
                 <input
                   type="checkbox"
                   id="riesgo-heces-estrechas"
@@ -356,7 +446,7 @@
                 />
                 <span>Heces estrechas/acintadas</span>
               </label>
-              <label class="check-item" for="riesgo-perdida-peso">
+              <label class="page-algoritmo__check-item" for="riesgo-perdida-peso">
                 <input
                   type="checkbox"
                   id="riesgo-perdida-peso"
@@ -368,53 +458,153 @@
             </fieldset>
 
             <article
-              class="result-card result-card--fit"
+              class="page-algoritmo__result-card page-algoritmo__result-card--fit"
               id="risk-result"
               role="status"
               aria-live="polite"
             >
-              <div class="result-card__icon" aria-hidden="true">
+              <div class="page-algoritmo__result-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
                   <path d="m5 12 4.2 4.2L19 6.5"></path>
                 </svg>
               </div>
               <div>
-                <h3 class="result-card__title" id="risk-result-title">
+                <h3 class="page-algoritmo__result-title" id="risk-result-title">
                   RIESGO PROMEDIO → Candidato a Test FIT.
                 </h3>
-                <p class="result-card__text" id="risk-result-text">
+                <p class="page-algoritmo__result-text" id="risk-result-text">
                   No se detectaron criterios de riesgo elevado en esta
                   entrevista.
                 </p>
               </div>
             </article>
-
-            <div class="step-actions">
-              <button
-                type="button"
-                class="btn btn-ghost"
-                id="step3-prev"
-                data-step-prev
-              >
-                Volver
-              </button>
-            </div>
           </section>
         </form>
 
-        <section class="utility-panel" aria-label="Acciones de la evaluación">
-          <div class="utility-panel__actions">
-            <button type="button" class="btn btn-primary" id="copy-summary">
-              Copiar resumen
+        <section class="page-algoritmo__utility" aria-label="Acciones de la evaluación">
+          <div class="page-algoritmo__utility-actions">
+            <button
+              type="button"
+              class="page-algoritmo__btn page-algoritmo__btn--primary"
+              id="copy-summary"
+            >
+              Ver Resultado
             </button>
-            <button type="button" class="btn btn-secondary" id="reset-wizard">
+            <button
+              type="button"
+              class="page-algoritmo__btn page-algoritmo__btn--secondary"
+              id="reset-wizard"
+            >
               Reiniciar
             </button>
-            <a class="btn btn-ghost" href="/index.html#guias">Volver al portal</a>
+            <a
+              class="page-algoritmo__btn page-algoritmo__btn--ghost"
+              href="/index.html#guias"
+              >Volver al portal</a
+            >
           </div>
-          <p class="copy-feedback" id="copy-feedback" aria-live="polite"></p>
         </section>
       </section>
     </main>
+
+    <div class="page-algoritmo__modal" id="summary-modal" hidden aria-hidden="true">
+      <div class="page-algoritmo__modal-overlay" data-modal-close="true"></div>
+      <div
+        class="page-algoritmo__modal-dialog"
+        id="summary-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="summary-modal-title"
+        tabindex="-1"
+      >
+        <header class="page-algoritmo__modal-header">
+          <div class="page-algoritmo__modal-brand">
+            <img
+              src="assets/logo-cinta-azul.png"
+              alt="Cinta azul"
+              width="42"
+              height="42"
+              decoding="async"
+            />
+            <div>
+              <h2 id="summary-modal-title" class="page-algoritmo__modal-title">
+                Resumen de clasificación
+              </h2>
+              <p class="page-algoritmo__modal-subtitle">
+                Programa de Prevención de Cáncer Colorrectal
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="page-algoritmo__icon-close"
+            data-modal-close="true"
+            aria-label="Cerrar resumen"
+          >
+            ×
+          </button>
+        </header>
+
+        <div class="page-algoritmo__modal-body">
+          <dl class="page-algoritmo__summary-list">
+            <div class="page-algoritmo__summary-row">
+              <dt>Edad ingresada</dt>
+              <dd id="summary-age">-</dd>
+            </div>
+            <div class="page-algoritmo__summary-row">
+              <dt>Estado Paso 1</dt>
+              <dd id="summary-step1">-</dd>
+            </div>
+            <div class="page-algoritmo__summary-row">
+              <dt>Estado Paso 2</dt>
+              <dd id="summary-step2">-</dd>
+            </div>
+            <div class="page-algoritmo__summary-row">
+              <dt>Resultado final</dt>
+              <dd id="summary-final">-</dd>
+            </div>
+          </dl>
+
+          <div
+            class="page-algoritmo__decision-pill page-algoritmo__decision-pill--neutral"
+            id="summary-decision-pill"
+            role="status"
+            aria-live="polite"
+          >
+            Entrevista incompleta.
+          </div>
+          <p
+            class="page-algoritmo__modal-toast"
+            id="summary-modal-toast"
+            aria-live="polite"
+          ></p>
+        </div>
+
+        <footer class="page-algoritmo__modal-actions">
+          <button
+            type="button"
+            class="page-algoritmo__btn page-algoritmo__btn--secondary"
+            id="modal-copy-text"
+          >
+            Copiar texto
+          </button>
+          <button
+            type="button"
+            class="page-algoritmo__btn page-algoritmo__btn--primary"
+            id="modal-download-image"
+          >
+            Descargar imagen
+          </button>
+          <button
+            type="button"
+            class="page-algoritmo__btn page-algoritmo__btn--ghost"
+            id="modal-close"
+            data-modal-close="true"
+          >
+            Cerrar
+          </button>
+        </footer>
+      </div>
+    </div>
   </body>
 </html>

@@ -6,8 +6,14 @@ const STEP = {
   RISK: 3,
 };
 
+const CRITERIA_AGE = {
+  DEFAULT: 50,
+  NEW: 45,
+};
+
 const ui = {};
 let currentStep = STEP.AGE;
+let lastFocusedBeforeModal = null;
 
 document.addEventListener("DOMContentLoaded", initWizard);
 
@@ -19,30 +25,49 @@ function initWizard() {
 
 function captureElements() {
   ui.form = document.getElementById("risk-wizard");
-  ui.steps = Array.from(document.querySelectorAll(".wizard-step[data-step]"));
+  ui.steps = Array.from(document.querySelectorAll(".page-algoritmo__step[data-step]"));
   ui.stepperButtons = Array.from(
-    document.querySelectorAll(".stepper__button[data-step-target]"),
+    document.querySelectorAll(".page-algoritmo__stepper-button[data-step-target]"),
   );
 
   ui.ageInput = document.getElementById("edad-input");
   ui.ageFeedback = document.getElementById("edad-feedback");
+  ui.step1ThresholdCopy = document.getElementById("step1-threshold-copy");
+  ui.criterionSwitch = document.getElementById("criterion45-switch");
+  ui.criterionHelp = document.getElementById("criterion45-help");
+
   ui.step1Stop = document.getElementById("step1-stop");
+  ui.step1StopText = document.getElementById("step1-stop-text");
+  ui.step1Ok = document.getElementById("step1-ok");
+  ui.step1OkText = document.getElementById("step1-ok-text");
   ui.step1Next = document.getElementById("step1-next");
 
   ui.exclusionChecks = Array.from(document.querySelectorAll(".exclusion-check"));
+  ui.step2Ok = document.getElementById("step2-ok");
   ui.step2Stop = document.getElementById("step2-stop");
   ui.step2Prev = document.getElementById("step2-prev");
   ui.step2Next = document.getElementById("step2-next");
 
   ui.riskChecks = Array.from(document.querySelectorAll(".risk-check"));
-  ui.step3Prev = document.getElementById("step3-prev");
   ui.riskResult = document.getElementById("risk-result");
   ui.riskResultTitle = document.getElementById("risk-result-title");
   ui.riskResultText = document.getElementById("risk-result-text");
 
-  ui.copyButton = document.getElementById("copy-summary");
+  ui.openSummaryModalButton = document.getElementById("copy-summary");
   ui.resetButton = document.getElementById("reset-wizard");
-  ui.copyFeedback = document.getElementById("copy-feedback");
+
+  ui.summaryModal = document.getElementById("summary-modal");
+  ui.summaryDialog = document.getElementById("summary-modal-dialog");
+  ui.modalCopyButton = document.getElementById("modal-copy-text");
+  ui.modalDownloadButton = document.getElementById("modal-download-image");
+  ui.modalCloseButton = document.getElementById("modal-close");
+  ui.modalToast = document.getElementById("summary-modal-toast");
+
+  ui.summaryAge = document.getElementById("summary-age");
+  ui.summaryStep1 = document.getElementById("summary-step1");
+  ui.summaryStep2 = document.getElementById("summary-step2");
+  ui.summaryFinal = document.getElementById("summary-final");
+  ui.summaryDecisionPill = document.getElementById("summary-decision-pill");
 }
 
 function bindEvents() {
@@ -51,24 +76,28 @@ function bindEvents() {
     refreshWizardState();
   });
 
+  ui.criterionSwitch.addEventListener("change", refreshWizardState);
+
   ui.step1Next.addEventListener("click", () => {
-    if (isAgeEligible()) goToStep(STEP.EXCLUSIONS);
+    if (isAgeEligible()) {
+      goToStep(STEP.EXCLUSIONS);
+    }
   });
 
-  ui.exclusionChecks.forEach((check) => {
-    check.addEventListener("change", refreshWizardState);
+  ui.exclusionChecks.forEach((checkbox) => {
+    checkbox.addEventListener("change", refreshWizardState);
   });
 
   ui.step2Prev.addEventListener("click", () => goToStep(STEP.AGE));
   ui.step2Next.addEventListener("click", () => {
-    if (canProceedFromExclusions()) goToStep(STEP.RISK);
+    if (canProceedFromExclusions()) {
+      goToStep(STEP.RISK);
+    }
   });
 
-  ui.riskChecks.forEach((check) => {
-    check.addEventListener("change", refreshWizardState);
+  ui.riskChecks.forEach((checkbox) => {
+    checkbox.addEventListener("change", refreshWizardState);
   });
-
-  ui.step3Prev.addEventListener("click", () => goToStep(STEP.EXCLUSIONS));
 
   ui.stepperButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -78,8 +107,30 @@ function bindEvents() {
     });
   });
 
-  ui.copyButton.addEventListener("click", copySummaryToClipboard);
+  ui.openSummaryModalButton.addEventListener("click", openSummaryModal);
   ui.resetButton.addEventListener("click", resetWizard);
+
+  ui.summaryModal.addEventListener("click", (event) => {
+    const closeTrigger = event.target.closest("[data-modal-close='true']");
+    if (closeTrigger) closeSummaryModal();
+  });
+
+  ui.modalCopyButton.addEventListener("click", copySummaryTextFromModal);
+  ui.modalDownloadButton.addEventListener("click", downloadSummaryImage);
+  ui.modalCloseButton.addEventListener("click", closeSummaryModal);
+}
+
+function getInclusionThreshold() {
+  return ui.criterionSwitch.checked ? CRITERIA_AGE.NEW : CRITERIA_AGE.DEFAULT;
+}
+
+function parseAge() {
+  const raw = String(ui.ageInput.value || "").trim();
+  if (raw === "") return null;
+
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return null;
+  return value;
 }
 
 function sanitizeAge() {
@@ -91,15 +142,6 @@ function sanitizeAge() {
   } else if (age > 120) {
     ui.ageInput.value = "120";
   }
-}
-
-function parseAge() {
-  const raw = String(ui.ageInput.value || "").trim();
-  if (raw === "") return null;
-
-  const value = Number(raw);
-  if (!Number.isFinite(value)) return null;
-  return value;
 }
 
 function getSelectedLabels(inputs) {
@@ -116,7 +158,7 @@ function hasSelectedRisk() {
 
 function isAgeEligible() {
   const age = parseAge();
-  return age !== null && age >= 50;
+  return age !== null && age >= getInclusionThreshold();
 }
 
 function canProceedFromExclusions() {
@@ -134,16 +176,15 @@ function goToStep(targetStep) {
   if (!Number.isFinite(normalizedStep)) return;
 
   const boundedStep = Math.min(Math.max(normalizedStep, STEP.AGE), STEP.RISK);
-  const maxAllowedStep = getMaxAllowedStep();
-  currentStep = Math.min(boundedStep, maxAllowedStep);
+  currentStep = Math.min(boundedStep, getMaxAllowedStep());
   renderSteps();
   renderStepper();
 }
 
 function refreshWizardState() {
-  renderStep1Validation();
-  renderStep2Validation();
-  renderRiskResult();
+  renderStep1State();
+  renderStep2State();
+  renderStep3State();
 
   const maxAllowedStep = getMaxAllowedStep();
   if (currentStep > maxAllowedStep) {
@@ -154,54 +195,74 @@ function refreshWizardState() {
   renderStepper();
 }
 
-function renderStep1Validation() {
+function renderStep1State() {
   const age = parseAge();
+  const threshold = getInclusionThreshold();
+
+  ui.step1ThresholdCopy.textContent = `Criterio mínimo de inclusión: ${threshold} años.`;
+  ui.criterionHelp.textContent =
+    threshold === CRITERIA_AGE.NEW
+      ? "Criterio actual: inclusión desde 45 años."
+      : "Criterio actual: inclusión desde 50 años.";
+
+  ui.step1StopText.textContent = `No cumple criterio de inclusión por edad (<${threshold}). Fin de la entrevista.`;
+  ui.step1OkText.textContent = `Cumple criterio de inclusión (≥${threshold}). Puede continuar.`;
 
   if (age === null) {
     ui.ageInput.setAttribute("aria-invalid", "false");
-    ui.ageFeedback.textContent = "Ingresá la edad para continuar.";
+    ui.ageFeedback.textContent = "Ingresá la edad para evaluar inclusión.";
     ui.step1Stop.hidden = true;
-    ui.step1Next.disabled = true;
+    ui.step1Ok.hidden = true;
+    ui.step1Next.hidden = true;
     return;
   }
 
-  if (age < 50) {
+  if (age < threshold) {
     ui.ageInput.setAttribute("aria-invalid", "true");
-    ui.ageFeedback.textContent =
-      "Edad menor a 50 años. No cumple criterio de inclusión por edad.";
+    ui.ageFeedback.textContent = "No es necesario continuar el algoritmo.";
     ui.step1Stop.hidden = false;
-    ui.step1Next.disabled = true;
+    ui.step1Ok.hidden = true;
+    ui.step1Next.hidden = true;
     return;
   }
 
   ui.ageInput.setAttribute("aria-invalid", "false");
-  ui.ageFeedback.textContent = "Edad válida para continuar al siguiente paso.";
+  ui.ageFeedback.textContent = "Paciente apto para continuar al Paso 2.";
   ui.step1Stop.hidden = true;
-  ui.step1Next.disabled = false;
+  ui.step1Ok.hidden = false;
+  ui.step1Next.hidden = false;
 }
 
-function renderStep2Validation() {
+function renderStep2State() {
+  if (!isAgeEligible()) {
+    ui.step2Ok.hidden = true;
+    ui.step2Stop.hidden = true;
+    ui.step2Next.hidden = true;
+    return;
+  }
+
   const blocked = hasSelectedExclusion();
   ui.step2Stop.hidden = !blocked;
-  ui.step2Next.disabled = !isAgeEligible() || blocked;
+  ui.step2Ok.hidden = blocked;
+  ui.step2Next.hidden = blocked;
 }
 
-function renderRiskResult() {
+function renderStep3State() {
   const riskSelected = hasSelectedRisk();
 
   if (riskSelected) {
-    ui.riskResult.classList.add("result-card--risk");
-    ui.riskResult.classList.remove("result-card--fit");
+    ui.riskResult.classList.add("page-algoritmo__result-card--risk");
+    ui.riskResult.classList.remove("page-algoritmo__result-card--fit");
     ui.riskResultTitle.textContent =
-      "RIESGO AUMENTADO \u2192 Derivación primaria a Colonoscopía (VCC). No entregar FIT.";
+      "RIESGO AUMENTADO → Derivación a Colonoscopía (VCC). No entregar FIT.";
     ui.riskResultText.textContent =
       "Se detectó al menos un criterio de riesgo elevado en la entrevista.";
     return;
   }
 
-  ui.riskResult.classList.add("result-card--fit");
-  ui.riskResult.classList.remove("result-card--risk");
-  ui.riskResultTitle.textContent = "RIESGO PROMEDIO \u2192 Candidato a Test FIT.";
+  ui.riskResult.classList.add("page-algoritmo__result-card--fit");
+  ui.riskResult.classList.remove("page-algoritmo__result-card--risk");
+  ui.riskResultTitle.textContent = "RIESGO PROMEDIO → Candidato a Test FIT.";
   ui.riskResultText.textContent =
     "No se detectaron criterios de riesgo elevado en esta entrevista.";
 }
@@ -223,6 +284,7 @@ function renderStepper() {
 
     button.classList.toggle("is-current", isCurrent);
     button.disabled = !isEnabled;
+    button.setAttribute("aria-disabled", String(!isEnabled));
 
     if (isCurrent) {
       button.setAttribute("aria-current", "step");
@@ -232,55 +294,190 @@ function renderStepper() {
   });
 }
 
-function buildDecision() {
+function getSummaryState() {
   const age = parseAge();
-  const selectedExclusions = getSelectedLabels(ui.exclusionChecks);
-  const selectedRisk = getSelectedLabels(ui.riskChecks);
+  const threshold = getInclusionThreshold();
+  const exclusions = getSelectedLabels(ui.exclusionChecks);
+  const risks = getSelectedLabels(ui.riskChecks);
+
+  const ageEligible = age !== null && age >= threshold;
+  const hasExclusion = exclusions.length > 0;
+  const hasRisk = risks.length > 0;
+
+  let step1Status = "Pendiente";
+  let step2Status = "No evaluado";
+  let finalStatus = "No evaluado";
+  let tone = "neutral";
+  let decision = "Entrevista incompleta.";
 
   if (age === null) {
-    return "Entrevista incompleta (edad no informada).";
+    step1Status = `Pendiente (criterio actual ≥${threshold})`;
+  } else if (!ageEligible) {
+    step1Status = `STOP por edad (<${threshold})`;
+    step2Status = "No evaluado (bloqueado por edad)";
+    finalStatus = "No evaluado";
+    tone = "danger";
+    decision = `No cumple criterio de inclusión por edad (<${threshold}). Fin de la entrevista.`;
+  } else {
+    step1Status = `Incluye (≥${threshold})`;
+
+    if (hasExclusion) {
+      step2Status = "STOP por vigilancia vigente";
+      finalStatus = "No aplica al programa masivo";
+      tone = "warning";
+      decision =
+        "Paciente en seguimiento activo / ventana de vigilancia vigente. No aplica al programa masivo.";
+    } else {
+      step2Status = "Sin criterios de exclusión";
+
+      if (hasRisk) {
+        finalStatus = "Derivación a Colonoscopía (VCC)";
+        tone = "danger";
+        decision =
+          "RIESGO AUMENTADO → Derivación a Colonoscopía (VCC). No entregar FIT.";
+      } else {
+        finalStatus = "Candidato a Test FIT";
+        tone = "success";
+        decision = "RIESGO PROMEDIO → Candidato a Test FIT.";
+      }
+    }
   }
 
-  if (age < 50) {
-    return "No cumple criterio de inclusión por edad. Fin de la entrevista.";
+  return {
+    age,
+    threshold,
+    exclusions,
+    risks,
+    step1Status,
+    step2Status,
+    finalStatus,
+    tone,
+    decision,
+  };
+}
+
+function populateSummaryModal() {
+  const summary = getSummaryState();
+
+  ui.summaryAge.textContent =
+    summary.age === null ? "No informada" : `${summary.age} años`;
+  ui.summaryStep1.textContent = summary.step1Status;
+  ui.summaryStep2.textContent = summary.step2Status;
+  ui.summaryFinal.textContent = summary.finalStatus;
+
+  ui.summaryDecisionPill.classList.remove(
+    "page-algoritmo__decision-pill--success",
+    "page-algoritmo__decision-pill--warning",
+    "page-algoritmo__decision-pill--danger",
+    "page-algoritmo__decision-pill--neutral",
+  );
+
+  const toneClass = {
+    success: "page-algoritmo__decision-pill--success",
+    warning: "page-algoritmo__decision-pill--warning",
+    danger: "page-algoritmo__decision-pill--danger",
+    neutral: "page-algoritmo__decision-pill--neutral",
+  }[summary.tone];
+
+  ui.summaryDecisionPill.classList.add(toneClass || "page-algoritmo__decision-pill--neutral");
+  ui.summaryDecisionPill.textContent = summary.decision;
+}
+
+function openSummaryModal() {
+  populateSummaryModal();
+  ui.modalToast.textContent = "";
+
+  lastFocusedBeforeModal = document.activeElement;
+  ui.summaryModal.hidden = false;
+  ui.summaryModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("is-modal-open");
+
+  document.addEventListener("keydown", onModalKeydown);
+
+  const focusables = getModalFocusableElements();
+  if (focusables.length > 0) {
+    focusables[0].focus();
+  } else {
+    ui.summaryDialog.focus();
+  }
+}
+
+function closeSummaryModal() {
+  if (ui.summaryModal.hidden) return;
+
+  ui.summaryModal.hidden = true;
+  ui.summaryModal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("is-modal-open");
+  document.removeEventListener("keydown", onModalKeydown);
+
+  if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === "function") {
+    lastFocusedBeforeModal.focus();
+  }
+}
+
+function onModalKeydown(event) {
+  if (ui.summaryModal.hidden) return;
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeSummaryModal();
+    return;
   }
 
-  if (selectedExclusions.length > 0) {
-    return "Paciente en seguimiento activo o ventana de vigilancia vigente. No aplica al programa masivo.";
+  if (event.key !== "Tab") return;
+
+  const focusables = getModalFocusableElements();
+  if (focusables.length === 0) {
+    event.preventDefault();
+    ui.summaryDialog.focus();
+    return;
   }
 
-  if (selectedRisk.length > 0) {
-    return "RIESGO AUMENTADO -> Derivación primaria a Colonoscopía (VCC). No entregar FIT.";
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+    return;
   }
 
-  return "RIESGO PROMEDIO -> Candidato a Test FIT.";
+  if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function getModalFocusableElements() {
+  return Array.from(
+    ui.summaryDialog.querySelectorAll(
+      "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
+    ),
+  ).filter((el) => !el.disabled && el.offsetParent !== null);
 }
 
 function buildSummaryText() {
-  const age = parseAge();
-  const selectedExclusions = getSelectedLabels(ui.exclusionChecks);
-  const selectedRisk = getSelectedLabels(ui.riskChecks);
+  const summary = getSummaryState();
 
   return [
-    "Resumen - Algoritmo / Criterios de Riesgo",
-    `Edad: ${age === null ? "No informada" : age}`,
-    `Exclusiones marcadas: ${
-      selectedExclusions.length > 0
-        ? selectedExclusions.join("; ")
-        : "Ninguna"
-    }`,
-    `Riesgos marcados: ${selectedRisk.length > 0 ? selectedRisk.join("; ") : "Ninguno"}`,
-    `Decision final: ${buildDecision()}`,
+    "Resumen de clasificación - PPCCR",
+    `Edad ingresada: ${summary.age === null ? "No informada" : `${summary.age} años`}`,
+    `Estado Paso 1: ${summary.step1Status}`,
+    `Estado Paso 2: ${summary.step2Status}`,
+    `Resultado final: ${summary.finalStatus}`,
+    `Exclusiones marcadas: ${summary.exclusions.length > 0 ? summary.exclusions.join("; ") : "Ninguna"}`,
+    `Riesgos marcados: ${summary.risks.length > 0 ? summary.risks.join("; ") : "Ninguno"}`,
+    `Determinación: ${summary.decision}`,
   ].join("\n");
 }
 
-async function copySummaryToClipboard() {
-  const summary = buildSummaryText();
-  const success = await writeClipboard(summary);
-
-  ui.copyFeedback.textContent = success
-    ? "Resumen copiado al portapapeles."
-    : "No fue posible copiar automáticamente. Copiá el resumen manualmente.";
+async function copySummaryTextFromModal() {
+  const success = await writeClipboard(buildSummaryText());
+  showModalToast(
+    success
+      ? "Resumen copiado al portapapeles."
+      : "No se pudo copiar automáticamente. Podés copiarlo manualmente.",
+  );
 }
 
 async function writeClipboard(text) {
@@ -290,7 +487,7 @@ async function writeClipboard(text) {
       return true;
     }
   } catch (_error) {
-    // fallback con textarea
+    // fallback
   }
 
   try {
@@ -309,10 +506,315 @@ async function writeClipboard(text) {
   }
 }
 
+function showModalToast(message) {
+  ui.modalToast.textContent = message;
+}
+
+function getTimestampForFilename() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hour = String(now.getHours()).padStart(2, "0");
+  const minute = String(now.getMinutes()).padStart(2, "0");
+  return `${year}${month}${day}-${hour}${minute}`;
+}
+
+function isIOSLikeDevice() {
+  return /iP(ad|hone|od)/.test(navigator.userAgent);
+}
+
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function getWrappedLines(ctx, text, maxWidth) {
+  const words = String(text || "").trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [""];
+
+  const lines = [];
+  let line = "";
+
+  words.forEach((word) => {
+    const candidate = line ? `${line} ${word}` : word;
+    if (ctx.measureText(candidate).width <= maxWidth || !line) {
+      line = candidate;
+    } else {
+      lines.push(line);
+      line = word;
+    }
+  });
+
+  if (line) lines.push(line);
+  return lines;
+}
+
+function drawTextBlock(ctx, options) {
+  const {
+    text,
+    x,
+    y,
+    maxWidth,
+    lineHeight,
+    font,
+    color,
+  } = options;
+
+  ctx.font = font;
+  ctx.fillStyle = color;
+  const lines = getWrappedLines(ctx, text, maxWidth);
+
+  lines.forEach((line, index) => {
+    ctx.fillText(line, x, y + index * lineHeight);
+  });
+
+  return y + (lines.length - 1) * lineHeight;
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+async function buildSummaryCanvas() {
+  const summary = getSummaryState();
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 1280;
+  canvas.height = 920;
+  const ctx = canvas.getContext("2d");
+  const card = {
+    x: 64,
+    y: 52,
+    width: 1152,
+    height: 816,
+  };
+  const rowsX = {
+    label: card.x + 36,
+    value: card.x + 390,
+  };
+
+  const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  bgGradient.addColorStop(0, "#f5f9ff");
+  bgGradient.addColorStop(1, "#e9f3ff");
+  ctx.fillStyle = bgGradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  drawRoundedRect(ctx, card.x, card.y, card.width, card.height, 30);
+  ctx.fillStyle = "#ffffff";
+  ctx.shadowColor = "rgba(5, 28, 57, 0.16)";
+  ctx.shadowBlur = 28;
+  ctx.shadowOffsetY = 12;
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  drawRoundedRect(ctx, card.x, card.y, card.width, 142, 30);
+  const headerGradient = ctx.createLinearGradient(
+    card.x,
+    card.y,
+    card.x + card.width,
+    card.y + 142,
+  );
+  headerGradient.addColorStop(0, "#0f5fa6");
+  headerGradient.addColorStop(1, "#0b3e72");
+  ctx.fillStyle = headerGradient;
+  ctx.fill();
+  ctx.restore();
+
+  try {
+    const logo = await loadImage("assets/logo-cinta-azul.png");
+    ctx.drawImage(logo, card.x + 28, card.y + 24, 78, 78);
+  } catch (_error) {
+    // si falla el logo, continuar sin bloquear descarga
+  }
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 44px 'Avenir Next', 'Segoe UI', sans-serif";
+  ctx.fillText("Resumen de clasificación", card.x + 126, card.y + 85);
+  ctx.font = "600 24px 'Avenir Next', 'Segoe UI', sans-serif";
+  ctx.fillText(
+    "Programa de Prevención de Cáncer Colorrectal",
+    card.x + 126,
+    card.y + 128,
+  );
+
+  const rowsTop = card.y + 182;
+  let rowY = rowsTop;
+  const rowLineHeight = 32;
+  const rowLabelOffset = 28;
+  const rowsRuleX1 = card.x + 28;
+  const rowsRuleX2 = card.x + card.width - 30;
+  const rowValueMaxWidth = card.width - 460;
+
+  const rows = [
+    ["Edad ingresada", summary.age === null ? "No informada" : `${summary.age} años`],
+    ["Estado Paso 1", summary.step1Status],
+    ["Estado Paso 2", summary.step2Status],
+    ["Resultado final", summary.finalStatus],
+  ];
+
+  rows.forEach((row) => {
+    ctx.font = "700 25px 'Avenir Next', 'Segoe UI', sans-serif";
+    const valueLines = getWrappedLines(ctx, row[1], rowValueMaxWidth);
+    const valueHeight = valueLines.length * rowLineHeight;
+    const rowHeight = Math.max(54, valueHeight + 12);
+
+    ctx.fillStyle = "#5a6f89";
+    ctx.font = "700 24px 'Avenir Next', 'Segoe UI', sans-serif";
+    ctx.fillText(row[0], rowsX.label, rowY + rowLabelOffset);
+
+    drawTextBlock(ctx, {
+      text: row[1],
+      x: rowsX.value,
+      y: rowY + rowLabelOffset,
+      maxWidth: rowValueMaxWidth,
+      lineHeight: rowLineHeight,
+      font: "800 25px 'Avenir Next', 'Segoe UI', sans-serif",
+      color: "#0b3e72",
+    });
+
+    const ruleY = rowY + rowHeight + 10;
+    ctx.strokeStyle = "rgba(15, 95, 166, 0.24)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(rowsRuleX1, ruleY);
+    ctx.lineTo(rowsRuleX2, ruleY);
+    ctx.stroke();
+
+    rowY = ruleY + 20;
+  });
+
+  const toneStyles = {
+    success: { bg: "#dcf4e7", text: "#0e5f3a", border: "#76be99" },
+    warning: { bg: "#ffe9bc", text: "#7d530a", border: "#d6ac5b" },
+    danger: { bg: "#ffd8d8", text: "#8e2626", border: "#d58a8a" },
+    neutral: { bg: "#e9f0f7", text: "#415974", border: "#9cb1c8" },
+  };
+
+  const tone = toneStyles[summary.tone] || toneStyles.neutral;
+  const decisionTextY = rowY + 62;
+
+  ctx.font = "900 34px 'Avenir Next', 'Segoe UI', sans-serif";
+  const decisionLines = getWrappedLines(ctx, summary.decision, card.width - 116);
+  const decisionLineHeight = 42;
+  const decisionInnerPadding = 28;
+  const decisionHeight = Math.max(
+    112,
+    decisionInnerPadding * 2 + decisionLines.length * decisionLineHeight - 14,
+  );
+
+  ctx.save();
+  drawRoundedRect(
+    ctx,
+    card.x + 26,
+    decisionTextY - 54,
+    card.width - 52,
+    decisionHeight,
+    18,
+  );
+  ctx.fillStyle = tone.bg;
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = tone.border;
+  ctx.stroke();
+  ctx.restore();
+
+  const lastDecisionY = drawTextBlock(ctx, {
+    text: summary.decision,
+    x: card.x + 54,
+    y: decisionTextY,
+    maxWidth: card.width - 116,
+    lineHeight: decisionLineHeight,
+    font: "900 34px 'Avenir Next', 'Segoe UI', sans-serif",
+    color: tone.text,
+  });
+
+  const generatedAt = (() => {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = now.getFullYear();
+    const hour = String(now.getHours()).padStart(2, "0");
+    const minute = String(now.getMinutes()).padStart(2, "0");
+    return `${day}/${month}/${year} ${hour}:${minute}`;
+  })();
+  ctx.fillStyle = "#537091";
+  ctx.font = "600 21px 'Avenir Next', 'Segoe UI', sans-serif";
+  ctx.fillText(`Generado: ${generatedAt}`, card.x + 30, lastDecisionY + 68);
+
+  return canvas;
+}
+
+async function downloadSummaryImage() {
+  try {
+    const canvas = await buildSummaryCanvas();
+    const dataUrl = canvas.toDataURL("image/png");
+    const filename = `ppccr-resumen-${getTimestampForFilename()}.png`;
+
+    let downloaded = false;
+
+    if ("download" in HTMLAnchorElement.prototype && !isIOSLikeDevice()) {
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      downloaded = true;
+    }
+
+    if (!downloaded) {
+      const newTab = window.open();
+      if (newTab) {
+        newTab.document.title = filename;
+        newTab.document.body.style.margin = "0";
+        newTab.document.body.style.background = "#0f172a";
+        newTab.document.body.style.display = "grid";
+        newTab.document.body.style.placeItems = "center";
+
+        const image = newTab.document.createElement("img");
+        image.src = dataUrl;
+        image.alt = "Resumen de clasificación PPCCR";
+        image.style.maxWidth = "100vw";
+        image.style.maxHeight = "100vh";
+        image.style.objectFit = "contain";
+        newTab.document.body.appendChild(image);
+      } else {
+        window.location.href = dataUrl;
+      }
+    }
+
+    showModalToast("Imagen generada correctamente.");
+  } catch (_error) {
+    showModalToast("No se pudo generar la imagen. Intentá nuevamente.");
+  }
+}
+
 function resetWizard() {
   ui.form.reset();
-  ui.copyFeedback.textContent = "";
   currentStep = STEP.AGE;
+
+  if (!ui.summaryModal.hidden) {
+    closeSummaryModal();
+  }
+
   refreshWizardState();
   ui.ageInput.focus();
 }

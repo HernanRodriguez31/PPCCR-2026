@@ -78,12 +78,6 @@ const CONFIG = {
         meta: "Ir a sección",
         url: "#kpis",
       },
-      {
-        key: "reporteConsolidado",
-        title: "Reporte consolidado",
-        meta: "Ir a sección",
-        url: "#kpis",
-      },
     ],
 
     /**
@@ -412,8 +406,6 @@ function renderGuides() {
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4.5" y="5" width="15" height="14" rx="2.5"></rect><path d="M8.5 9.2h7"></path><path d="M8.5 12h4.8"></path><path d="m9.1 15.2 1.8 1.7 3.9-3.9"></path></svg>',
     kpis:
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19.5h16"></path><rect x="5.5" y="10.5" width="3.2" height="7" rx="1"></rect><rect x="10.4" y="7.8" width="3.2" height="9.7" rx="1"></rect><rect x="15.3" y="5.5" width="3.2" height="12" rx="1"></rect></svg>',
-    reporteConsolidado:
-      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5.2" y="4.3" width="13.6" height="15.4" rx="2"></rect><path d="M8.5 8.3h7"></path><path d="M8.5 11.5h7"></path><path d="M8.5 14.7h5.2"></path></svg>',
   };
 
   CONFIG.links.guias.forEach((g) => {
