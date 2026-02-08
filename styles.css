@@ -1394,6 +1394,7 @@ code {
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   color: var(--blue-900);
   font-size: 0.86rem;
