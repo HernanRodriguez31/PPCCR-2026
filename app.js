@@ -123,7 +123,7 @@ const CONFIG = {
         items: [
           {
             key: "entrevistaMedica",
-            label: "Entrevista médica (presencial)",
+            label: "Entrevista médica",
             url: "https://entrevista.programadeprevencion.com",
           },
           {
