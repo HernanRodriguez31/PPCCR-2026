@@ -57,8 +57,8 @@ const CONFIG = {
       {
         key: "manejoKitFIT",
         title: "Manejo de kit FIT",
-        meta: "PDF / Documento",
-        url: "PEGAR_AQUI_URL_MANEJO_KIT_FIT",
+        meta: "Página interna",
+        url: "/kit-fit.html",
       },
       {
         key: "entregaMuestras",
