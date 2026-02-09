@@ -88,7 +88,14 @@
                 rel="noopener noreferrer"
                 aria-label="Abrir formulario externo de recepción de muestra (nueva pestaña)"
               >
-                Abrir formulario: Recepción de muestra
+                <span class="em-action__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M9.8 4.5h4.4"></path>
+                    <path d="M10.4 4.5v3.6l-2.8 4.7a5 5 0 0 0 4.4 7.2 5 5 0 0 0 4.4-7.2l-2.8-4.7V4.5"></path>
+                    <path d="M9.4 13.1h5.2"></path>
+                  </svg>
+                </span>
+                <span>Abrir formulario: Recepción de muestra</span>
               </a>
               <a
                 class="btn btn-secondary"
@@ -97,14 +104,36 @@
                 rel="noopener noreferrer"
                 aria-label="Abrir formulario externo de envío de muestras a laboratorio (nueva pestaña)"
               >
-                Abrir formulario: Envío a laboratorio
+                <span class="em-action__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M3.5 9h11.5v7.8H3.5z"></path>
+                    <path d="M15 11h3.3l2.2 2.2v3.6H15z"></path>
+                    <path d="M6.8 18.2a1.7 1.7 0 1 0 0 .01"></path>
+                    <path d="M17.8 18.2a1.7 1.7 0 1 0 0 .01"></path>
+                  </svg>
+                </span>
+                <span>Abrir formulario: Envío a laboratorio</span>
               </a>
-              <a class="btn btn-ghost" href="/kit-fit.html"
-                >Ir a Manejo de kit FIT</a
-              >
-              <a class="btn btn-secondary" href="/workflow.html"
-                >Ir al Workflow operativo</a
-              >
+              <a class="btn btn-secondary" href="/kit-fit.html">
+                <span class="em-action__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M7.8 7.3h8.4"></path>
+                    <path d="M8.6 7.3v3.5l-2.8 4.8A4.7 4.7 0 0 0 9.9 22h4.2a4.7 4.7 0 0 0 4.1-6.4l-2.8-4.8V7.3"></path>
+                  </svg>
+                </span>
+                <span>Ir a Manejo de kit FIT</span>
+              </a>
+              <a class="btn btn-secondary" href="/workflow.html">
+                <span class="em-action__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <rect x="4.5" y="5" width="15" height="14" rx="2.5"></rect>
+                    <path d="M8.5 9.2h7"></path>
+                    <path d="M8.5 12h4.8"></path>
+                    <path d="m9.1 15.2 1.8 1.7 3.9-3.9"></path>
+                  </svg>
+                </span>
+                <span>Ir al Workflow operativo</span>
+              </a>
             </div>
           </article>
         </section>
@@ -115,47 +144,79 @@
               Checklist de recepción en estación
             </h2>
             <ul class="em-checklist-grid">
-              <li class="em-check-item">
-                <p class="em-check-item__title">1) Identificación del participante</p>
-                <p>
-                  Confirmar nombre, contacto y datos mínimos requeridos por el
-                  circuito operativo.
-                </p>
+              <li>
+                <a class="em-check-item" href="#paso-1">
+                  <span class="em-check-badge" aria-hidden="true">1</span>
+                  <span class="em-check-copy">
+                    <span class="em-check-item__title"
+                      >Identificación del participante</span
+                    >
+                    <span>
+                      Confirmar nombre, contacto y datos mínimos requeridos por
+                      el circuito operativo.
+                    </span>
+                  </span>
+                </a>
               </li>
-              <li class="em-check-item">
-                <p class="em-check-item__title">2) Rotulado completo</p>
-                <p>
-                  Verificar tubo y bolsa identificados, con fecha/hora de toma y
-                  código/ID cuando corresponda.
-                </p>
+              <li>
+                <a class="em-check-item" href="#paso-2">
+                  <span class="em-check-badge" aria-hidden="true">2</span>
+                  <span class="em-check-copy">
+                    <span class="em-check-item__title">Rotulado completo</span>
+                    <span>
+                      Verificar tubo y bolsa identificados, con fecha/hora de
+                      toma y código/ID cuando corresponda.
+                    </span>
+                  </span>
+                </a>
               </li>
-              <li class="em-check-item">
-                <p class="em-check-item__title">3) Integridad de muestra</p>
-                <p>
-                  Confirmar tubo cerrado, sin fugas, bolsa zip cerrada y sin
-                  contaminación visible.
-                </p>
+              <li>
+                <a class="em-check-item" href="#paso-3">
+                  <span class="em-check-badge" aria-hidden="true">3</span>
+                  <span class="em-check-copy">
+                    <span class="em-check-item__title">Integridad de muestra</span>
+                    <span>
+                      Confirmar tubo cerrado, sin fugas, bolsa zip cerrada y sin
+                      contaminación visible.
+                    </span>
+                  </span>
+                </a>
               </li>
-              <li class="em-check-item">
-                <p class="em-check-item__title">4) Cadena de frío</p>
-                <p>
-                  Asegurar conservación entre 2–8 °C, sin congelación en ningún
-                  punto del circuito.
-                </p>
+              <li>
+                <a class="em-check-item" href="#paso-4">
+                  <span class="em-check-badge" aria-hidden="true">4</span>
+                  <span class="em-check-copy">
+                    <span class="em-check-item__title">Cadena de frío</span>
+                    <span>
+                      Asegurar conservación entre 2–8 °C, sin congelación en
+                      ningún punto del circuito.
+                    </span>
+                  </span>
+                </a>
               </li>
-              <li class="em-check-item">
-                <p class="em-check-item__title">5) Ventana de tiempo</p>
-                <p>
-                  Confirmar que no supere 72 horas desde la toma hasta la entrega
-                  en estación.
-                </p>
+              <li>
+                <a class="em-check-item" href="#paso-5">
+                  <span class="em-check-badge" aria-hidden="true">5</span>
+                  <span class="em-check-copy">
+                    <span class="em-check-item__title">Ventana de tiempo</span>
+                    <span>
+                      Confirmar que no supere 72 horas desde la toma hasta la
+                      entrega en estación.
+                    </span>
+                  </span>
+                </a>
               </li>
-              <li class="em-check-item">
-                <p class="em-check-item__title">6) Registro y guarda</p>
-                <p>
-                  Registrar recepción en sistema y almacenar en heladera de
-                  estación hasta retiro logístico.
-                </p>
+              <li>
+                <a class="em-check-item" href="#paso-6">
+                  <span class="em-check-badge" aria-hidden="true">6</span>
+                  <span class="em-check-copy">
+                    <span class="em-check-item__title">Registro y guarda</span>
+                    <span>
+                      Registrar recepción en sistema y almacenar en heladera de
+                      estación hasta retiro logístico.
+                    </span>
+                  </span>
+                </a>
               </li>
             </ul>
           </article>
@@ -169,6 +230,14 @@
                   Paso a paso en Estación Saludable
                 </h2>
                 <div class="kf-section-head__actions">
+                  <div class="em-accordion-controls" role="group" aria-label="Controles de acordeón de pasos">
+                    <button type="button" class="btn btn-ghost em-control-btn" id="em-open-all">
+                      Abrir todo
+                    </button>
+                    <button type="button" class="btn btn-ghost em-control-btn" id="em-close-all">
+                      Cerrar todo
+                    </button>
+                  </div>
                   <div class="kf-role-legend">
                     <button
                       type="button"
@@ -189,9 +258,9 @@
                     >
                       <p class="kf-role-popover__title">Referencia de roles</p>
                       <ul class="kf-role-popover__list">
-                        <li><strong>EN:</strong> Enfermería / Navigator</li>
-                        <li><strong>LO:</strong> Logística</li>
+                        <li><strong>EN:</strong> Enfermería / Navigators</li>
                         <li><strong>ME:</strong> Médico/a</li>
+                        <li><strong>LO:</strong> Logística</li>
                         <li><strong>CO:</strong> Coordinación</li>
                       </ul>
                     </div>
@@ -204,15 +273,33 @@
               </p>
             </header>
 
-            <ol class="kf-steps" aria-label="Pasos de entrega y recepción FIT">
-              <li>
-                <details class="kf-step" open>
-                  <summary>
+            <div class="em-accordion" data-em-step-accordion>
+              <article class="em-step-card is-open" id="paso-1">
+                <h3 class="em-step-card__heading">
+                  <button
+                    type="button"
+                    class="em-accordion__trigger"
+                    id="paso-1-trigger"
+                    aria-expanded="true"
+                    aria-controls="paso-1-panel"
+                  >
                     <span class="kf-step__badge">Paso 1</span>
                     <span class="kf-step__title"
                       >Recepción en estación y confirmación</span
                     >
-                  </summary>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-accordion__panel"
+                  id="paso-1-panel"
+                  role="region"
+                  aria-labelledby="paso-1-trigger"
+                >
                   <ul class="kf-list">
                     <li>
                       Recibir la muestra y validar identidad del participante con
@@ -226,15 +313,34 @@
                   <div class="kf-role-list" aria-label="Roles involucrados">
                     <abbr title="Enfermería / Navegación">EN</abbr>
                   </div>
-                </details>
-              </li>
+                </div>
+              </article>
 
-              <li>
-                <details class="kf-step">
-                  <summary>
+              <article class="em-step-card" id="paso-2">
+                <h3 class="em-step-card__heading">
+                  <button
+                    type="button"
+                    class="em-accordion__trigger"
+                    id="paso-2-trigger"
+                    aria-expanded="false"
+                    aria-controls="paso-2-panel"
+                  >
                     <span class="kf-step__badge">Paso 2</span>
                     <span class="kf-step__title">Control de rotulado</span>
-                  </summary>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-accordion__panel"
+                  id="paso-2-panel"
+                  role="region"
+                  aria-labelledby="paso-2-trigger"
+                  hidden
+                >
                   <ul class="kf-list">
                     <li>
                       Verificar que tubo y bolsa estén correctamente rotulados.
@@ -251,17 +357,36 @@
                     <abbr title="Enfermería / Navegación">EN</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
-                </details>
-              </li>
+                </div>
+              </article>
 
-              <li>
-                <details class="kf-step">
-                  <summary>
+              <article class="em-step-card" id="paso-3">
+                <h3 class="em-step-card__heading">
+                  <button
+                    type="button"
+                    class="em-accordion__trigger"
+                    id="paso-3-trigger"
+                    aria-expanded="false"
+                    aria-controls="paso-3-panel"
+                  >
                     <span class="kf-step__badge">Paso 3</span>
                     <span class="kf-step__title"
                       >Control de integridad y criterios de rechazo</span
                     >
-                  </summary>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-accordion__panel"
+                  id="paso-3-panel"
+                  role="region"
+                  aria-labelledby="paso-3-trigger"
+                  hidden
+                >
                   <ul class="kf-list">
                     <li>
                       Confirmar tubo cerrado, sin fugas y bolsa zip en condición
@@ -280,17 +405,36 @@
                     <abbr title="Enfermería / Navegación">EN</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
-                </details>
-              </li>
+                </div>
+              </article>
 
-              <li>
-                <details class="kf-step">
-                  <summary>
+              <article class="em-step-card" id="paso-4">
+                <h3 class="em-step-card__heading">
+                  <button
+                    type="button"
+                    class="em-accordion__trigger"
+                    id="paso-4-trigger"
+                    aria-expanded="false"
+                    aria-controls="paso-4-panel"
+                  >
                     <span class="kf-step__badge">Paso 4</span>
                     <span class="kf-step__title"
                       >Verificación de cadena de frío y ventana de tiempo</span
                     >
-                  </summary>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-accordion__panel"
+                  id="paso-4-panel"
+                  role="region"
+                  aria-labelledby="paso-4-trigger"
+                  hidden
+                >
                   <ul class="kf-list">
                     <li>
                       Confirmar conservación entre 2–8 °C y uso de gel
@@ -330,15 +474,34 @@
                     <abbr title="Enfermería / Navegación">EN</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
-                </details>
-              </li>
+                </div>
+              </article>
 
-              <li>
-                <details class="kf-step">
-                  <summary>
+              <article class="em-step-card" id="paso-5">
+                <h3 class="em-step-card__heading">
+                  <button
+                    type="button"
+                    class="em-accordion__trigger"
+                    id="paso-5-trigger"
+                    aria-expanded="false"
+                    aria-controls="paso-5-panel"
+                  >
                     <span class="kf-step__badge">Paso 5</span>
                     <span class="kf-step__title">Registro digital de recepción</span>
-                  </summary>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-accordion__panel"
+                  id="paso-5-panel"
+                  role="region"
+                  aria-labelledby="paso-5-trigger"
+                  hidden
+                >
                   <ul class="kf-list">
                     <li>
                       Completar formulario de recepción con fecha/hora, estado e
@@ -352,17 +515,36 @@
                   <div class="kf-role-list" aria-label="Roles involucrados">
                     <abbr title="Enfermería / Navegación">EN</abbr>
                   </div>
-                </details>
-              </li>
+                </div>
+              </article>
 
-              <li>
-                <details class="kf-step">
-                  <summary>
+              <article class="em-step-card" id="paso-6">
+                <h3 class="em-step-card__heading">
+                  <button
+                    type="button"
+                    class="em-accordion__trigger"
+                    id="paso-6-trigger"
+                    aria-expanded="false"
+                    aria-controls="paso-6-panel"
+                  >
                     <span class="kf-step__badge">Paso 6</span>
                     <span class="kf-step__title"
                       >Almacenamiento en heladera de estación</span
                     >
-                  </summary>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-accordion__panel"
+                  id="paso-6-panel"
+                  role="region"
+                  aria-labelledby="paso-6-trigger"
+                  hidden
+                >
                   <ul class="kf-list">
                     <li>
                       Guardar muestra en heladera operativa y mantener orden por
@@ -377,20 +559,40 @@
                     <abbr title="Enfermería / Navegación">EN</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
-                </details>
-              </li>
+                </div>
+              </article>
 
-              <li>
-                <details class="kf-step">
-                  <summary>
+              <article class="em-step-card" id="paso-7">
+                <h3 class="em-step-card__heading">
+                  <button
+                    type="button"
+                    class="em-accordion__trigger"
+                    id="paso-7-trigger"
+                    aria-expanded="false"
+                    aria-controls="paso-7-panel"
+                  >
                     <span class="kf-step__badge">Paso 7</span>
                     <span class="kf-step__title"
                       >Retiro por logística y cadena de custodia</span
                     >
-                  </summary>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-accordion__panel"
+                  id="paso-7-panel"
+                  role="region"
+                  aria-labelledby="paso-7-trigger"
+                  hidden
+                >
                   <ul class="kf-list">
                     <li>
-                      Entregar lote al equipo logístico según cronograma de retiro.
+                      Entregar lote al equipo logístico según cronograma de
+                      retiro.
                     </li>
                     <li>
                       Registrar hora, responsable y condición de entrega para
@@ -401,21 +603,40 @@
                     <abbr title="Logística">LO</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
-                </details>
-              </li>
+                </div>
+              </article>
 
-              <li>
-                <details class="kf-step">
-                  <summary>
+              <article class="em-step-card" id="paso-8">
+                <h3 class="em-step-card__heading">
+                  <button
+                    type="button"
+                    class="em-accordion__trigger"
+                    id="paso-8-trigger"
+                    aria-expanded="false"
+                    aria-controls="paso-8-panel"
+                  >
                     <span class="kf-step__badge">Paso 8</span>
                     <span class="kf-step__title"
                       >Traslado a laboratorio y confirmación de entrega</span
                     >
-                  </summary>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-accordion__panel"
+                  id="paso-8-panel"
+                  role="region"
+                  aria-labelledby="paso-8-trigger"
+                  hidden
+                >
                   <ul class="kf-list">
                     <li>
-                      Trasladar muestras bajo condiciones de conservación definidas
-                      por el operativo.
+                      Trasladar muestras bajo condiciones de conservación
+                      definidas por el operativo.
                     </li>
                     <li>
                       Confirmar recepción en laboratorio y dejar registro del
@@ -426,17 +647,36 @@
                     <abbr title="Logística">LO</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
-                </details>
-              </li>
+                </div>
+              </article>
 
-              <li>
-                <details class="kf-step">
-                  <summary>
+              <article class="em-step-card" id="paso-9">
+                <h3 class="em-step-card__heading">
+                  <button
+                    type="button"
+                    class="em-accordion__trigger"
+                    id="paso-9-trigger"
+                    aria-expanded="false"
+                    aria-controls="paso-9-panel"
+                  >
                     <span class="kf-step__badge">Paso 9</span>
                     <span class="kf-step__title"
                       >Resultado y comunicación al paciente</span
                     >
-                  </summary>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-accordion__panel"
+                  id="paso-9-panel"
+                  role="region"
+                  aria-labelledby="paso-9-trigger"
+                  hidden
+                >
                   <ul class="kf-list">
                     <li>
                       El resultado FIT llega por el canal definido y se comunica
@@ -454,9 +694,9 @@
                     <abbr title="Médico/a">ME</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
-                </details>
-              </li>
-            </ol>
+                </div>
+              </article>
+            </div>
           </article>
         </section>
 
@@ -467,7 +707,7 @@
             </h2>
             <div class="em-criteria-grid">
               <article class="em-criteria-card em-criteria-card--accept">
-                <h3>Aceptar muestra</h3>
+                <h3><span aria-hidden="true">✓</span> Aceptar muestra</h3>
                 <ul class="kf-list">
                   <li>Rotulado completo en tubo y bolsa.</li>
                   <li>Integridad de envase, sin fugas ni contaminación visible.</li>
@@ -477,7 +717,7 @@
               </article>
 
               <article class="em-criteria-card em-criteria-card--reject">
-                <h3>Rechazar / No procesar</h3>
+                <h3><span aria-hidden="true">✕</span> Rechazar / No procesar</h3>
                 <ul class="kf-list">
                   <li>Muestra sin rotulado o con datos incompletos.</li>
                   <li>Tubo abierto, fuga o bolsa dañada.</li>
@@ -531,51 +771,179 @@
         <section class="kf-section" aria-labelledby="em-faq-title">
           <article class="kf-panel">
             <h2 class="kf-panel__title" id="em-faq-title">Errores frecuentes</h2>
-            <div class="kf-faq">
-              <details>
-                <summary>¿Qué pasa si no está rotulado?</summary>
-                <p>
-                  Acción operativa: rechazar, registrar incidente y coordinar
-                  repetición de kit.
-                </p>
-              </details>
-              <details>
-                <summary>¿Qué pasa si estuvo fuera de heladera o sin gel?</summary>
-                <p>
-                  Acción operativa: considerar desvío de cadena de frío, registrar
-                  y no procesar hasta definir reposición.
-                </p>
-              </details>
-              <details>
-                <summary>¿Qué pasa si pasaron más de 72 h desde la toma?</summary>
-                <p>
-                  Acción operativa: no procesar, registrar fuera de ventana y
-                  gestionar nuevo kit.
-                </p>
-              </details>
-              <details>
-                <summary>¿Qué pasa si el tubo está mal cerrado o con fuga?</summary>
-                <p>
-                  Acción operativa: rechazar por integridad, registrar y escalar a
-                  coordinación.
-                </p>
-              </details>
-              <details>
-                <summary>¿Qué pasa si la muestra se contaminó?</summary>
-                <p>
-                  Acción operativa: descartar para procesamiento, registrar
-                  incidente y repetir toma según protocolo.
-                </p>
-              </details>
+            <div class="em-faq" data-em-faq-accordion>
+              <article class="em-faq__item">
+                <h3 class="em-faq__heading">
+                  <button
+                    type="button"
+                    class="em-faq__trigger"
+                    id="faq-1-trigger"
+                    aria-expanded="false"
+                    aria-controls="faq-1-panel"
+                  >
+                    <span>¿Qué pasa si no está rotulado?</span>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-faq__panel"
+                  id="faq-1-panel"
+                  role="region"
+                  aria-labelledby="faq-1-trigger"
+                  hidden
+                >
+                  <p>
+                    Acción operativa: no procesar, registrar incidente y solicitar
+                    nueva muestra según protocolo.
+                  </p>
+                </div>
+              </article>
+
+              <article class="em-faq__item">
+                <h3 class="em-faq__heading">
+                  <button
+                    type="button"
+                    class="em-faq__trigger"
+                    id="faq-2-trigger"
+                    aria-expanded="false"
+                    aria-controls="faq-2-panel"
+                  >
+                    <span>¿Qué pasa si estuvo fuera de heladera/sin gel?</span>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-faq__panel"
+                  id="faq-2-panel"
+                  role="region"
+                  aria-labelledby="faq-2-trigger"
+                  hidden
+                >
+                  <p>
+                    Acción operativa: evaluar tiempo/temperatura; si no cumple
+                    criterio de conservación, no procesar y registrar desvío.
+                  </p>
+                </div>
+              </article>
+
+              <article class="em-faq__item">
+                <h3 class="em-faq__heading">
+                  <button
+                    type="button"
+                    class="em-faq__trigger"
+                    id="faq-3-trigger"
+                    aria-expanded="false"
+                    aria-controls="faq-3-panel"
+                  >
+                    <span>¿Qué pasa si pasaron más de 72 h?</span>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-faq__panel"
+                  id="faq-3-panel"
+                  role="region"
+                  aria-labelledby="faq-3-trigger"
+                  hidden
+                >
+                  <p>
+                    Acción operativa: no procesar la muestra, registrar fuera de
+                    ventana y gestionar reposición.
+                  </p>
+                </div>
+              </article>
+
+              <article class="em-faq__item">
+                <h3 class="em-faq__heading">
+                  <button
+                    type="button"
+                    class="em-faq__trigger"
+                    id="faq-4-trigger"
+                    aria-expanded="false"
+                    aria-controls="faq-4-panel"
+                  >
+                    <span>¿Qué pasa si el tubo está mal cerrado o con fuga?</span>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-faq__panel"
+                  id="faq-4-panel"
+                  role="region"
+                  aria-labelledby="faq-4-trigger"
+                  hidden
+                >
+                  <p>
+                    Acción operativa: no procesar por riesgo de integridad,
+                    registrar incidente y escalar a coordinación.
+                  </p>
+                </div>
+              </article>
+
+              <article class="em-faq__item">
+                <h3 class="em-faq__heading">
+                  <button
+                    type="button"
+                    class="em-faq__trigger"
+                    id="faq-5-trigger"
+                    aria-expanded="false"
+                    aria-controls="faq-5-panel"
+                  >
+                    <span>¿Qué pasa si hay contaminación visible?</span>
+                    <span class="em-accordion__chevron" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path d="M4.5 6.5 8 10l3.5-3.5"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  class="em-faq__panel"
+                  id="faq-5-panel"
+                  role="region"
+                  aria-labelledby="faq-5-trigger"
+                  hidden
+                >
+                  <p>
+                    Acción operativa: no procesar, registrar incidente y solicitar
+                    nueva muestra.
+                  </p>
+                </div>
+              </article>
             </div>
           </article>
         </section>
 
-        <section class="kf-section kf-section--actions" aria-label="Accesos relacionados">
+        <section
+          class="kf-section kf-section--actions"
+          aria-label="Accesos relacionados"
+        >
           <div class="kf-actions">
-            <a class="btn btn-secondary" href="/index.html#guias">Volver al portal</a>
-            <a class="btn btn-primary" href="/kit-fit.html">Ir a Manejo de kit FIT</a>
-            <a class="btn btn-ghost" href="/workflow.html">Ir al Workflow operativo</a>
+            <a class="btn btn-secondary" href="/index.html#guias"
+              >Volver al portal</a
+            >
+            <a class="btn btn-primary" href="/kit-fit.html"
+              >Ir a Manejo de kit FIT</a
+            >
+            <a class="btn btn-ghost" href="/workflow.html"
+              >Ir al Workflow operativo</a
+            >
           </div>
         </section>
       </div>

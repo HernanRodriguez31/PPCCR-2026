@@ -84,22 +84,22 @@ const CONFIG = {
         items: [
           {
             key: "entregaKitFIT",
-            label: "Entrega de Kit de FIT a pacientes",
+            label: "Entrega de kit FIT",
             url: "https://9kxsjveuebz.typeform.com/to/CA9UQXTK",
           },
           {
             key: "recepcionMuestraFIT",
-            label: "Recepción de Muestra de Test FIT",
+            label: "Recepción de muestra FIT",
             url: "https://9kxsjveuebz.typeform.com/to/ICgvwiBh",
           },
           {
             key: "envioMuestrasLaboratorio",
-            label: "Envío de Muestras de FIT al Laboratorio",
+            label: "Envío a laboratorio",
             url: "https://9kxsjveuebz.typeform.com/to/EDtlnghR",
           },
           {
             key: "recepcionResultadosFIT",
-            label: "Recepción de Resultados de FIT",
+            label: "Recepción de resultados FIT",
             url: "https://9kxsjveuebz.typeform.com/to/zbS6LWx7",
           },
         ],
@@ -116,7 +116,7 @@ const CONFIG = {
           },
           {
             key: "informePacienteResultadoFIT",
-            label: "Informe al paciente del resultado del Test FIT",
+            label: "Informe de resultado FIT",
             url: "https://9kxsjveuebz.typeform.com/to/CPDHPjyy",
           },
         ],
@@ -128,7 +128,7 @@ const CONFIG = {
         items: [
           {
             key: "evaluacionInicialSalud",
-            label: "Formularios de evaluación inicial de salud",
+            label: "Evaluación inicial",
             url: "https://9kxsjveuebz.typeform.com/to/X2jtQ7NT",
           },
         ],
@@ -437,10 +437,12 @@ function renderGuides() {
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19.5h16"></path><rect x="5.5" y="10.5" width="3.2" height="7" rx="1"></rect><rect x="10.4" y="7.8" width="3.2" height="9.7" rx="1"></rect><rect x="15.3" y="5.5" width="3.2" height="12" rx="1"></rect></svg>',
   };
 
-  CONFIG.links.guias.forEach((g) => {
+  CONFIG.links.guias.forEach((g, index) => {
     const a = document.createElement("a");
     a.className = "pill";
     a.dataset.key = g.key;
+    a.dataset.animate = "";
+    a.style.setProperty("--delay", `${Math.min(index * 35, 210)}ms`);
 
     const icon = document.createElement("span");
     icon.className = "pill__icon";
@@ -499,16 +501,28 @@ function renderRoles() {
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5.5" y="4.5" width="13" height="15" rx="2"></rect><path d="M9 8h6"></path><path d="M9 11h6"></path><path d="M10.1 15.4h3.8"></path><path d="M12 13.5v3.8"></path></svg>',
   };
 
+  const shortLabels = {
+    entregaKitFIT: "Entrega de kit FIT",
+    recepcionMuestraFIT: "Recepción de muestra FIT",
+    envioMuestrasLaboratorio: "Envío a laboratorio",
+    recepcionResultadosFIT: "Recepción de resultados FIT",
+    entrevistaMedica: "Entrevista médica",
+    informePacienteResultadoFIT: "Informe de resultado FIT",
+    evaluacionInicialSalud: "Evaluación inicial",
+  };
+
   const roles = [{ key: "enfermeria" }, { key: "medicos" }, { key: "pacientes" }];
 
-  roles.forEach((r) => {
+  roles.forEach((r, roleIndex) => {
     const roleCfg = CONFIG.links.formularios[r.key];
     if (!roleCfg) return;
 
     const card = document.createElement("article");
     card.className = "role-card";
+    card.dataset.animate = "";
+    card.style.setProperty("--delay", `${120 + roleIndex * 70}ms`);
 
-    const header = document.createElement("div");
+    const header = document.createElement("header");
     header.className = "role-card__header";
 
     const h = document.createElement("h3");
@@ -522,30 +536,27 @@ function renderRoles() {
     header.appendChild(h);
     header.appendChild(desc);
 
-    const body = document.createElement("div");
-    body.className = "role-card__body";
-
     const actions = document.createElement("div");
-    actions.className = "role-actions";
+    actions.className = "role-card__actions role-actions";
 
     roleCfg.items.forEach((item) => {
       const a = document.createElement("a");
-      a.className = "role-link";
+      a.className = "action-pill role-link";
       a.dataset.key = item.key;
 
       const icon = document.createElement("span");
-      icon.className = "role-link__icon";
+      icon.className = "action-pill__icon role-link__icon";
       icon.setAttribute("aria-hidden", "true");
       icon.innerHTML =
         roleFormIcons[item.key] ||
         '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="4.5" width="12" height="15" rx="2"></rect><path d="M9 9h6"></path><path d="M9 12.5h6"></path></svg>';
 
       const label = document.createElement("span");
-      label.className = "role-link__label";
-      label.textContent = item.label;
+      label.className = "action-pill__label role-link__label";
+      label.textContent = shortLabels[item.key] || item.label;
 
       const chev = document.createElement("span");
-      chev.className = "role-link__chev";
+      chev.className = "action-pill__chev role-link__chev";
       chev.setAttribute("aria-hidden", "true");
       chev.textContent = "↗";
 
@@ -558,14 +569,18 @@ function renderRoles() {
 
       if (!item.url || isPlaceholderUrl(item.url)) {
         a.setAttribute("aria-label", `${item.label} (URL pendiente)`);
+      } else {
+        a.setAttribute(
+          "aria-label",
+          `${label.textContent} (abre en nueva pestaña)`,
+        );
       }
 
       actions.appendChild(a);
     });
 
-    body.appendChild(actions);
     card.appendChild(header);
-    card.appendChild(body);
+    card.appendChild(actions);
     grid.appendChild(card);
   });
 }
@@ -813,9 +828,15 @@ function setupActiveNavObserver() {
   if (sections.length === 0) return;
 
   const setActiveLink = (sectionId) => {
-    navLinks.forEach((a) => a.removeAttribute("aria-current"));
+    navLinks.forEach((a) => {
+      a.removeAttribute("aria-current");
+      a.classList.remove("is-active");
+    });
     const active = navLinks.find((a) => a.getAttribute("href") === `#${sectionId}`);
-    if (active) active.setAttribute("aria-current", "page");
+    if (active) {
+      active.setAttribute("aria-current", "true");
+      active.classList.add("is-active");
+    }
   };
 
   const getSectionByScroll = () => {
@@ -922,8 +943,12 @@ function setupSmoothAnchorScroll() {
 
     const activeLink = navLinks.find((link) => link.getAttribute("href") === href);
     if (activeLink) {
-      navLinks.forEach((link) => link.removeAttribute("aria-current"));
-      activeLink.setAttribute("aria-current", "page");
+      navLinks.forEach((link) => {
+        link.removeAttribute("aria-current");
+        link.classList.remove("is-active");
+      });
+      activeLink.setAttribute("aria-current", "true");
+      activeLink.classList.add("is-active");
     }
 
     history.pushState(null, "", href);
@@ -996,6 +1021,37 @@ function setupRevealAnimations() {
       });
     },
     { threshold: 0.18, rootMargin: "0px 0px -40px 0px" },
+  );
+
+  targets.forEach((el) => observer.observe(el));
+}
+
+function setupHomeDataAnimateReveal() {
+  if (!document.body.classList.contains("page-home")) return;
+
+  const targets = Array.from(document.querySelectorAll("[data-animate]"));
+  if (targets.length === 0) return;
+
+  const reduceMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    targets.forEach((el) => el.classList.add("is-inview"));
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-inview");
+        observer.unobserve(entry.target);
+      });
+    },
+    {
+      threshold: 0.22,
+      rootMargin: "0px 0px -12% 0px",
+    },
   );
 
   targets.forEach((el) => observer.observe(el));
@@ -1168,6 +1224,7 @@ function init() {
   setupActiveNavObserver();
   setupSmoothAnchorScroll();
   setupRevealAnimations();
+  setupHomeDataAnimateReveal();
   setupBackToTopButton();
   setupLookerModal();
 

@@ -12,21 +12,164 @@ document.addEventListener("DOMContentLoaded", () => {
     triggerId: "em-coldchain-trigger",
     popoverId: "em-coldchain-tooltip",
   });
-  initStepAccordion();
+
+  const stepAccordion = initAccordion({
+    rootSelector: "[data-em-step-accordion]",
+    itemSelector: ".em-step-card",
+    triggerSelector: ".em-accordion__trigger",
+    panelSelector: ".em-accordion__panel",
+    singleOpen: false,
+  });
+
+  initAccordion({
+    rootSelector: "[data-em-faq-accordion]",
+    itemSelector: ".em-faq__item",
+    triggerSelector: ".em-faq__trigger",
+    panelSelector: ".em-faq__panel",
+    singleOpen: false,
+  });
+
+  if (stepAccordion) {
+    initStepControls(stepAccordion);
+    initStepDeepLink(stepAccordion);
+    initChecklistLinks(stepAccordion);
+  }
 });
 
-function initStepAccordion() {
-  const steps = Array.from(document.querySelectorAll(".kf-steps .kf-step"));
-  if (steps.length === 0) return;
+function initAccordion({
+  rootSelector,
+  itemSelector,
+  triggerSelector,
+  panelSelector,
+  singleOpen = false,
+}) {
+  const root = document.querySelector(rootSelector);
+  if (!root) return null;
 
-  steps.forEach((step) => {
-    step.addEventListener("toggle", () => {
-      if (!step.open) return;
+  const items = Array.from(root.querySelectorAll(itemSelector));
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-      steps.forEach((otherStep) => {
-        if (otherStep === step || !otherStep.open) return;
-        otherStep.open = false;
+  function getParts(item) {
+    const trigger = item.querySelector(triggerSelector);
+    const panel = item.querySelector(panelSelector);
+    if (!trigger || !panel) return null;
+    return { trigger, panel };
+  }
+
+  function setExpanded(item, expanded) {
+    const parts = getParts(item);
+    if (!parts) return;
+
+    parts.trigger.setAttribute("aria-expanded", expanded ? "true" : "false");
+    parts.panel.hidden = !expanded;
+    item.classList.toggle("is-open", expanded);
+
+    if (expanded && singleOpen) {
+      items.forEach((other) => {
+        if (other === item) return;
+        const otherParts = getParts(other);
+        if (!otherParts) return;
+        otherParts.trigger.setAttribute("aria-expanded", "false");
+        otherParts.panel.hidden = true;
+        other.classList.remove("is-open");
       });
+    }
+  }
+
+  function toggleItem(item) {
+    const parts = getParts(item);
+    if (!parts) return;
+    const expanded = parts.trigger.getAttribute("aria-expanded") === "true";
+    setExpanded(item, !expanded);
+  }
+
+  items.forEach((item) => {
+    const parts = getParts(item);
+    if (!parts) return;
+
+    const expanded = parts.trigger.getAttribute("aria-expanded") === "true";
+    parts.panel.hidden = !expanded;
+    item.classList.toggle("is-open", expanded);
+
+    parts.trigger.addEventListener("click", () => {
+      toggleItem(item);
+    });
+  });
+
+  return {
+    items,
+    setExpanded,
+    expandAll() {
+      items.forEach((item) => setExpanded(item, true));
+    },
+    collapseAll() {
+      items.forEach((item) => setExpanded(item, false));
+    },
+    openById(id, { scroll = false } = {}) {
+      const cleanId = String(id || "").replace(/^#/, "");
+      const item = cleanId ? document.getElementById(cleanId) : null;
+      if (!item || !items.includes(item)) return false;
+
+      setExpanded(item, true);
+      if (scroll) {
+        item.scrollIntoView({
+          behavior: reduceMotion ? "auto" : "smooth",
+          block: "start",
+        });
+      }
+      return true;
+    },
+  };
+}
+
+function initStepControls(accordion) {
+  const openAllButton = document.getElementById("em-open-all");
+  const closeAllButton = document.getElementById("em-close-all");
+
+  if (openAllButton) {
+    openAllButton.addEventListener("click", () => {
+      accordion.expandAll();
+    });
+  }
+
+  if (closeAllButton) {
+    closeAllButton.addEventListener("click", () => {
+      accordion.collapseAll();
+    });
+  }
+}
+
+function initStepDeepLink(accordion) {
+  function applyHash({ scroll = true } = {}) {
+    const hash = window.location.hash;
+    if (!hash || !hash.startsWith("#paso-")) return;
+    accordion.openById(hash, { scroll });
+  }
+
+  window.setTimeout(() => {
+    applyHash({ scroll: true });
+  }, 0);
+  window.addEventListener("hashchange", () => {
+    applyHash({ scroll: true });
+  });
+}
+
+function initChecklistLinks(accordion) {
+  const links = Array.from(document.querySelectorAll('.em-check-item[href^="#paso-"]'));
+  if (links.length === 0) return;
+
+  links.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const href = link.getAttribute("href");
+      if (!href) return;
+
+      event.preventDefault();
+      const opened = accordion.openById(href, { scroll: true });
+      if (!opened) return;
+
+      if (window.location.hash !== href) {
+        history.pushState(null, "", href);
+      }
     });
   });
 }
