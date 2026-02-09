@@ -63,8 +63,8 @@ const CONFIG = {
       {
         key: "entregaMuestras",
         title: "Entrega de muestras",
-        meta: "PDF / Documento",
-        url: "PEGAR_AQUI_URL_ENTREGA_MUESTRAS",
+        meta: "Página interna",
+        url: "/entrega-muestras.html",
       },
       {
         key: "kpis",

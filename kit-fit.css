@@ -111,6 +111,7 @@
   line-height: 1.5;
   font-weight: 500;
   color: var(--kf-primary-900);
+  max-width: 70ch;
 }
 
 .page-kit-fit .kf-note p + p {
@@ -170,6 +171,12 @@
   margin: 8px 0 0;
   color: var(--kf-muted);
   font-weight: 500;
+  max-width: 70ch;
+}
+
+.page-kit-fit .section-subtitle,
+.page-kit-fit .kf-panel > p {
+  max-width: 70ch;
 }
 
 .page-kit-fit .kf-actions {
@@ -635,6 +642,7 @@
   margin: 8px 0 0;
   color: var(--kf-text);
   line-height: 1.5;
+  max-width: 70ch;
 }
 
 .page-kit-fit .kf-section--actions .kf-actions {
