@@ -2,7 +2,10 @@
 <html lang="es-AR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>PPCCR – Home Operativa</title>
     <meta
       name="description"
@@ -18,8 +21,8 @@
   </head>
 
   <body class="page-home">
-    <header class="site-header" id="top">
-      <div class="topbar">
+    <header class="site-header site-topbar" id="top">
+      <div class="topbar site-topbar__inner" id="siteTopbar">
         <div class="brand" aria-label="Identidad del programa">
           <div class="brand-mark brand-mark--left">
             <img
@@ -38,7 +41,11 @@
           </div>
         </div>
 
-        <nav class="site-nav" aria-label="Navegación principal">
+        <nav
+          class="site-nav mobile-dock-wrap primary-nav"
+          id="mobileDockWrap"
+          aria-label="Navegación"
+        >
           <button
             class="nav-toggle"
             type="button"
@@ -50,7 +57,7 @@
             <span class="nav-toggle__label">Menú</span>
           </button>
 
-          <ul class="nav-list" id="nav-list">
+          <ul class="nav-list mobile-dock" id="nav-list" data-mobile-dock>
             <li>
               <a class="nav-link" href="#inicio" data-nav="inicio">
                 <span class="nav-link__icon" aria-hidden="true">
@@ -134,9 +141,12 @@
         </nav>
       </div>
 
-      <div class="logo-strip" aria-label="Partners del programa">
+      <div class="logo-strip partners-bar" aria-label="Partners del programa">
         <div class="container">
-          <div class="logo-strip__inner" id="partner-logos">
+          <div
+            class="logo-strip__inner partners-strip partners-grid"
+            id="partner-logos"
+          >
             <!-- Logos se renderizan desde CONFIG (app.js) -->
           </div>
         </div>
@@ -291,13 +301,23 @@
           </div>
 
           <div class="embed-card" aria-label="Reporte Looker Studio embebido">
-            <div class="responsive-embed report-shell" id="looker-embed-wrap">
+            <div
+              class="embed-shell embed-shell--looker"
+              id="looker-embed-wrap"
+              data-embed
+            >
+              <div class="embed-skeleton" aria-hidden="true"></div>
+              <div class="embed-fallback embed-fallback--overlay" role="note">
+                No se pudo cargar el reporte embebido. Usá “Abrir reporte
+                completo”.
+              </div>
               <iframe
+                class="embed-iframe"
                 id="looker-iframe"
                 title="Reporte consolidado PPCCR (Looker Studio)"
                 loading="lazy"
                 allowfullscreen
-                referrerpolicy="no-referrer"
+                referrerpolicy="no-referrer-when-downgrade"
               ></iframe>
             </div>
 
@@ -400,14 +420,21 @@
 
           <div class="embed-card" aria-label="Calendario embebido">
             <div
-              class="responsive-embed responsive-embed--calendar"
+              class="embed-shell embed-shell--calendar"
               id="calendar-embed-wrap"
+              data-embed
             >
+              <div class="embed-skeleton" aria-hidden="true"></div>
+              <div class="embed-fallback embed-fallback--overlay" role="note">
+                No se pudo cargar el calendario embebido. Usá “Abrir
+                calendario”.
+              </div>
               <iframe
+                class="embed-iframe"
                 id="calendar-iframe"
                 title="Calendario del Programa PPCCR"
                 loading="lazy"
-                referrerpolicy="no-referrer"
+                referrerpolicy="no-referrer-when-downgrade"
               ></iframe>
             </div>
 
@@ -434,6 +461,13 @@
         </div>
       </div>
     </main>
+
+    <nav
+      class="mobile-fixed-dock"
+      id="mobile-fixed-dock"
+      aria-label="Navegación principal móvil"
+      hidden
+    ></nav>
 
     <a
       class="back-to-top"
