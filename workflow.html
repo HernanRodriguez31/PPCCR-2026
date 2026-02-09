@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Workflow operativo | PPCCR 2026</title>
+    <meta
+      name="description"
+      content="Workflow operativo PPCCR 2026 en Estaciones Saludables (CABA): etapas, decisión clínica, ruta FIT, derivación y cierre operativo."
+    />
+    <link rel="canonical" href="https://programadeprevencion.com/workflow.html" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <script src="host-guard.js"></script>
+    <link rel="icon" href="assets/favicon.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="workflow.css" />
+    <script src="workflow.js" defer></script>
+  </head>
+  <body class="page-workflow" id="top">
+    <a class="wf-skip-link" href="#workflow-main">Saltar al contenido</a>
+
+    <header class="wf-hero">
+      <div class="container wf-hero__inner">
+        <div class="wf-brand" aria-label="Programa PPCCR">
+          <img
+            class="wf-brand__logo"
+            src="assets/logo-cinta-azul.png"
+            alt="Cinta azul de concientización"
+            width="58"
+            height="58"
+            decoding="async"
+          />
+          <p class="wf-brand__title">Programa de Prevención de Cáncer Colorrectal</p>
+        </div>
+
+        <h1 class="wf-hero__title">Workflow operativo</h1>
+        <p class="wf-hero__subtitle">
+          Operativo PPCCR 2026 – Estaciones Saludables (CABA). Alcance: desde
+          entrevista de inclusión hasta comunicación del resultado FIT y emisión
+          de derivación.
+        </p>
+
+        <aside class="wf-note" role="note" aria-label="Alcance y vigencia">
+          <p>
+            Vigencia: 9 de marzo – 1 de abril. (Difusión/Educación: 9–22 marzo.
+            Operativo qFIT: 23 marzo – 1 abril).
+          </p>
+          <p>
+            Fuera de alcance: coordinación/seguimiento con gastro-colonoscopía
+            luego de la derivación.
+          </p>
+        </aside>
+      </div>
+    </header>
+
+    <main id="workflow-main" class="wf-main">
+      <div class="container">
+        <section class="wf-section" aria-labelledby="wf-process-title">
+          <header class="section-header wf-section-header">
+            <div class="wf-section-head">
+              <h2 class="section-title" id="wf-process-title">Mapa de proceso 2026</h2>
+              <div class="wf-section-head__actions">
+                <div class="wf-role-legend">
+                  <button
+                    type="button"
+                    class="wf-info-btn"
+                    id="wf-role-legend-trigger"
+                    aria-label="Referencia de roles (CO, EN, ME, LO)"
+                    aria-expanded="false"
+                    aria-controls="roleLegendPopover"
+                  >
+                    <span aria-hidden="true">i</span>
+                  </button>
+                  <div
+                    class="wf-role-popover"
+                    id="roleLegendPopover"
+                    role="tooltip"
+                    hidden
+                    tabindex="-1"
+                  >
+                    <p class="wf-role-popover__title">Referencia de roles</p>
+                    <ul class="wf-role-popover__list">
+                      <li><strong>CO:</strong> Coordinación</li>
+                      <li><strong>EN:</strong> Enfermería / Navegación</li>
+                      <li><strong>ME:</strong> Médico/a</li>
+                      <li><strong>LO:</strong> Logística</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="section-subtitle">
+              El programa finaliza cuando se comunica el resultado FIT y se emite
+              derivación a colonoscopía cuando corresponde.
+            </p>
+          </header>
+
+          <div id="workflow-root" class="wf-flow" aria-live="polite"></div>
+        </section>
+
+        <section class="wf-section wf-section--actions" aria-label="Accesos relacionados">
+          <div class="wf-actions">
+            <a class="btn btn-secondary" href="/index.html#guias">Volver al portal</a>
+            <a class="btn btn-primary" href="/algoritmo.html">Ir al algoritmo de riesgo</a>
+            <a class="btn btn-ghost" href="/index.html#registro">Abrir formularios de registro</a>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <a
+      class="back-to-top"
+      id="back-to-top"
+      href="#top"
+      aria-label="Volver arriba"
+    >
+      <span class="back-to-top__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <path d="M12 18V6"></path>
+          <path d="m7 11 5-5 5 5"></path>
+        </svg>
+      </span>
+    </a>
+
+    <footer class="site-footer" aria-label="Pie de página">
+      <div class="container footer-grid">
+        <p class="footer-meta">© PPCCR 2026 | © Derechos Reservados.</p>
+      </div>
+    </footer>
+  </body>
+</html>

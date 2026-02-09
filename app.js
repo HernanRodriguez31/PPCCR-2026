@@ -51,8 +51,8 @@ const CONFIG = {
       {
         key: "rolesResponsabilidades",
         title: "Roles y responsabilidades",
-        meta: "PDF / Documento",
-        url: "PEGAR_AQUI_URL_ROLES_RESPONSABILIDADES",
+        meta: "Página interna",
+        url: "/roles.html",
       },
       {
         key: "manejoKitFIT",
@@ -69,8 +69,8 @@ const CONFIG = {
       {
         key: "workflow",
         title: "Workflow operativo",
-        meta: "PDF / Documento",
-        url: "PEGAR_AQUI_URL_WORKFLOW",
+        meta: "Página interna",
+        url: "/workflow.html",
       },
       {
         key: "kpis",
@@ -312,6 +312,41 @@ function deriveLookerEmbedUrl(openUrl) {
   }
 
   return openUrl;
+}
+
+function debounce(fn, wait = 140) {
+  let timeoutId = null;
+  return (...args) => {
+    window.clearTimeout(timeoutId);
+    timeoutId = window.setTimeout(() => fn(...args), wait);
+  };
+}
+
+let currentHeaderOffset = 180;
+
+function setHeaderOffset() {
+  const header = $(".site-header");
+  const headerHeight = header ? header.getBoundingClientRect().height : 160;
+  const nextOffset = Math.max(96, Math.round(headerHeight + 16));
+
+  if (nextOffset !== currentHeaderOffset) {
+    currentHeaderOffset = nextOffset;
+    document.documentElement.style.setProperty(
+      "--header-offset",
+      `${nextOffset}px`,
+    );
+  }
+
+  return currentHeaderOffset;
+}
+
+function getHeaderOffset() {
+  const raw = getComputedStyle(document.documentElement)
+    .getPropertyValue("--header-offset")
+    .trim();
+  const parsed = Number.parseFloat(raw);
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  return currentHeaderOffset;
 }
 
 function updateEmbedLoadState(wrapperEl, state) {
@@ -775,33 +810,100 @@ function setupMobileNav() {
 function setupActiveNavObserver() {
   const navLinks = Array.from(document.querySelectorAll(".nav-link[data-nav]"));
   const sections = navLinks
-    .map((a) => document.querySelector(a.getAttribute("href")))
+    .map((a) => {
+      const href = a.getAttribute("href");
+      return href ? document.querySelector(href) : null;
+    })
     .filter(Boolean);
 
-  if (!("IntersectionObserver" in window) || sections.length === 0) return;
+  if (sections.length === 0) return;
 
-  const obs = new IntersectionObserver(
-    (entries) => {
-      // Tomamos la sección más visible
-      const visible = entries
-        .filter((en) => en.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+  const setActiveLink = (sectionId) => {
+    navLinks.forEach((a) => a.removeAttribute("aria-current"));
+    const active = navLinks.find((a) => a.getAttribute("href") === `#${sectionId}`);
+    if (active) active.setAttribute("aria-current", "page");
+  };
 
-      if (!visible) return;
+  const getSectionByScroll = () => {
+    const line = window.scrollY + getHeaderOffset() + 24;
+    let current = sections[0];
+    sections.forEach((section) => {
+      if (section.offsetTop <= line) current = section;
+    });
+    return current?.id ?? null;
+  };
 
-      navLinks.forEach((a) => a.removeAttribute("aria-current"));
-      const activeLink = navLinks.find(
-        (a) => a.getAttribute("href") === `#${visible.target.id}`,
-      );
-      if (activeLink) activeLink.setAttribute("aria-current", "page");
-    },
-    { root: null, threshold: [0.2, 0.4, 0.6] },
+  const syncFromScroll = () => {
+    const currentSectionId = getSectionByScroll();
+    if (currentSectionId) setActiveLink(currentSectionId);
+  };
+
+  syncFromScroll();
+
+  let observer = null;
+  const supportsObserver = "IntersectionObserver" in window;
+
+  const buildObserver = () => {
+    if (!supportsObserver) return;
+    if (observer) observer.disconnect();
+
+    const rootMarginTop = -Math.round(getHeaderOffset());
+    observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => {
+            if (b.intersectionRatio !== a.intersectionRatio) {
+              return b.intersectionRatio - a.intersectionRatio;
+            }
+            return (
+              Math.abs(a.boundingClientRect.top) -
+              Math.abs(b.boundingClientRect.top)
+            );
+          })[0];
+
+        if (visible?.target?.id) {
+          setActiveLink(visible.target.id);
+          return;
+        }
+
+        syncFromScroll();
+      },
+      {
+        root: null,
+        threshold: [0.2, 0.35, 0.55, 0.75],
+        rootMargin: `${rootMarginTop}px 0px -55% 0px`,
+      },
+    );
+
+    sections.forEach((section) => observer.observe(section));
+  };
+
+  buildObserver();
+
+  let ticking = false;
+  const onScroll = () => {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(() => {
+      syncFromScroll();
+      ticking = false;
+    });
+  };
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener(
+    "resize",
+    debounce(() => {
+      setHeaderOffset();
+      buildObserver();
+      syncFromScroll();
+    }, 170),
   );
-
-  sections.forEach((s) => obs.observe(s));
 }
 
 function setupSmoothAnchorScroll() {
+  const navLinks = Array.from(document.querySelectorAll(".nav-link[data-nav]"));
   document.addEventListener("click", (e) => {
     if (e.defaultPrevented) return;
 
@@ -815,7 +917,21 @@ function setupSmoothAnchorScroll() {
     if (!target) return;
 
     e.preventDefault();
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    target.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "start",
+    });
+
+    const activeLink = navLinks.find((link) => link.getAttribute("href") === href);
+    if (activeLink) {
+      navLinks.forEach((link) => link.removeAttribute("aria-current"));
+      activeLink.setAttribute("aria-current", "page");
+    }
+
     history.pushState(null, "", href);
   });
 }
@@ -830,6 +946,7 @@ function setupHeaderScrollState() {
 
   const syncState = () => {
     header.classList.toggle(scrolledClass, window.scrollY > threshold);
+    setHeaderOffset();
   };
 
   const onScroll = () => {
@@ -843,6 +960,19 @@ function setupHeaderScrollState() {
 
   syncState();
   window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener(
+    "resize",
+    debounce(() => {
+      syncState();
+    }, 150),
+  );
+  window.addEventListener(
+    "load",
+    () => {
+      syncState();
+    },
+    { once: true },
+  );
 }
 
 function setupRevealAnimations() {
@@ -1040,6 +1170,7 @@ function init() {
 
   setupMobileNav();
   setupHeaderScrollState();
+  setHeaderOffset();
   setupActiveNavObserver();
   setupSmoothAnchorScroll();
   setupRevealAnimations();
