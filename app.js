@@ -37,10 +37,10 @@ const CONFIG = {
   links: {
     guias: [
       {
-        key: "estructuraPrograma",
-        title: "Estructura del programa",
-        meta: "PDF / Documento",
-        url: "PEGAR_AQUI_URL_ESTRUCTURA_DEL_PROGRAMA",
+        key: "workflow",
+        title: "Workflow operativo",
+        meta: "Página interna",
+        url: "/workflow.html",
       },
       {
         key: "algoritmoRiesgo",
@@ -67,12 +67,6 @@ const CONFIG = {
         url: "PEGAR_AQUI_URL_ENTREGA_MUESTRAS",
       },
       {
-        key: "workflow",
-        title: "Workflow operativo",
-        meta: "Página interna",
-        url: "/workflow.html",
-      },
-      {
         key: "kpis",
         title: "KPIs del programa",
         meta: "Ir a sección",
@@ -91,22 +85,22 @@ const CONFIG = {
           {
             key: "entregaKitFIT",
             label: "Entrega de Kit de FIT a pacientes",
-            url: "https://kitfit.programadeprevencion.com",
+            url: "https://9kxsjveuebz.typeform.com/to/CA9UQXTK",
           },
           {
             key: "recepcionMuestraFIT",
             label: "Recepción de Muestra de Test FIT",
-            url: "https://recepcionmuestra.programadeprevencion.com",
+            url: "https://9kxsjveuebz.typeform.com/to/ICgvwiBh",
           },
           {
             key: "envioMuestrasLaboratorio",
             label: "Envío de Muestras de FIT al Laboratorio",
-            url: "https://enviolab.programadeprevencion.com",
+            url: "https://9kxsjveuebz.typeform.com/to/EDtlnghR",
           },
           {
             key: "recepcionResultadosFIT",
             label: "Recepción de Resultados de FIT",
-            url: "https://recepcionresultados.programadeprevencion.com",
+            url: "https://9kxsjveuebz.typeform.com/to/zbS6LWx7",
           },
         ],
       },
@@ -118,12 +112,12 @@ const CONFIG = {
           {
             key: "entrevistaMedica",
             label: "Entrevista médica",
-            url: "https://entrevista.programadeprevencion.com",
+            url: "https://9kxsjveuebz.typeform.com/to/xP8fOLC4",
           },
           {
             key: "informePacienteResultadoFIT",
             label: "Informe al paciente del resultado del Test FIT",
-            url: "https://informeprograma.programadeprevencion.com",
+            url: "https://9kxsjveuebz.typeform.com/to/CPDHPjyy",
           },
         ],
       },
@@ -135,7 +129,7 @@ const CONFIG = {
           {
             key: "evaluacionInicialSalud",
             label: "Formularios de evaluación inicial de salud",
-            url: "https://cuestionario.programadeprevencion.com",
+            url: "https://9kxsjveuebz.typeform.com/to/X2jtQ7NT",
           },
         ],
       },
