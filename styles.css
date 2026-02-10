@@ -5494,12 +5494,41 @@ iframe {
 }
 
 .station-chip__label.user-dock-tile__label {
-  max-width: 74px;
+  max-width: 80px;
   font-size: 10.5px;
   line-height: 1.08;
   text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.station-chip__label--tight.user-dock-tile__label {
+  font-size: 9.4px;
+  line-height: 1.04;
+  letter-spacing: 0;
+}
+
+.station-chip--admin .station-chip__meta,
+#station-switch-trigger.station-chip.station-chip--admin .station-chip__meta {
+  gap: 0;
+}
+
+.station-chip--admin .station-chip__label.user-dock-tile__label,
+#station-switch-trigger.station-chip.station-chip--admin
+  .station-chip__label.user-dock-tile__label {
+  max-width: 82px;
+  font-size: 9.2px;
+  line-height: 1.03;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .station-chip.station-chip--inline,
@@ -5525,6 +5554,9 @@ iframe {
   .station-chip__label.user-dock-tile__label {
   max-width: 126px;
   text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (min-width: 768px) {
@@ -5621,5 +5653,340 @@ iframe {
     width: auto !important;
     max-width: none !important;
     transform: none !important;
+  }
+}
+
+/* =====================================================================
+   Station Switch Modal (scoped only to station mode)
+   ===================================================================== */
+:root {
+  --pp-blue-900: #0b2e4a;
+  --pp-blue-700: #0b5ed7;
+  --pp-blue-800: #084bb0;
+  --pp-blue-600: #1d6fe8;
+  --pp-blue-accent: #0f6bde;
+  --pp-program-blue: #0b4a7a;
+  --pp-surface: #ffffff;
+  --pp-border: rgba(11, 46, 74, 0.14);
+  --pp-muted: #6b7280;
+  --pp-shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.18);
+  --pp-shadow-md: 0 14px 35px rgba(0, 0, 0, 0.14);
+  --pp-shadow-sm: 0 10px 22px rgba(11, 46, 74, 0.12);
+  --pp-radius-xxl: 24px;
+  --pp-radius-xl: 18px;
+  --pp-radius-lg: 14px;
+}
+
+#auth-gate[data-mode="station"] {
+  background: rgba(15, 23, 42, 0.46);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  backdrop-filter: blur(16px) saturate(1.2);
+}
+
+#auth-gate[data-mode="station"] .pp-modal__card {
+  width: min(92vw, 560px);
+  max-width: 560px;
+  position: relative;
+  container-type: inline-size;
+  border-radius: var(--pp-radius-xxl);
+  border: 1px solid var(--pp-border);
+  background: var(--pp-surface);
+  box-shadow: var(--pp-shadow-lg);
+  overflow: hidden;
+  animation: ppModalIn 240ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+#auth-gate[data-mode="station"] .pp-modal__card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--pp-program-blue) 0%,
+    var(--pp-blue-700) 62%,
+    #35b6ff 120%
+  );
+  box-shadow: 0 1px 0 rgba(7, 23, 51, 0.14);
+  pointer-events: none;
+  z-index: 3;
+}
+
+#auth-gate[data-mode="station"] .pp-modal__header {
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid rgba(11, 46, 74, 0.1);
+  background: linear-gradient(180deg, rgba(241, 247, 255, 0.92), rgba(255, 255, 255, 0.98));
+}
+
+#auth-gate[data-mode="station"] .pp-modal__brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+#auth-gate[data-mode="station"] .pp-modal__logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+#auth-gate[data-mode="station"] .pp-modal__brandText {
+  min-width: 0;
+}
+
+#auth-gate[data-mode="station"] .pp-modal__kicker {
+  display: none;
+  margin: 0;
+  color: var(--pp-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#auth-gate[data-mode="station"] .pp-modal__programTitle {
+  margin: 2px 0 0;
+  color: var(--pp-program-blue);
+  font-size: 14px;
+  font-size: clamp(10.8px, 2.85cqi, 15.5px);
+  line-height: 1.06;
+  font-weight: 800;
+  letter-spacing: -0.012em;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  text-wrap: nowrap;
+  font-family:
+    "Avenir Next", "Trebuchet MS", "Montserrat", "Segoe UI", Helvetica, Arial,
+    sans-serif;
+}
+
+#auth-gate[data-mode="station"] .pp-modal__hint {
+  margin: 6px 0 0;
+  color: var(--pp-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+#auth-gate[data-mode="station"] .pp-modal__sectionTitle {
+  margin-top: 15px;
+}
+
+#auth-gate[data-mode="station"] .pp-modal__sectionKicker {
+  display: block;
+  margin: 0;
+  color: var(--pp-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#auth-gate[data-mode="station"] .pp-modal__sectionHeading {
+  margin: 2px 0 0;
+  color: var(--pp-blue-accent);
+  font-size: clamp(24px, 3.2vw, 30px);
+  line-height: 1.04;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  font-family:
+    "Avenir Next", "Trebuchet MS", "Montserrat", "Segoe UI", Helvetica, Arial,
+    sans-serif;
+}
+
+#auth-gate[data-mode="station"] .pp-modal__body {
+  padding: 18px 24px 22px;
+}
+
+#auth-gate[data-mode="station"] .station-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 13px;
+  margin-top: 16px;
+}
+
+#auth-gate[data-mode="station"] .station-tile {
+  position: relative;
+  min-height: 96px;
+  padding: 14px;
+  border-radius: var(--pp-radius-xl);
+  border: 1px solid rgba(11, 46, 74, 0.16);
+  background: #eaf6ff;
+  color: var(--pp-blue-900);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 700;
+  line-height: 1.18;
+  box-shadow: 0 3px 10px rgba(11, 46, 74, 0.08);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+#auth-gate[data-mode="station"] .station-tile__label {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  max-width: 100%;
+}
+
+#auth-gate[data-mode="station"] .station-tile__line {
+  display: block;
+  line-height: 1.1;
+}
+
+#auth-gate[data-mode="station"] .station-tile:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--pp-shadow-sm);
+}
+
+#auth-gate[data-mode="station"] .station-tile:active {
+  transform: scale(0.99);
+}
+
+#auth-gate[data-mode="station"] .station-tile:focus-visible {
+  outline: 3px solid rgba(29, 111, 232, 0.34);
+  outline-offset: 2px;
+}
+
+#auth-gate[data-mode="station"] .station-tile.is-selected,
+#auth-gate[data-mode="station"] .station-tile[aria-pressed="true"] {
+  background: linear-gradient(180deg, var(--pp-blue-600), var(--pp-blue-800));
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.38);
+  box-shadow:
+    0 14px 30px rgba(11, 94, 215, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+#auth-gate[data-mode="station"] .station-tile.is-selected::after,
+#auth-gate[data-mode="station"] .station-tile[aria-pressed="true"]::after {
+  content: "✓";
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.96);
+  opacity: 0.92;
+}
+
+#auth-gate[data-mode="station"] .pp-modal__footer {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(11, 46, 74, 0.1);
+}
+
+#auth-gate[data-mode="station"] .pp-modal__actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+#auth-gate[data-mode="station"] .pp-btn {
+  height: 44px;
+  min-width: 136px;
+  padding: 0 18px;
+  border-radius: var(--pp-radius-lg);
+  font-size: 0.94rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease,
+    opacity 160ms ease;
+}
+
+#auth-gate[data-mode="station"] .pp-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+#auth-gate[data-mode="station"] .pp-btn--secondary {
+  background: #ffffff;
+  border: 1px solid rgba(11, 46, 74, 0.2);
+  color: var(--pp-blue-800);
+  box-shadow: 0 6px 14px rgba(11, 46, 74, 0.08);
+}
+
+#auth-gate[data-mode="station"] .pp-btn--secondary:hover {
+  background: rgba(11, 94, 215, 0.06);
+}
+
+#auth-gate[data-mode="station"] .pp-btn--primary {
+  background: var(--pp-program-blue);
+  border: 1px solid transparent;
+  color: #ffffff;
+  box-shadow: 0 10px 18px rgba(11, 74, 122, 0.24);
+}
+
+#auth-gate[data-mode="station"] .pp-btn--primary:hover:not(:disabled) {
+  background: #083a61;
+}
+
+#auth-gate[data-mode="station"] .pp-btn--primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: saturate(0.9);
+  box-shadow: none;
+}
+
+@media (max-width: 520px) {
+  #auth-gate[data-mode="station"] .pp-modal__header,
+  #auth-gate[data-mode="station"] .pp-modal__body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  #auth-gate[data-mode="station"] .pp-modal__programTitle {
+    font-size: clamp(10px, 3.3cqi, 13.6px);
+  }
+
+  #auth-gate[data-mode="station"] .station-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #auth-gate[data-mode="station"] .station-tile[data-station="admin"] {
+    grid-column: 1 / -1;
+  }
+
+  #auth-gate[data-mode="station"] .pp-modal__actions {
+    justify-content: center;
+  }
+
+  #auth-gate[data-mode="station"] .pp-btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+@keyframes ppModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #auth-gate[data-mode="station"] .pp-modal__card,
+  #auth-gate[data-mode="station"] .station-tile,
+  #auth-gate[data-mode="station"] .pp-btn {
+    animation: none !important;
+    transition: none !important;
   }
 }

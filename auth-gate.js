@@ -328,6 +328,23 @@
   }
 
   /**
+   * @param {{id: string, name: string}} station
+   * @returns {string}
+   */
+  function getStationTileLabelMarkup(station) {
+    if (station.id === "aristobulo") {
+      return `
+        <span class="station-tile__label">
+          <span class="station-tile__line">Aristóbulo</span>
+          <span class="station-tile__line">del Valle</span>
+        </span>
+      `;
+    }
+
+    return `<span class="station-tile__label"><span class="station-tile__line">${station.name}</span></span>`;
+  }
+
+  /**
    * Crea el modal si todavía no existe en la página.
    */
   function ensureAuthGateExists() {
@@ -338,12 +355,13 @@
       (station) => `
         <button
           type="button"
-          class="auth-station auth-tile"
+          class="auth-station auth-tile station-tile"
           data-station-id="${station.id}"
+          data-station="${station.id}"
           data-station-name="${station.name}"
           aria-pressed="false"
         >
-          <span>${station.name}</span>
+          ${getStationTileLabelMarkup(station)}
         </button>
       `,
     ).join("");
@@ -357,20 +375,33 @@
     gate.setAttribute("aria-describedby", "authHint");
 
     gate.innerHTML = `
-      <div class="auth-card" role="document">
-        <header class="auth-header">
-          <div class="auth-brand">
-            <img class="auth-brand__logo auth-logo" src="${logoSrc}" alt="PPCCR" />
-            <div class="auth-brand__copy">
-              <span id="authKicker" class="auth-brand__kicker">Inicio de sesión</span>
-              <h1 id="authTitle" class="auth-brand__title">Programa de Prevención de Cáncer Colorrectal</h1>
-              <p id="authHint" class="auth-brand__subtitle">Seleccioná la estación saludable</p>
+      <div class="auth-card pp-modal__card" role="document">
+        <header class="auth-header pp-modal__header">
+          <div class="auth-brand pp-modal__brand">
+            <img
+              class="auth-brand__logo auth-logo pp-modal__logo"
+              src="${logoSrc}"
+              alt="PPCCR"
+            />
+            <div class="auth-brand__copy pp-modal__brandText">
+              <span id="authKicker" class="auth-brand__kicker pp-modal__kicker">Inicio de sesión</span>
+              <h1 id="authTitle" class="auth-brand__title pp-modal__programTitle">Programa de Prevención de Cáncer Colorrectal</h1>
+              <p id="authHint" class="auth-brand__subtitle pp-modal__hint">Seleccioná la estación saludable</p>
             </div>
+          </div>
+          <div id="authSectionTitleWrap" class="pp-modal__sectionTitle" hidden>
+            <span id="authSectionKicker" class="pp-modal__sectionKicker">Selecciona</span>
+            <h2 id="stationSectionTitle" class="pp-modal__sectionHeading">Estación saludable</h2>
           </div>
         </header>
 
-        <section class="auth-section">
-          <div class="auth-grid" id="authStationGrid" role="list" aria-label="Seleccionar ubicación">
+        <section class="auth-section pp-modal__body">
+          <div
+            class="auth-grid pp-modal__station-grid station-grid"
+            id="authStationGrid"
+            role="list"
+            aria-label="Seleccionar ubicación"
+          >
             ${stationsMarkup}
           </div>
 
@@ -409,10 +440,26 @@
             <p id="authError" class="auth-error" aria-live="polite" hidden>Clave incorrecta.</p>
           </div>
 
-          <div class="auth-actions">
-            <button id="authCancel" class="auth-btn auth-btn--ghost" type="button" hidden>Cancelar</button>
-            <button id="authEnter" class="auth-btn" type="button" disabled>Ingresar</button>
-          </div>
+          <footer class="auth-actions pp-modal__footer">
+            <div class="pp-modal__actions">
+              <button
+                id="authCancel"
+                class="auth-btn auth-btn--ghost pp-btn pp-btn--secondary"
+                type="button"
+                hidden
+              >
+                Cancelar
+              </button>
+              <button
+                id="authEnter"
+                class="auth-btn pp-btn pp-btn--primary"
+                type="button"
+                disabled
+              >
+                Ingresar
+              </button>
+            </div>
+          </footer>
         </section>
       </div>
     `;
@@ -594,10 +641,20 @@
    * @returns {HTMLButtonElement}
    */
   function buildStationChipButton(station) {
+    const isAdmin = station.id === "admin";
+    const tightLabel = isAdmin || station.name.length >= 12;
+    const metaClass = `station-chip__meta${isAdmin ? " station-chip__meta--admin" : ""}`;
+    const labelClass = `station-chip__label user-dock-tile__label${
+      tightLabel ? " station-chip__label--tight" : ""
+    }${isAdmin ? " station-chip__label--admin" : ""}`;
+    const kickerMarkup = isAdmin
+      ? ""
+      : '<span class="station-chip__kicker">Estación</span>';
+
     const button = document.createElement("button");
     button.type = "button";
     button.id = "station-switch-trigger";
-    button.className = "station-chip user-dock-tile";
+    button.className = `station-chip user-dock-tile${isAdmin ? " station-chip--admin" : ""}`;
     button.setAttribute("aria-label", `Cambiar estación saludable. Activa: ${station.name}`);
     button.dataset.stationId = station.id;
     button.innerHTML = `
@@ -608,9 +665,9 @@
           <path d="M9.6 11.1h4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
         </svg>
       </span>
-      <span class="station-chip__meta">
-        <span class="station-chip__kicker">Estación</span>
-        <span class="station-chip__label user-dock-tile__label">${station.name}</span>
+      <span class="${metaClass}">
+        ${kickerMarkup}
+        <span class="${labelClass}">${station.name}</span>
       </span>
     `;
     return button;
@@ -792,6 +849,9 @@
    * title: HTMLElement | null;
    * hint: HTMLElement | null;
    * kicker: HTMLElement | null;
+   * sectionTitleWrap: HTMLElement | null;
+   * sectionKicker: HTMLElement | null;
+   * sectionHeading: HTMLElement | null;
    * }}
    */
   function getAuthControls() {
@@ -812,6 +872,9 @@
     const title = document.getElementById("authTitle");
     const hint = document.getElementById("authHint");
     const kicker = document.getElementById("authKicker");
+    const sectionTitleWrap = document.getElementById("authSectionTitleWrap");
+    const sectionKicker = document.getElementById("authSectionKicker");
+    const sectionHeading = document.getElementById("stationSectionTitle");
 
     return {
       gate: gate instanceof HTMLElement ? gate : null,
@@ -828,6 +891,9 @@
       title: title instanceof HTMLElement ? title : null,
       hint: hint instanceof HTMLElement ? hint : null,
       kicker: kicker instanceof HTMLElement ? kicker : null,
+      sectionTitleWrap: sectionTitleWrap instanceof HTMLElement ? sectionTitleWrap : null,
+      sectionKicker: sectionKicker instanceof HTMLElement ? sectionKicker : null,
+      sectionHeading: sectionHeading instanceof HTMLElement ? sectionHeading : null,
     };
   }
 
@@ -991,6 +1057,9 @@
       title,
       hint,
       kicker,
+      sectionTitleWrap,
+      sectionKicker,
+      sectionHeading,
       field,
       input,
       enterBtn,
@@ -1004,9 +1073,15 @@
     clearAuthError();
 
     if (mode === "switch") {
-      if (kicker) kicker.textContent = "Contexto de estación";
+      if (kicker) {
+        kicker.textContent = "";
+        kicker.hidden = true;
+      }
       if (title) title.textContent = "Programa de Prevención de Cáncer Colorrectal";
       if (hint) hint.textContent = "Seleccioná la estación activa para esta sesión";
+      if (sectionTitleWrap) sectionTitleWrap.hidden = false;
+      if (sectionKicker) sectionKicker.textContent = "Selecciona";
+      if (sectionHeading) sectionHeading.textContent = "Estación saludable";
 
       if (field) {
         field.hidden = true;
@@ -1019,7 +1094,7 @@
       }
 
       toggleBtn.disabled = true;
-      enterBtn.textContent = "Aplicar cambios";
+      enterBtn.textContent = "Aplicar";
       if (cancelBtn) cancelBtn.hidden = false;
 
       const stationToSelect = currentStation ? currentStation.id : STATIONS[0].id;
@@ -1031,9 +1106,13 @@
       return;
     }
 
-    if (kicker) kicker.textContent = "Inicio de sesión";
+    if (kicker) {
+      kicker.hidden = false;
+      kicker.textContent = "Inicio de sesión";
+    }
     if (title) title.textContent = "Programa de Prevención de Cáncer Colorrectal";
     if (hint) hint.textContent = "Seleccioná la estación saludable";
+    if (sectionTitleWrap) sectionTitleWrap.hidden = true;
 
     if (field) {
       field.hidden = false;
@@ -1070,6 +1149,7 @@
     const gate = getGate();
     if (!gate) return;
 
+    gate.dataset.mode = mode === "switch" ? "station" : "login";
     resetAuthFormState();
     configureGateMode(mode);
 
@@ -1100,6 +1180,7 @@
     const gate = getGate();
     if (!gate) return;
 
+    gate.dataset.mode = "login";
     gate.classList.remove(AUTH_CLOSE_CLASS, AUTH_HIDING_CLASS);
     gate.setAttribute("aria-hidden", "true");
     gate.hidden = true;
@@ -1124,6 +1205,7 @@
     window.setTimeout(() => {
       gate.hidden = true;
       gate.style.display = "none";
+      gate.dataset.mode = "login";
       gate.classList.remove(AUTH_CLOSE_CLASS, AUTH_HIDING_CLASS);
       done();
     }, 250);
@@ -1243,8 +1325,8 @@
   function wireAuthInteractions() {
     if (interactionsBound) return;
 
-    const { input, enterBtn, toggleBtn, cancelBtn, grid } = getAuthControls();
-    if (!input || !enterBtn || !toggleBtn || !grid) return;
+    const { gate, input, enterBtn, toggleBtn, cancelBtn, grid } = getAuthControls();
+    if (!input || !enterBtn || !toggleBtn || !grid || !gate) return;
 
     grid.addEventListener("click", (event) => {
       const target = event.target;
@@ -1289,6 +1371,16 @@
         });
       });
     }
+
+    gate.addEventListener("click", (event) => {
+      if (gateMode !== "switch") return;
+      if (event.target !== gate) return;
+
+      closeAuthGate(() => {
+        unlockBody();
+        restoreFocusAfterGate();
+      });
+    });
 
     interactionsBound = true;
   }
