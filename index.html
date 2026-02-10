@@ -19,6 +19,19 @@
     <link rel="stylesheet" href="styles.css" />
     <script src="app.js" defer></script>
     <script src="auth-gate.js" defer></script>
+    <script
+      src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"
+      defer
+    ></script>
+    <script
+      src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"
+      defer
+    ></script>
+    <script
+      src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"
+      defer
+    ></script>
+    <script src="teleconsulta-embed.js" defer></script>
   </head>
 
   <body class="page-home">
@@ -116,7 +129,7 @@
             <li>
               <a
                 class="nav-link"
-                href="/teleconsulta.html"
+                href="#teleconsulta"
                 data-nav="teleconsulta"
               >
                 <span class="nav-link__icon" aria-hidden="true">
@@ -361,35 +374,142 @@
 
       <!-- TELECONSULTA -->
       <section
-        class="section section-anchor section-muted"
+        class="section section-anchor section-muted teleconsulta"
         id="teleconsulta"
         aria-labelledby="teleconsulta-title"
       >
         <div class="container">
-          <header class="section-header">
-            <h2 class="section-title" id="teleconsulta-title">Teleconsulta</h2>
-            <p class="section-subtitle">
-              Módulo operativo de telemedicina punto-a-punto para enlace con
-              estaciones saludables.
-            </p>
-          </header>
+          <div class="section-card teleconsulta-card">
+            <header class="teleconsulta-head section-header">
+              <h2 class="section-title" id="teleconsulta-title">Teleconsulta</h2>
+              <p class="section-subtitle">
+                Módulo operativo de telemedicina punto-a-punto para enlace con
+                estaciones saludables.
+              </p>
+            </header>
 
-          <div class="placeholder">
-            <div class="placeholder__badge">Disponible</div>
-            <h3 class="placeholder__title">
-              Telemedicina P2P del Consultorio Central
-            </h3>
-            <p class="placeholder__text">
-              Acceso al panel médico y a la terminal de estaciones para consulta
-              remota en tiempo real con Jitsi.
-            </p>
-            <div class="embed-actions">
-              <a class="btn btn-primary" href="/teleconsulta.html">
-                Abrir módulo médico
-              </a>
-              <a class="btn btn-secondary" href="/teleconsulta-estacion.html">
-                Abrir terminal de estación
-              </a>
+            <!-- Widget embebido -->
+            <div id="teleconsultaWidget" class="telew" aria-live="polite">
+              <!-- Contexto estación -->
+              <button
+                type="button"
+                id="telewStationPill"
+                class="telew__station"
+                aria-label="Cambiar estación saludable"
+              >
+                <span class="telew__stationIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path
+                      d="M12 21c4.4-3.6 6.6-6.8 6.6-9.8A6.6 6.6 0 0 0 12 4.6a6.6 6.6 0 0 0-6.6 6.6c0 3 2.2 6.2 6.6 9.8z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <circle
+                      cx="12"
+                      cy="11.2"
+                      r="2.4"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                    />
+                  </svg>
+                </span>
+                <span class="telew__stationText">
+                  <span class="telew__stationKicker">Tu estación</span>
+                  <span id="telewStationName" class="telew__stationName">—</span>
+                </span>
+                <span class="telew__stationAction">Cambiar</span>
+              </button>
+
+              <!-- Copy guía -->
+              <div class="telew__copy">
+                <div class="telew__copyKicker">Teleconsulta P2P</div>
+                <div class="telew__copyTitle">
+                  Seleccioná la estación con la que te querés comunicar
+                </div>
+              </div>
+
+              <!-- Targets -->
+              <div
+                id="telewTargets"
+                class="telew__targets"
+                role="list"
+                aria-label="Estaciones disponibles"
+              >
+                <!-- JS renderiza tarjetas aquí -->
+              </div>
+
+              <!-- Estado / acciones -->
+              <div class="telew__statusRow">
+                <div id="telewStatus" class="telew__status">Listo.</div>
+                <div class="telew__statusActions">
+                  <button
+                    type="button"
+                    id="telewCallBtn"
+                    class="btn btn-primary telew__btn"
+                    disabled
+                  >
+                    Llamar
+                  </button>
+                  <button
+                    type="button"
+                    id="telewHangupBtn"
+                    class="btn btn-danger telew__btn"
+                    hidden
+                  >
+                    Colgar
+                  </button>
+                </div>
+              </div>
+
+              <!-- Stage video embebido -->
+              <div class="telew__stage">
+                <div
+                  id="telewStage"
+                  class="telew__stageInner"
+                  aria-label="Video de teleconsulta"
+                >
+                  <div id="telewStagePlaceholder" class="telew__placeholder">
+                    <div class="telew__placeholderTitle">Teleconsulta</div>
+                    <div class="telew__placeholderText">
+                      Iniciá una llamada o esperá una entrante.
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Controles in-call -->
+                <div id="telewControls" class="telew__controls" hidden>
+                  <button
+                    type="button"
+                    id="telewToggleMic"
+                    class="telew__ctl"
+                    aria-label="Alternar micrófono"
+                    aria-pressed="true"
+                  >
+                    Mic
+                  </button>
+                  <button
+                    type="button"
+                    id="telewToggleCam"
+                    class="telew__ctl"
+                    aria-label="Alternar cámara"
+                    aria-pressed="false"
+                  >
+                    Cámara
+                  </button>
+                  <button
+                    type="button"
+                    id="telewFullscreen"
+                    class="telew__ctl"
+                    aria-label="Abrir en pantalla completa"
+                  >
+                    Pantalla completa
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -560,6 +680,55 @@
           ></iframe>
         </div>
       </div>
+    </div>
+
+    <!-- Modal: llamada entrante -->
+    <div
+      id="telecallIncoming"
+      class="telemodal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="telecallIncomingTitle"
+    >
+      <div class="telemodal__backdrop" data-close="1"></div>
+      <div class="telemodal__card" role="document">
+        <div class="telemodal__title" id="telecallIncomingTitle">
+          Llamada entrante
+        </div>
+        <div id="telecallIncomingFrom" class="telemodal__from">—</div>
+        <div class="telemodal__actions">
+          <button type="button" id="telecallDecline" class="btn btn-ghost">
+            Rechazar
+          </button>
+          <button type="button" id="telecallAccept" class="btn btn-primary">
+            Atender
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: fullscreen stage -->
+    <div
+      id="telecallFullscreen"
+      class="telefs"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="telefsLabel"
+    >
+      <div class="telefs__topbar">
+        <div class="telefs__label" id="telefsLabel">En llamada</div>
+        <div class="telefs__actions">
+          <button type="button" id="telefsMinimize" class="btn btn-ghost">
+            Minimizar
+          </button>
+          <button type="button" id="telefsHangup" class="btn btn-danger">
+            Colgar
+          </button>
+        </div>
+      </div>
+      <div id="telefsStage" class="telefs__stage"></div>
     </div>
 
     <noscript>

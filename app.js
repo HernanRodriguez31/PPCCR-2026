@@ -240,6 +240,24 @@ const CONFIG = {
   },
 };
 
+const STATION_BRIDGE_KEYS = Object.freeze({
+  station: "ppccr_station",
+  stationId: "ppccr_station_id",
+  stationName: "ppccr_station_name",
+  stationLegacy: "ppccr_auth_user",
+});
+
+const STATION_NAME_BY_ID = Object.freeze({
+  saavedra: "Parque Saavedra",
+  aristobulo: "Aristóbulo del Valle",
+  rivadavia: "Parque Rivadavia",
+  chacabuco: "Parque Chacabuco",
+  admin: "Administrador",
+});
+
+let stationBridgeBound = false;
+let stationBridgeLastSignature = "";
+
 /* ----------------------------- Helpers ----------------------------- */
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
@@ -314,6 +332,157 @@ function debounce(fn, wait = 140) {
     window.clearTimeout(timeoutId);
     timeoutId = window.setTimeout(() => fn(...args), wait);
   };
+}
+
+function safeSessionGetStation(key) {
+  try {
+    return sessionStorage.getItem(key) || "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function safeSessionSetStation(key, value) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch (error) {
+    // no-op: storage restringido
+  }
+}
+
+function normalizeStationDetail(detailCandidate, fallbackName = "") {
+  if (!detailCandidate || typeof detailCandidate !== "object") return null;
+
+  const rawId = String(
+    detailCandidate.stationId || detailCandidate.id || "",
+  ).trim();
+  if (!rawId) return null;
+
+  const stationId = rawId.toLowerCase();
+  const stationName =
+    String(detailCandidate.stationName || detailCandidate.name || "").trim() ||
+    String(fallbackName || "").trim() ||
+    STATION_NAME_BY_ID[stationId] ||
+    "Estación";
+
+  return { stationId, stationName };
+}
+
+function readStationFromStorageBridge() {
+  const bodyId = String(document.body?.dataset.station || "").trim().toLowerCase();
+  const bodyName = String(document.body?.dataset.stationName || "").trim();
+  if (bodyId) {
+    return normalizeStationDetail({ stationId: bodyId, stationName: bodyName });
+  }
+
+  const rawStation = safeSessionGetStation(STATION_BRIDGE_KEYS.station);
+  if (rawStation) {
+    try {
+      const parsed = JSON.parse(rawStation);
+      const normalized = normalizeStationDetail(parsed);
+      if (normalized) return normalized;
+    } catch (error) {
+      // compat: valor legacy no JSON
+      const normalized = normalizeStationDetail({
+        stationName: rawStation,
+      });
+      if (normalized) return normalized;
+    }
+  }
+
+  const sessionId = safeSessionGetStation(STATION_BRIDGE_KEYS.stationId).trim();
+  const sessionName =
+    safeSessionGetStation(STATION_BRIDGE_KEYS.stationName).trim() ||
+    safeSessionGetStation(STATION_BRIDGE_KEYS.stationLegacy).trim();
+
+  if (!sessionId) return null;
+  return normalizeStationDetail({
+    stationId: sessionId,
+    stationName: sessionName,
+  });
+}
+
+function syncStationBridgeState(station) {
+  if (!station || !document.body) return;
+
+  document.body.dataset.station = station.stationId;
+  document.body.dataset.stationName = station.stationName;
+
+  safeSessionSetStation(
+    STATION_BRIDGE_KEYS.station,
+    JSON.stringify({
+      id: station.stationId,
+      name: station.stationName,
+      stationId: station.stationId,
+      stationName: station.stationName,
+    }),
+  );
+  safeSessionSetStation(STATION_BRIDGE_KEYS.stationId, station.stationId);
+  safeSessionSetStation(STATION_BRIDGE_KEYS.stationName, station.stationName);
+  safeSessionSetStation(STATION_BRIDGE_KEYS.stationLegacy, station.stationName);
+}
+
+function emitStationChangedBridge(station) {
+  if (!station) return;
+
+  const signature = `${station.stationId}|${station.stationName}`;
+  if (signature === stationBridgeLastSignature) return;
+  stationBridgeLastSignature = signature;
+
+  window.dispatchEvent(
+    new CustomEvent("ppccr:station-changed", {
+      detail: {
+        stationId: station.stationId,
+        stationName: station.stationName,
+      },
+    }),
+  );
+}
+
+function setupStationBridge() {
+  if (stationBridgeBound) return;
+  stationBridgeBound = true;
+
+  window.addEventListener("ppccr:stationChanged", (event) => {
+    if (!(event instanceof CustomEvent)) return;
+    const station = normalizeStationDetail(event.detail || {});
+    if (!station) return;
+    syncStationBridgeState(station);
+    emitStationChangedBridge(station);
+  });
+
+  window.addEventListener("ppccr:open-station-picker", () => {
+    if (window.PPCCR?.station && typeof window.PPCCR.station.openSwitcher === "function") {
+      window.PPCCR.station.openSwitcher();
+      return;
+    }
+
+    const trigger = document.querySelector("#station-switch-trigger, #user-banner");
+    if (trigger instanceof HTMLElement) {
+      trigger.click();
+    }
+  });
+
+  window.PPCCR = window.PPCCR || {};
+  window.PPCCR.getActiveStation = () => {
+    const station = readStationFromStorageBridge();
+    if (!station) return null;
+    return {
+      stationId: station.stationId,
+      stationName: station.stationName,
+      id: station.stationId,
+      name: station.stationName,
+    };
+  };
+
+  const initialStation =
+    window.PPCCR?.station && typeof window.PPCCR.station.get === "function"
+      ? normalizeStationDetail(window.PPCCR.station.get())
+      : readStationFromStorageBridge();
+  if (initialStation) {
+    syncStationBridgeState(initialStation);
+    emitStationChangedBridge(initialStation);
+  }
 }
 
 let currentHeaderOffset = 180;
@@ -1541,6 +1710,7 @@ function setupLookerModal() {
 /* ----------------------------- Init ----------------------------- */
 
 function init() {
+  setupStationBridge();
   setMetaText();
   renderPartnerLogos();
   initEmbeds();

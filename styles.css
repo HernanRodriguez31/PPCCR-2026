@@ -60,6 +60,15 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --mobile-header-h: 64px;
   --mobile-dock-h: 76px;
+
+  --tele-brand-900: #083b8a;
+  --tele-brand-700: #0b57d0;
+  --tele-ink: #0b1b2b;
+  --tele-muted: rgba(11, 27, 43, 0.68);
+  --tele-surface: rgba(255, 255, 255, 0.86);
+  --tele-stroke: rgba(10, 45, 90, 0.14);
+  --tele-shadow: 0 18px 60px rgba(10, 25, 50, 0.18);
+  --tele-radius: 18px;
 }
 
 *,
@@ -974,6 +983,12 @@ code {
   background: rgba(255, 255, 255, 0.82);
   color: var(--blue-900);
   border-color: rgba(15, 95, 166, 0.18);
+}
+
+.btn-danger {
+  background: linear-gradient(140deg, #dd2f45, #bb1735);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .btn-ghost {
@@ -5986,6 +6001,605 @@ iframe {
   #auth-gate[data-mode="station"] .pp-modal__card,
   #auth-gate[data-mode="station"] .station-tile,
   #auth-gate[data-mode="station"] .pp-btn {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Teleconsulta Embedded */
+.section-card.teleconsulta-card {
+  border-radius: 24px;
+  border: 1px solid rgba(15, 95, 166, 0.16);
+  background: linear-gradient(
+    140deg,
+    rgba(255, 255, 255, 0.94),
+    rgba(236, 246, 255, 0.86)
+  );
+  box-shadow:
+    0 18px 42px rgba(3, 18, 38, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  padding: clamp(16px, 2.4vw, 24px);
+  max-width: 100%;
+}
+
+.teleconsulta-head.section-header {
+  margin-bottom: 16px;
+}
+
+.telew {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  max-width: 100%;
+  padding: clamp(14px, 2.2vw, 20px);
+  border-radius: var(--tele-radius);
+  border: 1px solid var(--tele-stroke);
+  background:
+    radial-gradient(
+      circle at 12% 0%,
+      rgba(11, 87, 208, 0.11) 0,
+      transparent 36%
+    ),
+    var(--tele-surface);
+  box-shadow: var(--tele-shadow);
+  -webkit-backdrop-filter: blur(12px) saturate(134%);
+  backdrop-filter: blur(12px) saturate(134%);
+}
+
+.telew.is-busy .telew__status::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(8, 59, 138, 0.25);
+  border-top-color: rgba(8, 59, 138, 0.95);
+  animation: teleSpin 1s linear infinite;
+}
+
+@keyframes teleSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.telew__station {
+  width: 100%;
+  border: 1px solid rgba(8, 59, 138, 0.18);
+  border-radius: var(--radius-16);
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.84),
+    rgba(237, 246, 255, 0.78)
+  );
+  box-shadow:
+    0 12px 22px rgba(9, 34, 69, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  color: var(--tele-ink);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition:
+    transform 170ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.telew__station:hover {
+  transform: translateY(-1px);
+  border-color: rgba(8, 59, 138, 0.28);
+  box-shadow:
+    0 16px 26px rgba(7, 30, 62, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.87);
+}
+
+.telew__stationIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(150deg, #e7f1ff, #d8e9ff);
+  color: var(--tele-brand-900);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  flex: 0 0 auto;
+}
+
+.telew__stationIcon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.telew__stationText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+.telew__stationKicker {
+  font-size: 0.76rem;
+  font-weight: 720;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(11, 27, 43, 0.62);
+}
+
+.telew__stationName {
+  font-weight: 760;
+  font-size: 1rem;
+  color: var(--tele-ink);
+  overflow-wrap: anywhere;
+}
+
+.telew__stationAction {
+  margin-left: auto;
+  font-size: 0.84rem;
+  font-weight: 760;
+  color: var(--tele-brand-700);
+}
+
+.telew__copy {
+  display: grid;
+  gap: 4px;
+}
+
+.telew__copyKicker {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(11, 27, 43, 0.56);
+  font-weight: 780;
+}
+
+.telew__copyTitle {
+  font-family:
+    "SF Pro Display", "Avenir Next", "Avenir Next Condensed", Montserrat,
+    "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: clamp(1rem, 2.4vw, 1.15rem);
+  font-weight: 640;
+  color: var(--tele-ink);
+}
+
+.telew__targets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.telew-target {
+  border: 1px solid rgba(11, 87, 208, 0.18);
+  border-radius: 14px;
+  background: linear-gradient(
+    158deg,
+    rgba(240, 247, 255, 0.9),
+    rgba(230, 242, 255, 0.84)
+  );
+  box-shadow:
+    0 10px 18px rgba(8, 37, 70, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  min-height: 84px;
+  padding: 10px 11px;
+  text-align: left;
+  color: var(--tele-ink);
+  cursor: pointer;
+  display: grid;
+  align-content: space-between;
+  gap: 8px;
+  transition:
+    transform 150ms ease,
+    box-shadow 170ms ease,
+    border-color 170ms ease,
+    background 170ms ease,
+    color 170ms ease;
+}
+
+.telew-target:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 12px 24px rgba(7, 35, 67, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.telew-target__name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: pretty;
+}
+
+.telew-target__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 680;
+  color: var(--tele-muted);
+}
+
+.telew-target__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #7f8ea3;
+  box-shadow: 0 0 0 3px rgba(11, 27, 43, 0.08);
+}
+
+.telew-target[data-state="available"] .telew-target__dot {
+  background: #15a661;
+  box-shadow: 0 0 0 3px rgba(21, 166, 97, 0.22);
+}
+
+.telew-target[data-state="busy"] .telew-target__dot {
+  background: #ffae18;
+  box-shadow: 0 0 0 3px rgba(255, 174, 24, 0.22);
+}
+
+.telew-target[data-state="offline"] .telew-target__dot {
+  background: #d23b4c;
+  box-shadow: 0 0 0 3px rgba(210, 59, 76, 0.2);
+}
+
+.telew-target.is-selected {
+  background: linear-gradient(145deg, #0b57d0, #083b8a);
+  border-color: rgba(4, 36, 84, 0.55);
+  color: #ffffff;
+  box-shadow:
+    0 14px 28px rgba(4, 32, 71, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.telew-target.is-selected .telew-target__status {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.telew-target[disabled] {
+  opacity: 0.78;
+}
+
+.telew__statusRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.telew__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  font-size: 0.92rem;
+  color: var(--tele-ink);
+  padding: 9px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(8, 59, 138, 0.15);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.telew__status[data-tone="info"] {
+  color: #0b376f;
+}
+
+.telew__status[data-tone="ok"] {
+  color: #0b5a3b;
+}
+
+.telew__status[data-tone="warn"] {
+  color: #7e4b00;
+}
+
+.telew__status[data-tone="error"] {
+  color: #8c1d2c;
+}
+
+.telew__statusActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.telew__btn {
+  min-width: 108px;
+  min-height: 42px;
+}
+
+.telew__stage {
+  display: grid;
+  gap: 10px;
+}
+
+.telew__stageInner {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(8, 59, 138, 0.16);
+  background:
+    radial-gradient(
+      circle at 14% 10%,
+      rgba(11, 87, 208, 0.22) 0,
+      transparent 38%
+    ),
+    linear-gradient(155deg, rgba(8, 27, 48, 0.96), rgba(7, 34, 66, 0.97));
+  box-shadow:
+    0 16px 36px rgba(4, 20, 41, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.telew__placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+  gap: 6px;
+  color: rgba(235, 244, 255, 0.88);
+  padding: 16px;
+  pointer-events: none;
+}
+
+.telew__placeholderTitle {
+  font-size: 1.08rem;
+  font-weight: 720;
+}
+
+.telew__placeholderText {
+  font-size: 0.9rem;
+  color: rgba(226, 239, 255, 0.75);
+}
+
+.telew__meetingHost,
+.telew__meetingHost iframe,
+.telew__stageInner iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.telew__controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.telew__ctl {
+  border: 1px solid rgba(10, 45, 90, 0.2);
+  background: rgba(255, 255, 255, 0.88);
+  color: #0b2e5e;
+  border-radius: 999px;
+  min-height: 36px;
+  padding: 0 13px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 170ms ease,
+    border-color 170ms ease,
+    transform 150ms ease,
+    color 160ms ease;
+}
+
+.telew__ctl:hover {
+  transform: translateY(-1px);
+  background: rgba(241, 248, 255, 0.98);
+}
+
+.telew__ctl[aria-pressed="true"] {
+  background: linear-gradient(145deg, #0b57d0, #083b8a);
+  border-color: rgba(8, 59, 138, 0.4);
+  color: #ffffff;
+}
+
+.telew__ctl:focus-visible,
+.telew-target:focus-visible,
+.telew__station:focus-visible {
+  outline: 3px solid rgba(42, 137, 230, 0.72);
+  outline-offset: 2px;
+}
+
+.telemodal {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+
+.telemodal.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.telemodal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 19, 38, 0.48);
+  -webkit-backdrop-filter: blur(7px);
+  backdrop-filter: blur(7px);
+}
+
+.telemodal__card {
+  position: relative;
+  z-index: 1;
+  width: min(92vw, 420px);
+  border-radius: 18px;
+  border: 1px solid rgba(9, 39, 75, 0.16);
+  background: rgba(255, 255, 255, 0.96);
+  padding: 18px;
+  box-shadow:
+    0 22px 48px rgba(4, 20, 41, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateY(6px) scale(0.98);
+  transition: transform 220ms ease;
+}
+
+.telemodal.is-open .telemodal__card {
+  transform: translateY(0) scale(1);
+}
+
+.telemodal__title {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 760;
+  color: var(--tele-brand-900);
+}
+
+.telemodal__from {
+  margin: 4px 0 0;
+  font-size: 1.14rem;
+  font-weight: 720;
+  color: #0a2d59;
+}
+
+.telemodal__actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.telefs {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(11, 87, 208, 0.18), transparent 36%),
+    linear-gradient(150deg, rgba(3, 10, 23, 0.96), rgba(7, 22, 42, 0.96));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.telefs.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.telefs__topbar {
+  min-height: 62px;
+  padding: 10px clamp(12px, 2.2vw, 18px);
+  border-bottom: 1px solid rgba(156, 190, 232, 0.26);
+  background: rgba(8, 24, 47, 0.66);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.telefs__label {
+  color: #eff6ff;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.telefs__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.telefs__actions .btn {
+  min-height: 38px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.telefs__actions .btn-ghost {
+  color: #eff6ff;
+  border-color: rgba(210, 228, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.telefs__stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: clamp(10px, 2vw, 16px);
+}
+
+.telefs__stage .telew__meetingHost {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+body.telefs-open,
+html.telefs-open {
+  overflow: hidden;
+}
+
+@media (min-width: 780px) {
+  .telew__targets {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1040px) {
+  .telew__targets {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .telew {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .telew__stationAction {
+    font-size: 0.8rem;
+  }
+
+  .telew__statusRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .telew__statusActions {
+    width: 100%;
+  }
+
+  .telew__btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .telemodal__actions {
+    justify-content: stretch;
+  }
+
+  .telemodal__actions .btn {
+    flex: 1 1 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .telew,
+  .telew__station,
+  .telew-target,
+  .telew__ctl,
+  .telemodal,
+  .telemodal__card,
+  .telefs,
+  .telew.is-busy .telew__status::after {
     animation: none !important;
     transition: none !important;
   }
