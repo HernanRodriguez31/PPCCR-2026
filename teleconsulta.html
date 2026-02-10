@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Telemedicina P2P | PPCCR 2026</title>
+    <meta
+      name="description"
+      content="Telemedicina punto-a-punto PPCCR 2026. Consultorio central conecta con estaciones saludables para consulta remota en tiempo real."
+    />
+    <link
+      rel="canonical"
+      href="https://programadeprevencion.com/teleconsulta.html"
+    />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <script src="host-guard.js"></script>
+    <link rel="icon" href="assets/favicon.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="teleconsulta.css" />
+    <script src="teleconsulta.js" defer></script>
+    <script src="mobile-shell.js" defer></script>
+  </head>
+
+  <body class="page-teleconsulta page-internal" id="top">
+    <header class="telemed-hero site-header site-topbar">
+      <div class="telemed-hero__inner">
+        <div class="telemed-brand" aria-label="Programa PPCCR">
+          <img
+            class="telemed-brand__logo"
+            src="assets/logo-cinta-azul.png"
+            alt="Cinta azul de concientización"
+            width="58"
+            height="58"
+            decoding="async"
+          />
+          <p class="telemed-brand__title">
+            Programa de Prevención de Cáncer Colorrectal
+          </p>
+        </div>
+
+        <h1 class="telemed-hero__title">Telemedicina P2P · Consultorio Central</h1>
+        <p class="telemed-hero__subtitle">
+          Módulo clínico para conectar en forma individual con cada estación
+          saludable. Solo una videollamada activa por vez.
+        </p>
+        <p class="telemed-hero__meta">
+          Estaciones habilitadas: Parque Saavedra, Aristóbulo del Valle, Parque
+          Rivadavia y Parque Chacabuco.
+        </p>
+      </div>
+    </header>
+
+    <main class="telemed-main site-main" id="telemed-main">
+      <div class="telemed-shell" id="telemedRoot" data-role="doctor">
+        <section class="telemed-panel" aria-labelledby="telemed-stations-title">
+          <header class="telemed-panel__head">
+            <h2 class="telemed-panel__title" id="telemed-stations-title">
+              Control de estaciones
+            </h2>
+            <p class="telemed-panel__hint">
+              Seleccione una estación para iniciar o cambiar consulta. Si cambia
+              varias veces durante conexión, se ejecuta el último destino.
+            </p>
+          </header>
+
+          <div class="telemed-grid" id="telemedGrid" role="list">
+            <button
+              class="station-card"
+              type="button"
+              data-station="saavedra"
+              aria-label="Conectar con Parque Saavedra"
+            >
+              <span class="station-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                  <path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z"></path>
+                  <circle cx="12" cy="11" r="2.3"></circle>
+                </svg>
+              </span>
+              <span>
+                <span class="station-card__title">Parque Saavedra</span>
+                <span class="station-card__meta">ES-01 · SAAV</span>
+              </span>
+              <span class="telemed-badge" data-badge>Disponible</span>
+            </button>
+
+            <button
+              class="station-card"
+              type="button"
+              data-station="aristobulo"
+              aria-label="Conectar con Aristóbulo del Valle"
+            >
+              <span class="station-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                  <path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z"></path>
+                  <circle cx="12" cy="11" r="2.3"></circle>
+                </svg>
+              </span>
+              <span>
+                <span class="station-card__title">Aristóbulo del Valle</span>
+                <span class="station-card__meta">ES-02 · ARDV</span>
+              </span>
+              <span class="telemed-badge" data-badge>Disponible</span>
+            </button>
+
+            <button
+              class="station-card"
+              type="button"
+              data-station="rivadavia"
+              aria-label="Conectar con Parque Rivadavia"
+            >
+              <span class="station-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                  <path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z"></path>
+                  <circle cx="12" cy="11" r="2.3"></circle>
+                </svg>
+              </span>
+              <span>
+                <span class="station-card__title">Parque Rivadavia</span>
+                <span class="station-card__meta">ES-03 · RIVA</span>
+              </span>
+              <span class="telemed-badge" data-badge>Disponible</span>
+            </button>
+
+            <button
+              class="station-card"
+              type="button"
+              data-station="chacabuco"
+              aria-label="Conectar con Parque Chacabuco"
+            >
+              <span class="station-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                  <path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z"></path>
+                  <circle cx="12" cy="11" r="2.3"></circle>
+                </svg>
+              </span>
+              <span>
+                <span class="station-card__title">Parque Chacabuco</span>
+                <span class="station-card__meta">ES-04 · CHAC</span>
+              </span>
+              <span class="telemed-badge" data-badge>Disponible</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="telemed-stage" aria-label="Videollamada">
+          <div class="telemed-jitsi-mount" id="jitsiMount"></div>
+          <div class="telemed-overlay" id="telemedOverlay" hidden>
+            <div class="telemed-spinner" aria-hidden="true"></div>
+            <p class="telemed-overlay__text" id="telemedOverlayText">
+              Conectando con estación...
+            </p>
+          </div>
+        </section>
+
+        <div class="telemed-statusbar is-idle" id="telemedStatusbar" role="status" aria-live="polite">
+          <p class="telemed-statusbar__text" id="telemedStatusText">
+            Seleccione una estación para iniciar la consulta.
+          </p>
+          <span class="telemed-station-pill" id="telemedStationName">Sin estación</span>
+          <div class="telemed-statusbar__actions">
+            <button class="btn btn-secondary" id="telemedRetry" type="button" hidden>
+              Reintentar
+            </button>
+            <button class="btn btn-ghost" id="telemedReset" type="button">
+              Volver a idle
+            </button>
+            <button class="btn btn-primary" id="telemedHangup" type="button">
+              Finalizar llamada
+            </button>
+          </div>
+        </div>
+
+        <p class="telemed-footnote">
+          Nota: esta implementación usa Jitsi sin backend propio. La protección
+          es de best effort con salas deterministas y password precompartida por
+          estación.
+        </p>
+      </div>
+    </main>
+
+    <nav
+      class="mobile-fixed-dock mobile-fixed-dock--internal"
+      id="mobile-fixed-dock"
+      aria-label="Navegación móvil"
+    >
+      <ul class="mobile-dock-list">
+        <li>
+          <a class="nav-link" href="/index.html#guias">
+            <span class="nav-link__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <path d="M6 5.5h7.5a2.5 2.5 0 0 1 2.5 2.5v10.5H8.5A2.5 2.5 0 0 0 6 21z"></path>
+                <path d="M18 18.5H8.5A2.5 2.5 0 0 0 6 21"></path>
+                <path d="M18 18.5V8a2.5 2.5 0 0 0-2.5-2.5H6"></path>
+              </svg>
+            </span>
+            <span class="nav-link__label">Guías</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" href="/index.html#registro">
+            <span class="nav-link__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <rect x="6" y="4.5" width="12" height="15" rx="2"></rect>
+                <path d="M9 9h6"></path>
+                <path d="M9 12.5h6"></path>
+              </svg>
+            </span>
+            <span class="nav-link__label">Registro</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" href="/index.html#kpis">
+            <span class="nav-link__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <path d="M4 19.5h16"></path>
+                <rect x="5.5" y="10.5" width="3.2" height="7" rx="1"></rect>
+                <rect x="10.4" y="7.8" width="3.2" height="9.7" rx="1"></rect>
+                <rect x="15.3" y="5.5" width="3.2" height="12" rx="1"></rect>
+              </svg>
+            </span>
+            <span class="nav-link__label">KPIs/Rep</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link is-active" href="/teleconsulta.html" aria-current="true">
+            <span class="nav-link__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <circle cx="12" cy="12" r="8"></circle>
+                <path d="M12 8v8"></path>
+                <path d="M8 12h8"></path>
+              </svg>
+            </span>
+            <span class="nav-link__label">Teleconsu</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" href="/index.html#cronograma">
+            <span class="nav-link__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <circle cx="12" cy="13" r="7"></circle>
+                <path d="M12 9.5v4l2.8 1.8"></path>
+                <path d="M8 3.5h8"></path>
+                <path d="M6 6.5h12"></path>
+              </svg>
+            </span>
+            <span class="nav-link__label">Cronogra</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <a class="back-to-top" id="back-to-top" href="#top" aria-label="Volver arriba">
+      <span class="back-to-top__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <path d="M12 18V6"></path>
+          <path d="m7 11 5-5 5 5"></path>
+        </svg>
+      </span>
+    </a>
+
+    <footer class="site-footer" aria-label="Pie de página">
+      <div class="container footer-grid">
+        <p class="footer-meta">© PPCCR 2026 | Telemedicina P2P.</p>
+      </div>
+    </footer>
+  </body>
+</html>

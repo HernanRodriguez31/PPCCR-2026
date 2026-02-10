@@ -1105,7 +1105,13 @@ function setupActiveNavObserver() {
   const sections = navLinks
     .map((a) => {
       const href = a.getAttribute("href");
-      return href ? document.querySelector(href) : null;
+      if (!href || !isAnchor(href)) return null;
+      try {
+        return document.querySelector(href);
+      } catch (error) {
+        console.warn("[nav] enlace no válido para observer:", href, error);
+        return null;
+      }
     })
     .filter(Boolean);
 
