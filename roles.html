@@ -2,7 +2,10 @@
 <html lang="es-AR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>Roles y responsabilidades | PPCCR 2026</title>
     <meta
       name="description"
@@ -15,9 +18,10 @@
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="roles.css" />
     <script src="roles.js" defer></script>
+    <script src="mobile-shell.js" defer></script>
   </head>
-  <body class="page-roles">
-    <header class="roles-hero">
+  <body class="page-roles page-internal" id="top">
+    <header class="roles-hero site-header site-topbar">
       <div class="container roles-hero__inner">
         <div class="roles-brand" aria-label="Programa PPCCR">
           <img
@@ -44,7 +48,7 @@
       </div>
     </header>
 
-    <main class="roles-main">
+    <main id="roles-main" class="roles-main site-main">
       <div class="container">
         <section class="roles-section" aria-labelledby="alcance-title">
           <article class="roles-panel">
@@ -433,6 +437,91 @@
         </section>
       </div>
     </main>
+
+    <nav
+      class="mobile-fixed-dock mobile-fixed-dock--internal"
+      id="mobile-fixed-dock"
+      aria-label="Navegación móvil"
+    >
+      <ul class="mobile-dock-list">
+        <li>
+          <a class="nav-link" href="/index.html#guias">
+            <span class="nav-link__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <path d="M6 5.5h7.5a2.5 2.5 0 0 1 2.5 2.5v10.5H8.5A2.5 2.5 0 0 0 6 21z"></path>
+                <path d="M18 18.5H8.5A2.5 2.5 0 0 0 6 21"></path>
+                <path d="M18 18.5V8a2.5 2.5 0 0 0-2.5-2.5H6"></path>
+              </svg>
+            </span>
+            <span class="nav-link__label">Guías</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" href="/index.html#registro">
+            <span class="nav-link__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <rect x="6" y="4.5" width="12" height="15" rx="2"></rect>
+                <path d="M9 9h6"></path>
+                <path d="M9 12.5h6"></path>
+              </svg>
+            </span>
+            <span class="nav-link__label">Registro</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" href="/index.html#kpis">
+            <span class="nav-link__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <path d="M4 19.5h16"></path>
+                <rect x="5.5" y="10.5" width="3.2" height="7" rx="1"></rect>
+                <rect x="10.4" y="7.8" width="3.2" height="9.7" rx="1"></rect>
+                <rect x="15.3" y="5.5" width="3.2" height="12" rx="1"></rect>
+              </svg>
+            </span>
+            <span class="nav-link__label">KPIs/Rep</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" href="/index.html#teleconsulta">
+            <span class="nav-link__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <circle cx="12" cy="12" r="8"></circle>
+                <path d="M12 8v8"></path>
+                <path d="M8 12h8"></path>
+              </svg>
+            </span>
+            <span class="nav-link__label">Teleconsu</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" href="/index.html#cronograma">
+            <span class="nav-link__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <circle cx="12" cy="13" r="7"></circle>
+                <path d="M12 9.5v4l2.8 1.8"></path>
+                <path d="M8 3.5h8"></path>
+                <path d="M6 6.5h12"></path>
+              </svg>
+            </span>
+            <span class="nav-link__label">Cronogra</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <a
+      class="back-to-top"
+      id="back-to-top"
+      href="#top"
+      aria-label="Volver arriba"
+    >
+      <span class="back-to-top__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <path d="M12 18V6"></path>
+          <path d="m7 11 5-5 5 5"></path>
+        </svg>
+      </span>
+    </a>
 
     <footer class="site-footer" aria-label="Pie de página">
       <div class="container footer-grid">

@@ -291,7 +291,7 @@
   left: calc(100% + 10px);
   top: 0;
   z-index: 50;
-  width: min(290px, calc(100vw - 24px));
+  width: min(290px, calc(100% - 24px));
   padding: 12px 14px;
   border-radius: var(--kf-radius-md);
   border: 1px solid rgba(255, 255, 255, 0.24);
@@ -498,7 +498,7 @@
   left: 50%;
   bottom: calc(100% + 8px);
   transform: translateX(-50%);
-  width: min(270px, calc(100vw - 24px));
+  width: min(270px, calc(100% - 24px));
   padding: 10px 12px;
   border-radius: var(--kf-radius-sm);
   background: linear-gradient(
@@ -679,7 +679,7 @@
 .page-kit-fit .kf-media-modal__dialog {
   position: relative;
   z-index: 1;
-  width: min(960px, calc(100vw - 24px));
+  width: min(960px, calc(100% - 24px));
   max-height: calc(100vh - 24px);
   overflow: auto;
   background: #fff;

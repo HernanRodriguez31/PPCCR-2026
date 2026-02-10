@@ -334,7 +334,7 @@ function setHeaderOffset() {
   }
 
   if (document.body.classList.contains("page-home")) {
-    const mobileQuery = window.matchMedia("(max-width: 768px)");
+    const mobileQuery = window.matchMedia("(max-width: 520px)");
     const mobileTopbar = $("#siteTopbar") || $(".topbar");
     const topbarHeight = mobileTopbar
       ? Math.max(48, Math.round(mobileTopbar.getBoundingClientRect().height))
@@ -368,7 +368,7 @@ function updateMobileBars() {
   if (!document.body.classList.contains("page-home")) return;
 
   const root = document.documentElement;
-  const isMobile = window.matchMedia("(max-width: 768px)").matches;
+  const isMobile = window.matchMedia("(max-width: 520px)").matches;
   const header = $(".site-header");
   const topbar = $("#siteTopbar") || $(".topbar");
   const fixedDock =
@@ -491,8 +491,12 @@ function renderPartnerLogos() {
     const img = document.createElement("img");
     img.src = p.src;
     img.alt = p.alt;
-    img.loading = "lazy";
+    img.loading = "eager";
+    img.fetchPriority = "high";
     img.decoding = "async";
+    // Reserva proporción desde el primer layout en mobile para evitar "pills" vacíos.
+    img.width = 290;
+    img.height = 110;
     img.dataset.partner = p.key;
 
     const label = document.createElement("span");
@@ -927,7 +931,7 @@ function setupHomeMobileBottomNavDock() {
   const fixedDock = $("#mobile-fixed-dock");
   if (!sourceNav || !sourceList || !fixedDock) return;
 
-  const isMobile = window.matchMedia("(max-width: 768px)").matches;
+  const isMobile = window.matchMedia("(max-width: 520px)").matches;
 
   if (isMobile) {
     sourceNav.classList.add("is-mobile-source-hidden");
@@ -978,7 +982,7 @@ function initMobilePremiumHeader() {
     header?.querySelector(".site-topbar__inner");
   if (!header) return;
 
-  const mq = window.matchMedia("(max-width: 768px)");
+  const mq = window.matchMedia("(max-width: 520px)");
   const COMPACT_Y = 24;
   let lastCompact = null;
 
@@ -1241,7 +1245,7 @@ function setupHeaderScrollState() {
 
   const scrolledClass = CONFIG.ui.headerScrolledClass;
   const threshold = 24;
-  const mobileSolidQuery = window.matchMedia("(max-width: 768px)");
+  const mobileSolidQuery = window.matchMedia("(max-width: 520px)");
   let ticking = false;
 
   const syncState = () => {
