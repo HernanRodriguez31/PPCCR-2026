@@ -11,17 +11,31 @@
   const AUTH_HIDING_CLASS = "is-hiding";
   const VIEWPORT_MQ = "(max-width: 767.98px)";
 
-  const AUTH_STORAGE_LEGACY = "ppccr_auth_user";
-  const AUTH_STORAGE_FLAG = "ppccr_auth";
-  const AUTH_STORAGE_STATION = "ppccr_station";
+  const STORAGE_KEYS = {
+    authFlag: "ppccr_auth",
+    authFlagAlt: "ppccr_auth_ok",
+    station: "ppccr_station",
+    stationId: "ppccr_station_id",
+    stationLegacy: "ppccr_auth_user",
+  };
 
-  const AUTH_STATIONS = [
-    "Parque Saavedra",
-    "Aristóbulo del Valle",
-    "Parque Rivadavia",
-    "Parque Chacabuco",
-    "Administrador",
+  const STATIONS = [
+    { id: "saavedra", name: "Parque Saavedra" },
+    { id: "aristobulo", name: "Aristóbulo del Valle" },
+    { id: "rivadavia", name: "Parque Rivadavia" },
+    { id: "chacabuco", name: "Parque Chacabuco" },
+    { id: "admin", name: "Administrador" },
   ];
+
+  /** @type {Map<string, {id: string, name: string}>} */
+  const STATION_BY_ID = new Map();
+  /** @type {Map<string, {id: string, name: string}>} */
+  const STATION_BY_NAME = new Map();
+
+  STATIONS.forEach((station) => {
+    STATION_BY_ID.set(station.id, station);
+    STATION_BY_NAME.set(foldText(station.name), station);
+  });
 
   /** @type {MediaQueryList | null} */
   let authMq = null;
@@ -35,14 +49,38 @@
   let headerSyncBound = false;
   /** @type {ResizeObserver | null} */
   let headerResizeObserver = null;
+  /** @type {boolean} */
+  let interactionsBound = false;
+  /** @type {boolean} */
+  let stationTriggerBound = false;
+
+  /** @type {"login" | "switch"} */
+  let gateMode = "login";
+  /** @type {string} */
+  let selectedStationId = "";
+  /** @type {boolean} */
+  let isAuthenticating = false;
+  /** @type {boolean} */
+  let isPassVisible = false;
 
   /**
-   * Normaliza la clave para validación case-insensitive.
    * @param {string} value
    * @returns {string}
    */
   function normalizePass(value) {
     return String(value ?? "").trim().toLowerCase();
+  }
+
+  /**
+   * @param {string} value
+   * @returns {string}
+   */
+  function foldText(value) {
+    return String(value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
   }
 
   /**
@@ -71,30 +109,202 @@
   }
 
   /**
-   * Obtiene estación persistida de la pestaña actual.
-   * @returns {string}
+   * @param {unknown} stationCandidate
+   * @returns {{id: string, name: string} | null}
    */
-  function getStoredStation() {
-    const authFlag = safeSessionGet(AUTH_STORAGE_FLAG);
-    const storedStation = safeSessionGet(AUTH_STORAGE_STATION);
+  function resolveStation(stationCandidate) {
+    if (!stationCandidate) return null;
 
-    if (authFlag === "1" && AUTH_STATIONS.includes(storedStation)) {
-      return storedStation;
+    if (typeof stationCandidate === "string") {
+      const trimmed = stationCandidate.trim();
+      if (!trimmed) return null;
+
+      const byId = STATION_BY_ID.get(trimmed.toLowerCase());
+      if (byId) return byId;
+
+      const byName = STATION_BY_NAME.get(foldText(trimmed));
+      if (byName) return byName;
+
+      if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || trimmed.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          return resolveStation(parsed);
+        } catch {
+          return null;
+        }
+      }
+
+      return null;
     }
 
-    const legacyStation = safeSessionGet(AUTH_STORAGE_LEGACY);
-    return AUTH_STATIONS.includes(legacyStation) ? legacyStation : "";
+    if (typeof stationCandidate === "object") {
+      const maybeStation = /** @type {{id?: unknown, stationId?: unknown, name?: unknown, stationName?: unknown}} */ (
+        stationCandidate
+      );
+
+      const stationId = String(maybeStation.id ?? maybeStation.stationId ?? "")
+        .trim()
+        .toLowerCase();
+      if (stationId) {
+        const byId = STATION_BY_ID.get(stationId);
+        if (byId) return byId;
+      }
+
+      const stationName = String(maybeStation.name ?? maybeStation.stationName ?? "").trim();
+      if (stationName) {
+        const byName = STATION_BY_NAME.get(foldText(stationName));
+        if (byName) return byName;
+      }
+    }
+
+    return null;
   }
 
   /**
-   * Persiste sesión y estación actual.
-   * @param {string} station
+   * @returns {boolean}
+   */
+  function isAuthFlagEnabled() {
+    const valid = new Set(["1", "true", "ok", "yes"]);
+    const mainFlag = safeSessionGet(STORAGE_KEYS.authFlag).trim().toLowerCase();
+    const altFlag = safeSessionGet(STORAGE_KEYS.authFlagAlt).trim().toLowerCase();
+    return valid.has(mainFlag) || valid.has(altFlag);
+  }
+
+  function setAuthFlagEnabled() {
+    safeSessionSet(STORAGE_KEYS.authFlag, "1");
+    safeSessionSet(STORAGE_KEYS.authFlagAlt, "1");
+  }
+
+  /**
+   * @returns {{id: string, name: string} | null}
+   */
+  function readStationFromStorage() {
+    const primary = resolveStation(safeSessionGet(STORAGE_KEYS.station));
+    if (primary) return primary;
+
+    const byId = resolveStation(safeSessionGet(STORAGE_KEYS.stationId));
+    if (byId) return byId;
+
+    const legacy = resolveStation(safeSessionGet(STORAGE_KEYS.stationLegacy));
+    if (legacy) return legacy;
+
+    return null;
+  }
+
+  /**
+   * @returns {{id: string, name: string} | null}
+   */
+  function getStoredStation() {
+    const station = readStationFromStorage();
+    if (!station) return null;
+
+    if (isAuthFlagEnabled()) return station;
+
+    // Compatibilidad con sesiones previas que solo persistían estación.
+    const hasAnyLegacy = Boolean(
+      safeSessionGet(STORAGE_KEYS.station) || safeSessionGet(STORAGE_KEYS.stationLegacy),
+    );
+    return hasAnyLegacy ? station : null;
+  }
+
+  /**
+   * @param {{id: string, name: string}} station
    */
   function setStoredStation(station) {
-    safeSessionSet(AUTH_STORAGE_FLAG, "1");
-    safeSessionSet(AUTH_STORAGE_STATION, station);
+    const payload = {
+      id: station.id,
+      name: station.name,
+      ts: Date.now(),
+    };
+
+    setAuthFlagEnabled();
+    safeSessionSet(STORAGE_KEYS.station, JSON.stringify(payload));
+    safeSessionSet(STORAGE_KEYS.stationId, station.id);
     // Compatibilidad con implementación previa.
-    safeSessionSet(AUTH_STORAGE_LEGACY, station);
+    safeSessionSet(STORAGE_KEYS.stationLegacy, station.name);
+  }
+
+  /**
+   * @param {{id: string, name: string} | null} station
+   */
+  function syncBodyStationDataset(station) {
+    if (!document.body) return;
+
+    if (!station) {
+      delete document.body.dataset.station;
+      delete document.body.dataset.stationName;
+      return;
+    }
+
+    document.body.dataset.station = station.id;
+    document.body.dataset.stationName = station.name;
+  }
+
+  /**
+   * @param {{id: string, name: string}} station
+   */
+  function emitStationChanged(station) {
+    window.dispatchEvent(
+      new CustomEvent("ppccr:stationChanged", {
+        detail: {
+          stationId: station.id,
+          stationName: station.name,
+        },
+      }),
+    );
+  }
+
+  /**
+   * @returns {{stationId: string, stationName: string, id: string, name: string} | null}
+   */
+  function getStationPublicState() {
+    const station = getStoredStation();
+    if (!station) return null;
+
+    return {
+      stationId: station.id,
+      stationName: station.name,
+      id: station.id,
+      name: station.name,
+    };
+  }
+
+  /**
+   * @param {(detail: {stationId: string, stationName: string}) => void} handler
+   * @returns {() => void}
+   */
+  function onStationChange(handler) {
+    if (typeof handler !== "function") {
+      return () => {};
+    }
+
+    const wrapped = (event) => {
+      if (!(event instanceof CustomEvent)) return;
+      const detail = /** @type {{stationId?: string, stationName?: string}} */ (
+        event.detail || {}
+      );
+      if (!detail.stationId || !detail.stationName) return;
+      handler({ stationId: detail.stationId, stationName: detail.stationName });
+    };
+
+    window.addEventListener("ppccr:stationChanged", wrapped);
+    return () => window.removeEventListener("ppccr:stationChanged", wrapped);
+  }
+
+  function setupGlobalStationApi() {
+    window.PPCCR = window.PPCCR || {};
+    window.PPCCR.station = {
+      get: () => getStationPublicState(),
+      set: (stationId) => {
+        const station = resolveStation(stationId);
+        if (!station) return;
+        applyStationState(station, { emit: true, render: true });
+      },
+      openSwitcher: () => {
+        openStationSwitcher();
+      },
+      onChange: (fn) => onStationChange(fn),
+    };
   }
 
   /**
@@ -124,15 +334,16 @@
     if (document.getElementById(AUTH_MODAL_ID)) return;
 
     const logoSrc = getAuthLogoSrc();
-    const stationsMarkup = AUTH_STATIONS.map(
+    const stationsMarkup = STATIONS.map(
       (station) => `
         <button
           type="button"
           class="auth-station auth-tile"
-          data-station="${station}"
+          data-station-id="${station.id}"
+          data-station-name="${station.name}"
           aria-pressed="false"
         >
-          <span>${station}</span>
+          <span>${station.name}</span>
         </button>
       `,
     ).join("");
@@ -151,19 +362,19 @@
           <div class="auth-brand">
             <img class="auth-brand__logo auth-logo" src="${logoSrc}" alt="PPCCR" />
             <div class="auth-brand__copy">
-              <span class="auth-brand__kicker">Inicio de sesión</span>
+              <span id="authKicker" class="auth-brand__kicker">Inicio de sesión</span>
               <h1 id="authTitle" class="auth-brand__title">Programa de Prevención de Cáncer Colorrectal</h1>
-              <p id="authHint" class="auth-brand__subtitle">Selecciona la estación saludable</p>
+              <p id="authHint" class="auth-brand__subtitle">Seleccioná la estación saludable</p>
             </div>
           </div>
         </header>
 
         <section class="auth-section">
-          <div class="auth-grid" role="list" aria-label="Seleccionar ubicación">
+          <div class="auth-grid" id="authStationGrid" role="list" aria-label="Seleccionar ubicación">
             ${stationsMarkup}
           </div>
 
-          <div class="auth-field">
+          <div class="auth-field" id="authPasswordField">
             <label class="auth-label" for="authPass">Clave</label>
             <div class="auth-inputWrap">
               <input
@@ -199,6 +410,7 @@
           </div>
 
           <div class="auth-actions">
+            <button id="authCancel" class="auth-btn auth-btn--ghost" type="button" hidden>Cancelar</button>
             <button id="authEnter" class="auth-btn" type="button" disabled>Ingresar</button>
           </div>
         </section>
@@ -221,12 +433,13 @@
   function findPrimaryHeader() {
     return (
       document.querySelector(".site-header.site-topbar") ||
+      document.querySelector(".site-header") ||
       document.querySelector("header")
     );
   }
 
   /**
-   * Sincroniza variable CSS con alto real del header fijo.
+   * Sincroniza variables CSS con alto real del header fijo.
    */
   function syncHeaderHeight() {
     const headerEl = findPrimaryHeader();
@@ -234,6 +447,7 @@
 
     const headerHeight = Math.max(0, Math.round(headerEl.getBoundingClientRect().height));
     document.documentElement.style.setProperty("--app-header-h", `${headerHeight}px`);
+    document.documentElement.style.setProperty("--header-fixed-h", `${headerHeight}px`);
   }
 
   /**
@@ -328,48 +542,78 @@
    * Remueve elementos de identidad previos para evitar duplicados.
    */
   function removeIdentityNodes() {
-    const ids = ["user-banner", "user-dock-tile", "user-identity-tile"];
+    const ids = [
+      "user-banner",
+      "station-switch-trigger",
+      "user-dock-tile",
+      "user-identity-tile",
+    ];
     ids.forEach((id) => {
       const node = document.getElementById(id);
-      if (node) node.remove();
+      if (node) {
+        const parent = node.parentElement;
+        if (parent && parent.classList.contains("station-chip-item")) {
+          parent.remove();
+        } else {
+          node.remove();
+        }
+      }
     });
   }
 
   /**
-   * @param {string} station
+   * @param {{id: string, name: string}} station
    * @returns {HTMLElement}
    */
   function buildUserBanner(station) {
-    const banner = document.createElement("div");
+    const banner = document.createElement("button");
+    banner.type = "button";
     banner.id = "user-banner";
-    banner.className = "user-banner";
-    banner.setAttribute("role", "status");
-    banner.setAttribute("aria-live", "polite");
-    banner.textContent = station;
+    banner.className = "user-banner user-banner--sticky";
+    banner.setAttribute("aria-label", "Cambiar estación saludable");
+    banner.dataset.stationId = station.id;
+    banner.innerHTML = `
+      <span class="user-banner__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <path d="M12 20.5s6-5.1 6-10a6 6 0 1 0-12 0c0 4.9 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+          <circle cx="12" cy="10.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.9"></circle>
+        </svg>
+      </span>
+      <span class="user-banner__text">${station.name}</span>
+      <span class="user-banner__chevron" aria-hidden="true">
+        <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+          <path d="m6.5 7.5 3.5 3.7 3.5-3.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </span>
+    `;
     return banner;
   }
 
   /**
-   * @param {string} station
-   * @param {boolean} useListItem
-   * @returns {HTMLElement}
+   * @param {{id: string, name: string}} station
+   * @returns {HTMLButtonElement}
    */
-  function buildUserDockTile(station, useListItem) {
-    const tile = document.createElement(useListItem ? "li" : "div");
-    tile.id = "user-dock-tile";
-    tile.className = "user-dock-tile";
-    tile.setAttribute("aria-label", `Estación activa: ${station}`);
-    tile.innerHTML = `
-      <span class="user-dock-tile__icon" aria-hidden="true">
+  function buildStationChipButton(station) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.id = "station-switch-trigger";
+    button.className = "station-chip user-dock-tile";
+    button.setAttribute("aria-label", `Cambiar estación saludable. Activa: ${station.name}`);
+    button.dataset.stationId = station.id;
+    button.innerHTML = `
+      <span class="station-chip__icon user-dock-tile__icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
           <path d="M12 20.6s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
           <path d="M12 8.7v4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
           <path d="M9.6 11.1h4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
         </svg>
       </span>
-      <span class="user-dock-tile__label">${station}</span>
+      <span class="station-chip__meta">
+        <span class="station-chip__kicker">Estación</span>
+        <span class="station-chip__label user-dock-tile__label">${station.name}</span>
+      </span>
     `;
-    return tile;
+    return button;
   }
 
   /**
@@ -455,15 +699,19 @@
 
   /**
    * Inserta banner móvil debajo del header fijo.
-   * @param {string} station
+   * @param {{id: string, name: string}} station
    * @returns {boolean}
    */
   function insertMobileBanner(station) {
     const header = findPrimaryHeader();
-    if (!header || !header.parentElement) return false;
-
     const banner = buildUserBanner(station);
-    header.insertAdjacentElement("afterend", banner);
+
+    if (header && header.parentElement) {
+      header.insertAdjacentElement("afterend", banner);
+    } else {
+      document.body.prepend(banner);
+    }
+
     document.body.classList.add("has-user-banner");
     bindHeaderHeightSync();
     scheduleHeaderSync();
@@ -472,7 +720,7 @@
 
   /**
    * Inserta tile de estación en desktop (dock izquierdo o fallback en header).
-   * @param {string} station
+   * @param {{id: string, name: string}} station
    * @returns {boolean}
    */
   function insertDesktopIdentityTile(station) {
@@ -480,9 +728,17 @@
 
     const target = findDesktopDockContainer();
     if (target) {
-      const useListItem = target.matches("ul, ol");
-      const tile = buildUserDockTile(station, useListItem);
-      target.prepend(tile);
+      const button = buildStationChipButton(station);
+
+      if (target.matches("ul, ol")) {
+        const item = document.createElement("li");
+        item.className = "station-chip-item";
+        item.appendChild(button);
+        target.prepend(item);
+      } else {
+        target.prepend(button);
+      }
+
       return true;
     }
 
@@ -496,15 +752,15 @@
       header.querySelector('[class*="header-inner"]') ||
       header;
 
-    const inlineTile = buildUserDockTile(station, false);
-    inlineTile.classList.add("user-dock-tile--inline");
+    const inlineTile = buildStationChipButton(station);
+    inlineTile.classList.add("station-chip--inline", "user-dock-tile--inline");
     inlineTarget.prepend(inlineTile);
     return true;
   }
 
   /**
    * Inserta identidad según viewport (banner móvil / tile desktop).
-   * @param {string} station
+   * @param {{id: string, name: string}} station
    * @param {number} attempt
    */
   function applyUserIdentityUI(station, attempt = 0) {
@@ -513,9 +769,7 @@
     removeIdentityNodes();
 
     const isMobile = authMq ? authMq.matches : window.innerWidth < 768;
-    const inserted = isMobile
-      ? insertMobileBanner(station)
-      : insertDesktopIdentityTile(station);
+    const inserted = isMobile ? insertMobileBanner(station) : insertDesktopIdentityTile(station);
 
     if (!inserted && attempt < 2) {
       window.setTimeout(() => applyUserIdentityUI(station, attempt + 1), 120);
@@ -524,41 +778,56 @@
 
   /**
    * @returns {{
+   * gate: HTMLElement | null;
    * stations: HTMLButtonElement[];
    * input: HTMLInputElement | null;
    * enterBtn: HTMLButtonElement | null;
+   * cancelBtn: HTMLButtonElement | null;
    * toggleBtn: HTMLButtonElement | null;
    * error: HTMLElement | null;
    * field: HTMLElement | null;
    * help: HTMLElement | null;
    * grid: HTMLElement | null;
    * inputWrap: HTMLElement | null;
+   * title: HTMLElement | null;
+   * hint: HTMLElement | null;
+   * kicker: HTMLElement | null;
    * }}
    */
   function getAuthControls() {
-    const stations = Array.from(
-      document.querySelectorAll(".auth-station"),
-    ).filter((el) => el instanceof HTMLButtonElement);
+    const gate = getGate();
+    const stations = Array.from(document.querySelectorAll(".auth-station")).filter(
+      (el) => el instanceof HTMLButtonElement,
+    );
 
     const input = document.getElementById("authPass");
     const enterBtn = document.getElementById("authEnter");
+    const cancelBtn = document.getElementById("authCancel");
     const toggleBtn = document.getElementById("authPassToggle");
     const error = document.getElementById("authError");
-    const field = document.querySelector(".auth-field");
+    const field = document.getElementById("authPasswordField") || document.querySelector(".auth-field");
     const help = document.getElementById("authFieldHelp");
-    const grid = document.querySelector(".auth-grid");
+    const grid = document.getElementById("authStationGrid") || document.querySelector(".auth-grid");
     const inputWrap = document.querySelector(".auth-inputWrap");
+    const title = document.getElementById("authTitle");
+    const hint = document.getElementById("authHint");
+    const kicker = document.getElementById("authKicker");
 
     return {
+      gate: gate instanceof HTMLElement ? gate : null,
       stations,
       input: input instanceof HTMLInputElement ? input : null,
       enterBtn: enterBtn instanceof HTMLButtonElement ? enterBtn : null,
+      cancelBtn: cancelBtn instanceof HTMLButtonElement ? cancelBtn : null,
       toggleBtn: toggleBtn instanceof HTMLButtonElement ? toggleBtn : null,
       error: error instanceof HTMLElement ? error : null,
       field: field instanceof HTMLElement ? field : null,
       help: help instanceof HTMLElement ? help : null,
       grid: grid instanceof HTMLElement ? grid : null,
       inputWrap: inputWrap instanceof HTMLElement ? inputWrap : null,
+      title: title instanceof HTMLElement ? title : null,
+      hint: hint instanceof HTMLElement ? hint : null,
+      kicker: kicker instanceof HTMLElement ? kicker : null,
     };
   }
 
@@ -597,29 +866,17 @@
   function showAuthError(message) {
     const { field, error, inputWrap } = getAuthControls();
 
-    if (field) field.classList.add("is-error");
+    if (field && gateMode === "login") field.classList.add("is-error");
     if (error) {
       error.textContent = message;
       error.hidden = false;
     }
 
-    if (inputWrap) {
+    if (inputWrap && gateMode === "login") {
       inputWrap.classList.remove("is-shaking");
       void inputWrap.offsetWidth;
       inputWrap.classList.add("is-shaking");
     }
-  }
-
-  /**
-   * Actualiza estado del botón ingresar.
-   * @param {string | null} selectedStation
-   */
-  function updateEnterButton(selectedStation) {
-    const { input, enterBtn } = getAuthControls();
-    if (!input || !enterBtn) return;
-
-    const hasPassword = input.value.trim().length > 0;
-    enterBtn.disabled = !(Boolean(selectedStation) && hasPassword);
   }
 
   /**
@@ -641,11 +898,180 @@
   }
 
   /**
-   * Muestra gate y mueve foco inicial.
+   * @param {string} stationId
+   * @param {{focusInput?: boolean}} options
    */
-  function showAuthGate() {
+  function selectStation(stationId, options = {}) {
+    const station = resolveStation(stationId);
+    if (!station) return;
+
+    selectedStationId = station.id;
+
+    const { stations, input, grid } = getAuthControls();
+
+    stations.forEach((stationBtn) => {
+      const isActive = stationBtn.dataset.stationId === station.id;
+      stationBtn.classList.toggle("is-selected", isActive);
+      stationBtn.setAttribute("aria-pressed", String(isActive));
+    });
+
+    if (grid) grid.classList.remove("is-error");
+    clearAuthError();
+
+    if (gateMode === "login") {
+      if (input) input.disabled = false;
+      setFieldHelp(`Estación seleccionada: ${station.name}`);
+      if (options.focusInput !== false && input) input.focus();
+    } else {
+      setFieldHelp(`Estación seleccionada: ${station.name}`);
+    }
+
+    syncPrimaryActionState();
+  }
+
+  function syncPrimaryActionState() {
+    const { input, enterBtn } = getAuthControls();
+    if (!enterBtn) return;
+
+    const hasStation = Boolean(selectedStationId);
+
+    if (gateMode === "switch") {
+      enterBtn.disabled = !hasStation || isAuthenticating;
+      return;
+    }
+
+    const hasPassword = input ? input.value.trim().length > 0 : false;
+    enterBtn.disabled = !(hasStation && hasPassword) || isAuthenticating;
+  }
+
+  function resetAuthFormState() {
+    const { stations, input, enterBtn, toggleBtn, field, cancelBtn } = getAuthControls();
+
+    selectedStationId = "";
+    isAuthenticating = false;
+    isPassVisible = false;
+
+    stations.forEach((stationBtn) => {
+      stationBtn.classList.remove("is-selected");
+      stationBtn.setAttribute("aria-pressed", "false");
+    });
+
+    if (input) {
+      input.value = "";
+      input.disabled = true;
+      input.type = "password";
+    }
+
+    if (toggleBtn) {
+      toggleBtn.disabled = false;
+      toggleBtn.setAttribute("aria-pressed", "false");
+      toggleBtn.setAttribute("aria-label", "Mostrar clave");
+    }
+
+    if (enterBtn) enterBtn.disabled = true;
+    if (field) {
+      field.hidden = false;
+      field.removeAttribute("aria-hidden");
+    }
+    if (cancelBtn) cancelBtn.hidden = true;
+
+    setPasswordVisibility(false);
+    clearAuthError();
+    setFieldHelp("Seleccione una estación antes de ingresar la clave.");
+  }
+
+  /**
+   * @param {"login" | "switch"} mode
+   */
+  function configureGateMode(mode) {
+    gateMode = mode;
+
+    const currentStation = getStoredStation();
+    const {
+      title,
+      hint,
+      kicker,
+      field,
+      input,
+      enterBtn,
+      cancelBtn,
+      toggleBtn,
+      stations,
+    } = getAuthControls();
+
+    if (!enterBtn || !toggleBtn || !stations.length) return;
+
+    clearAuthError();
+
+    if (mode === "switch") {
+      if (kicker) kicker.textContent = "Contexto de estación";
+      if (title) title.textContent = "Programa de Prevención de Cáncer Colorrectal";
+      if (hint) hint.textContent = "Seleccioná la estación activa para esta sesión";
+
+      if (field) {
+        field.hidden = true;
+        field.setAttribute("aria-hidden", "true");
+      }
+
+      if (input) {
+        input.value = "";
+        input.disabled = true;
+      }
+
+      toggleBtn.disabled = true;
+      enterBtn.textContent = "Aplicar cambios";
+      if (cancelBtn) cancelBtn.hidden = false;
+
+      const stationToSelect = currentStation ? currentStation.id : STATIONS[0].id;
+      selectStation(stationToSelect, { focusInput: false });
+      setFieldHelp(
+        "Seleccioná una estación y aplicá cambios. No se requiere clave en este modo.",
+      );
+      syncPrimaryActionState();
+      return;
+    }
+
+    if (kicker) kicker.textContent = "Inicio de sesión";
+    if (title) title.textContent = "Programa de Prevención de Cáncer Colorrectal";
+    if (hint) hint.textContent = "Seleccioná la estación saludable";
+
+    if (field) {
+      field.hidden = false;
+      field.removeAttribute("aria-hidden");
+    }
+
+    if (cancelBtn) cancelBtn.hidden = true;
+    toggleBtn.disabled = false;
+    enterBtn.textContent = "Ingresar";
+
+    selectedStationId = "";
+    stations.forEach((stationBtn) => {
+      stationBtn.classList.remove("is-selected");
+      stationBtn.setAttribute("aria-pressed", "false");
+    });
+
+    if (currentStation) {
+      selectStation(currentStation.id, { focusInput: false });
+    } else {
+      if (input) {
+        input.disabled = true;
+        input.value = "";
+      }
+      setFieldHelp("Seleccione una estación antes de ingresar la clave.");
+      syncPrimaryActionState();
+    }
+  }
+
+  /**
+   * Muestra gate y mueve foco inicial.
+   * @param {"login" | "switch"} mode
+   */
+  function showAuthGate(mode) {
     const gate = getGate();
     if (!gate) return;
+
+    resetAuthFormState();
+    configureGateMode(mode);
 
     gate.hidden = false;
     gate.style.display = "grid";
@@ -653,9 +1079,17 @@
     gate.setAttribute("aria-hidden", "false");
     lockBody();
 
+    const selected = gate.querySelector(".auth-station.is-selected");
     const firstStation = gate.querySelector(".auth-station");
-    if (firstStation instanceof HTMLElement) {
-      window.requestAnimationFrame(() => firstStation.focus());
+    const focusTarget =
+      selected instanceof HTMLElement
+        ? selected
+        : firstStation instanceof HTMLElement
+          ? firstStation
+          : null;
+
+    if (focusTarget) {
+      window.requestAnimationFrame(() => focusTarget.focus());
     }
   }
 
@@ -695,6 +1129,79 @@
     }, 250);
   }
 
+  function restoreFocusAfterGate() {
+    if (lastFocusedBeforeGate && typeof lastFocusedBeforeGate.focus === "function") {
+      window.setTimeout(() => {
+        lastFocusedBeforeGate.focus();
+      }, 0);
+    }
+  }
+
+  /**
+   * @param {{id: string, name: string}} station
+   * @param {{emit?: boolean, render?: boolean}} options
+   */
+  function applyStationState(station, options = {}) {
+    const { emit = true, render = true } = options;
+
+    setStoredStation(station);
+    syncBodyStationDataset(station);
+    if (render) applyUserIdentityUI(station);
+    if (emit) emitStationChanged(station);
+  }
+
+  /**
+   * @param {{id: string, name: string}} station
+   */
+  function completeGateFlow(station) {
+    closeAuthGate(() => {
+      unlockBody();
+      applyStationState(station, { emit: true, render: true });
+      restoreFocusAfterGate();
+    });
+  }
+
+  function trySubmitGate() {
+    if (isAuthenticating) return;
+
+    const station = resolveStation(selectedStationId);
+    if (!station) {
+      const { stations, grid } = getAuthControls();
+      if (grid) grid.classList.add("is-error");
+      showAuthError("Seleccione una estación saludable.");
+      setFieldHelp("Seleccione una estación antes de continuar.", true);
+      const firstStation = stations[0];
+      if (firstStation) firstStation.focus();
+      return;
+    }
+
+    if (gateMode === "switch") {
+      completeGateFlow(station);
+      return;
+    }
+
+    const { input, enterBtn, toggleBtn } = getAuthControls();
+    if (!input || !enterBtn || !toggleBtn) return;
+
+    const passOK = normalizePass(input.value) === AUTH_PASS;
+
+    if (passOK) {
+      isAuthenticating = true;
+      input.disabled = true;
+      enterBtn.disabled = true;
+      toggleBtn.disabled = true;
+      clearAuthError();
+      completeGateFlow(station);
+      return;
+    }
+
+    showAuthError("Clave incorrecta.");
+    setFieldHelp(`Estación seleccionada: ${station.name}`);
+    input.focus();
+    input.select();
+    syncPrimaryActionState();
+  }
+
   /**
    * Trap de foco básico mientras el modal está visible.
    * @param {KeyboardEvent} event
@@ -731,124 +1238,89 @@
   }
 
   /**
-   * Finaliza login exitoso.
-   * @param {string} station
-   */
-  function completeAuth(station) {
-    setStoredStation(station);
-
-    closeAuthGate(() => {
-      unlockBody();
-      applyUserIdentityUI(station);
-
-      if (lastFocusedBeforeGate && typeof lastFocusedBeforeGate.focus === "function") {
-        window.setTimeout(() => {
-          lastFocusedBeforeGate.focus();
-        }, 0);
-      }
-    });
-  }
-
-  /**
    * Configura eventos y validaciones del formulario de auth.
    */
   function wireAuthInteractions() {
-    const { stations, input, enterBtn, toggleBtn, grid } = getAuthControls();
+    if (interactionsBound) return;
 
-    if (!input || !enterBtn || !toggleBtn || stations.length === 0) return;
+    const { input, enterBtn, toggleBtn, cancelBtn, grid } = getAuthControls();
+    if (!input || !enterBtn || !toggleBtn || !grid) return;
 
-    let selectedStation = null;
-    let isAuthenticating = false;
-    let isPassVisible = false;
+    grid.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const stationBtn = target.closest(".auth-station");
+      if (!(stationBtn instanceof HTMLButtonElement)) return;
 
-    input.disabled = true;
-    input.value = "";
-    enterBtn.disabled = true;
-    setPasswordVisibility(false);
-    clearAuthError();
-    setFieldHelp("Seleccione una estación antes de ingresar la clave.");
-
-    stations.forEach((stationBtn) => {
-      stationBtn.classList.remove("is-selected");
-      stationBtn.setAttribute("aria-pressed", "false");
-    });
-
-    const setSelectedStation = (stationName) => {
-      if (!AUTH_STATIONS.includes(stationName)) return;
-      selectedStation = stationName;
-
-      stations.forEach((stationBtn) => {
-        const isActive = stationBtn.dataset.station === stationName;
-        stationBtn.classList.toggle("is-selected", isActive);
-        stationBtn.setAttribute("aria-pressed", String(isActive));
-      });
-
-      if (grid) grid.classList.remove("is-error");
-      input.disabled = false;
-      clearAuthError();
-      setFieldHelp(`Estación seleccionada: ${stationName}`);
-      updateEnterButton(selectedStation);
-      input.focus();
-    };
-
-    const tryLogin = () => {
-      if (isAuthenticating) return;
-
-      if (!selectedStation) {
-        if (grid) grid.classList.add("is-error");
-        showAuthError("Seleccione una estación saludable.");
-        setFieldHelp("Seleccione una estación antes de ingresar la clave.", true);
-        const firstStation = stations[0];
-        if (firstStation) firstStation.focus();
-        return;
-      }
-
-      const passOK = normalizePass(input.value) === AUTH_PASS;
-
-      if (passOK) {
-        isAuthenticating = true;
-        input.disabled = true;
-        enterBtn.disabled = true;
-        toggleBtn.disabled = true;
-        clearAuthError();
-        completeAuth(selectedStation);
-        return;
-      }
-
-      showAuthError("Clave incorrecta.");
-      setFieldHelp(`Estación seleccionada: ${selectedStation}`);
-      input.focus();
-      input.select();
-      updateEnterButton(selectedStation);
-    };
-
-    stations.forEach((stationBtn) => {
-      stationBtn.addEventListener("click", () => {
-        const stationName = stationBtn.dataset.station || "";
-        setSelectedStation(stationName);
-      });
+      const stationId = stationBtn.dataset.stationId || "";
+      selectStation(stationId);
     });
 
     input.addEventListener("input", () => {
       clearAuthError();
-      if (selectedStation) setFieldHelp(`Estación seleccionada: ${selectedStation}`);
-      updateEnterButton(selectedStation);
+      if (selectedStationId) {
+        const station = resolveStation(selectedStationId);
+        if (station) setFieldHelp(`Estación seleccionada: ${station.name}`);
+      }
+      syncPrimaryActionState();
     });
 
     input.addEventListener("keydown", (event) => {
       if (event.key !== "Enter") return;
       event.preventDefault();
-      tryLogin();
+      trySubmitGate();
     });
 
     toggleBtn.addEventListener("click", () => {
-      if (input.disabled) return;
+      if (input.disabled || gateMode !== "login") return;
       isPassVisible = !isPassVisible;
       setPasswordVisibility(isPassVisible);
       input.focus();
     });
 
-    enterBtn.addEventListener("click", tryLogin);
+    enterBtn.addEventListener("click", trySubmitGate);
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", () => {
+        if (gateMode !== "switch") return;
+        closeAuthGate(() => {
+          unlockBody();
+          restoreFocusAfterGate();
+        });
+      });
+    }
+
+    interactionsBound = true;
+  }
+
+  function openStationSwitcher() {
+    const station = getStoredStation();
+    lastFocusedBeforeGate =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    if (!station) {
+      showAuthGate("login");
+      return;
+    }
+
+    showAuthGate("switch");
+  }
+
+  function bindStationSwitcherTriggers() {
+    if (stationTriggerBound) return;
+
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const trigger = target.closest("#user-banner, #station-switch-trigger");
+      if (!(trigger instanceof HTMLElement)) return;
+
+      event.preventDefault();
+      openStationSwitcher();
+    });
+
+    stationTriggerBound = true;
   }
 
   /**
@@ -856,26 +1328,27 @@
    */
   function bootstrapAuthGate() {
     ensureAuthGateExists();
-
-    const gate = getGate();
-    if (!gate) return;
+    setupGlobalStationApi();
+    wireAuthInteractions();
+    bindStationSwitcherTriggers();
 
     const savedStation = getStoredStation();
 
     if (savedStation) {
       hideAuthGateImmediately();
+      syncBodyStationDataset(savedStation);
       applyUserIdentityUI(savedStation);
       return;
     }
 
     removeIdentityNodes();
     document.body.classList.remove("has-user-banner");
+    syncBodyStationDataset(null);
 
     lastFocusedBeforeGate =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
-    showAuthGate();
-    wireAuthInteractions();
+    showAuthGate("login");
   }
 
   /**
@@ -895,7 +1368,21 @@
     });
   }
 
-  document.addEventListener("keydown", trapAuthFocus, true);
+  function handleGlobalKeydown(event) {
+    trapAuthFocus(event);
+
+    if (!isGateVisible()) return;
+    if (event.key !== "Escape") return;
+    if (gateMode !== "switch") return;
+
+    event.preventDefault();
+    closeAuthGate(() => {
+      unlockBody();
+      restoreFocusAfterGate();
+    });
+  }
+
+  document.addEventListener("keydown", handleGlobalKeydown, true);
 
   document.addEventListener("DOMContentLoaded", () => {
     try {
@@ -904,10 +1391,12 @@
         const station = getStoredStation();
         if (!station) return;
         applyUserIdentityUI(station);
+        scheduleHeaderSync();
       };
 
       bootstrapAuthGate();
       bindViewportListeners();
+      bindHeaderHeightSync();
     } catch (error) {
       console.error("[auth-gate] Error de inicialización", error);
     }

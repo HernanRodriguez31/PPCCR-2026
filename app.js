@@ -326,7 +326,10 @@ function setHeaderOffset() {
   const root = document.documentElement;
   const header = $(".site-header");
   const headerHeight = header ? header.getBoundingClientRect().height : 160;
+  const headerFixed = Math.max(0, Math.round(headerHeight));
   const nextOffset = Math.max(96, Math.round(headerHeight + 16));
+
+  root.style.setProperty("--header-fixed-h", `${headerFixed}px`);
 
   if (nextOffset !== currentHeaderOffset) {
     currentHeaderOffset = nextOffset;
@@ -371,21 +374,22 @@ function updateMobileBars() {
   const isMobile = window.matchMedia("(max-width: 520px)").matches;
   const header = $(".site-header");
   const topbar = $("#siteTopbar") || $(".topbar");
+  const headerHeight = header
+    ? Math.max(0, Math.round(header.getBoundingClientRect().height))
+    : 0;
   const fixedDock =
     document.querySelector("#mobile-fixed-dock.is-visible") ||
     document.querySelector("#mobileFixedDock.is-visible");
   const fallbackDock = document.querySelector(".site-nav .nav-list");
   const dock = fixedDock || fallbackDock;
 
+  root.style.setProperty("--header-fixed-h", `${headerHeight}px`);
+
   if (!isMobile) {
     root.style.setProperty("--mobile-header-h", "0px");
     root.style.setProperty("--mobile-dock-h", "0px");
     return;
   }
-
-  const headerHeight = header
-    ? Math.max(0, Math.round(header.getBoundingClientRect().height))
-    : 0;
   const topbarHeight = topbar
     ? Math.max(48, Math.ceil(topbar.getBoundingClientRect().height))
     : 64;
@@ -988,6 +992,9 @@ function initMobilePremiumHeader() {
 
   // Mobile App Shell: medimos alturas reales solo cuando hace falta.
   const measureShell = () => {
+    const liveHeaderH = Math.max(0, Math.round(header.getBoundingClientRect().height));
+    root.style.setProperty("--header-fixed-h", `${liveHeaderH}px`);
+
     if (!mq.matches) {
       root.style.removeProperty("--mobile-header-h");
       root.style.removeProperty("--topbar-h");
@@ -998,7 +1005,7 @@ function initMobilePremiumHeader() {
       return;
     }
 
-    const headerH = Math.max(0, Math.round(header.getBoundingClientRect().height));
+    const headerH = liveHeaderH;
     const topbarH = topbar
       ? Math.max(48, Math.round(topbar.getBoundingClientRect().height))
       : Math.max(48, headerH);
