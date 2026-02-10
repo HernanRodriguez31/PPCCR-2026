@@ -1209,6 +1209,22 @@ function setupActiveNavObserver() {
 
 function setupSmoothAnchorScroll() {
   const navLinks = Array.from(document.querySelectorAll(".nav-link[data-nav]"));
+  const getScrollOffset = () => {
+    setHeaderOffset();
+    const rootStyles = getComputedStyle(document.documentElement);
+    const mobileOffset = Number.parseFloat(
+      rootStyles.getPropertyValue("--h-offset").trim(),
+    );
+    const desktopOffset = getHeaderOffset();
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+    if (isMobile && Number.isFinite(mobileOffset) && mobileOffset > 0) {
+      return mobileOffset;
+    }
+
+    return desktopOffset;
+  };
+
   document.addEventListener("click", (e) => {
     if (e.defaultPrevented) return;
 
@@ -1226,9 +1242,14 @@ function setupSmoothAnchorScroll() {
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
-    target.scrollIntoView({
+    const scrollOffset = getScrollOffset();
+    const targetTop =
+      window.scrollY + target.getBoundingClientRect().top - scrollOffset - 8;
+
+    window.scrollTo({
+      top: Math.max(0, Math.round(targetTop)),
+      left: 0,
       behavior: reduceMotion ? "auto" : "smooth",
-      block: "start",
     });
 
     const activeLink = navLinks.find((link) => link.getAttribute("href") === href);

@@ -18,6 +18,7 @@
     <link rel="icon" href="assets/favicon.png" />
     <link rel="stylesheet" href="styles.css" />
     <script src="app.js" defer></script>
+    <script src="auth-gate.js" defer></script>
   </head>
 
   <body class="page-home">
@@ -182,9 +183,11 @@
                 role="group"
                 aria-label="Accesos principales"
               >
-                <a class="btn btn-primary" href="#guias">Ir a Guías</a>
-                <a class="btn btn-secondary" href="#registro">Ir a Registro</a>
-                <a class="btn btn-ghost" href="#kpis">Ver KPIs</a>
+                <a class="btn btn-primary hero-cta__link" href="#guias">Guías</a>
+                <a class="btn btn-secondary hero-cta__link" href="#registro"
+                  >Registro</a
+                >
+                <a class="btn btn-ghost hero-cta__link" href="#kpis">KPIs</a>
               </div>
 
               <p class="hero-note" id="hero-note">
@@ -195,22 +198,38 @@
 
             <div class="hero-right" aria-label="Resumen del sitio">
               <div class="mini-panels">
-                <article class="mini-panel">
+                <a
+                  class="mini-panel mini-panel--link"
+                  href="#guias"
+                  aria-label="Ir a sección Guías"
+                >
                   <h3 class="mini-panel__title">Guías</h3>
                   <p class="mini-panel__text">Protocolos y flujo operativo.</p>
-                </article>
-                <article class="mini-panel">
+                </a>
+                <a
+                  class="mini-panel mini-panel--link"
+                  href="#registro"
+                  aria-label="Ir a sección Registro"
+                >
                   <h3 class="mini-panel__title">Registro</h3>
                   <p class="mini-panel__text">Formularios por rol.</p>
-                </article>
-                <article class="mini-panel">
+                </a>
+                <a
+                  class="mini-panel mini-panel--link"
+                  href="#kpis"
+                  aria-label="Ir a sección KPIs"
+                >
                   <h3 class="mini-panel__title">KPIs</h3>
                   <p class="mini-panel__text">Reporte en tiempo real.</p>
-                </article>
-                <article class="mini-panel">
+                </a>
+                <a
+                  class="mini-panel mini-panel--link"
+                  href="#cronograma"
+                  aria-label="Ir a sección Cronograma"
+                >
                   <h3 class="mini-panel__title">Cronograma</h3>
                   <p class="mini-panel__text">Calendario embebido.</p>
-                </article>
+                </a>
               </div>
             </div>
           </div>
@@ -496,6 +515,16 @@
         </svg>
       </span>
     </a>
+
+    <footer class="site-footer" aria-label="Pie de página">
+      <div class="container footer-grid">
+        <div class="footer-partners" aria-label="Partners del programa">
+          <p class="footer-title">Partners</p>
+          <div class="footer-logos" id="footer-logos"></div>
+        </div>
+        <p class="footer-meta">© PPCCR 2026 | © Derechos Reservados.</p>
+      </div>
+    </footer>
 
     <!-- MODAL FULLSCREEN: Looker -->
     <div class="modal" id="modal" aria-hidden="true">
