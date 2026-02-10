@@ -319,7 +319,7 @@ function debounce(fn, wait = 140) {
 let currentHeaderOffset = 180;
 let mobileBarsResizeTimer = null;
 let mobileBarsObserver = null;
-let mobilePremiumHeaderObserver = null;
+let mobileShellResizeObserver = null;
 let mobilePremiumHeaderBound = false;
 
 function setHeaderOffset() {
@@ -971,122 +971,129 @@ function initMobilePremiumHeader() {
 
   const root = document.documentElement;
   const body = document.body;
-  const header = document.querySelector("header.site-header.site-topbar");
+  const header = document.getElementById("top");
+  const dock = document.getElementById("mobile-fixed-dock");
   const topbar =
     document.getElementById("siteTopbar") ||
     header?.querySelector(".site-topbar__inner");
-  const dock = document.getElementById("mobile-fixed-dock");
-  if (!header || !topbar) return;
+  if (!header) return;
 
   const mq = window.matchMedia("(max-width: 768px)");
-  let isCompact = false;
-  let scrollRaf = 0;
   const COMPACT_Y = 24;
+  let lastCompact = null;
 
-  const setVars = () => {
-    if (!mq.matches) return;
-
-    const headerH = header.getBoundingClientRect().height;
-    const topbarH = topbar.getBoundingClientRect().height;
-    const dockH = dock ? dock.getBoundingClientRect().height : 0;
-
-    root.style.setProperty("--mobile-header-h", `${Math.round(headerH)}px`);
-    root.style.setProperty("--topbar-h", `${Math.round(topbarH)}px`);
-    root.style.setProperty("--mobile-dock-h", `${Math.round(dockH)}px`);
-    root.style.setProperty("--dock-h", `${Math.round(dockH)}px`);
-    root.style.setProperty(
-      "--home-mobile-header-offset",
-      `${Math.round(headerH + 8)}px`,
-    );
-    root.style.setProperty("--h-offset", `${Math.round(topbarH + 12)}px`);
-  };
-
-  const applyCompactState = () => {
+  // Mobile App Shell: medimos alturas reales solo cuando hace falta.
+  const measureShell = () => {
     if (!mq.matches) {
-      isCompact = false;
-      header.classList.remove("is-compact", "partners-collapsed");
-      header.classList.add("partners-expanded");
-      body.classList.remove("is-header-compact");
+      root.style.removeProperty("--mobile-header-h");
+      root.style.removeProperty("--topbar-h");
+      root.style.removeProperty("--mobile-dock-h");
+      root.style.removeProperty("--dock-h");
+      root.style.removeProperty("--home-mobile-header-offset");
+      root.style.removeProperty("--h-offset");
       return;
     }
 
-    const shouldCompact = window.scrollY > COMPACT_Y;
-    if (shouldCompact === isCompact) return;
+    const headerH = Math.max(0, Math.round(header.getBoundingClientRect().height));
+    const topbarH = topbar
+      ? Math.max(48, Math.round(topbar.getBoundingClientRect().height))
+      : Math.max(48, headerH);
+    const dockH = dock ? Math.max(0, Math.round(dock.getBoundingClientRect().height)) : 0;
 
-    isCompact = shouldCompact;
-    header.classList.toggle("is-compact", isCompact);
-    header.classList.toggle("partners-collapsed", isCompact);
-    header.classList.toggle("partners-expanded", !isCompact);
-    body.classList.toggle("is-header-compact", isCompact);
-
-    window.setTimeout(() => {
-      setVars();
-      setHeaderOffset();
-      updateMobileBars();
-    }, 220);
+    root.style.setProperty("--mobile-header-h", `${headerH}px`);
+    root.style.setProperty("--topbar-h", `${topbarH}px`);
+    root.style.setProperty("--mobile-dock-h", `${dockH}px`);
+    root.style.setProperty("--dock-h", `${dockH}px`);
+    root.style.setProperty("--home-mobile-header-offset", `${headerH + 8}px`);
+    root.style.setProperty("--h-offset", `${topbarH + 12}px`);
+    root.style.setProperty("--header-offset", `${Math.max(96, headerH + 16)}px`);
   };
 
-  const onScroll = () => {
-    if (scrollRaf) return;
-    scrollRaf = window.requestAnimationFrame(() => {
-      scrollRaf = 0;
-      applyCompactState();
+  const toggleCompact = (shouldCompact) => {
+    if (!mq.matches || shouldCompact === lastCompact) return;
+
+    lastCompact = shouldCompact;
+    body.classList.toggle("is-header-compact", shouldCompact);
+    header.classList.toggle("is-compact", shouldCompact);
+    header.classList.toggle("partners-collapsed", shouldCompact);
+    header.classList.toggle("partners-expanded", !shouldCompact);
+
+    window.requestAnimationFrame(() => {
+      measureShell();
+      updateMobileBars();
     });
   };
 
-  const onResize = () => {
-    if (!mq.matches) return;
-    setVars();
-    applyCompactState();
-    setHeaderOffset();
-    updateMobileBars();
-  };
-
-  const initState = () => {
+  const syncMobileState = () => {
     if (!mq.matches) {
+      lastCompact = null;
+      body.classList.remove("is-header-compact");
       header.classList.remove("is-compact", "partners-collapsed");
       header.classList.add("partners-expanded");
-      body.classList.remove("is-header-compact");
-      root.style.removeProperty("--topbar-h");
+      measureShell();
+      updateMobileBars();
       return;
     }
 
-    isCompact = window.scrollY > COMPACT_Y;
-    header.classList.toggle("is-compact", isCompact);
-    header.classList.toggle("partners-collapsed", isCompact);
-    header.classList.toggle("partners-expanded", !isCompact);
-    body.classList.toggle("is-header-compact", isCompact);
-    setVars();
+    lastCompact = null;
+    toggleCompact(window.scrollY > COMPACT_Y);
+    measureShell();
+    updateMobileBars();
+  };
+
+  const onScroll = () => {
+    if (!mq.matches) return;
+    const shouldCompact = window.scrollY > COMPACT_Y;
+    if (shouldCompact === lastCompact) return;
+    toggleCompact(shouldCompact);
+  };
+
+  const onResize = () => {
+    if (!mq.matches) {
+      syncMobileState();
+      return;
+    }
+    measureShell();
+    updateMobileBars();
   };
 
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onResize, { passive: true });
   window.addEventListener("orientationchange", onResize, { passive: true });
-
-  if (typeof mq.addEventListener === "function") {
-    mq.addEventListener("change", initState);
-  } else if (typeof mq.addListener === "function") {
-    mq.addListener(initState);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", onResize, { passive: true });
   }
 
-  window.addEventListener("load", () => window.setTimeout(setVars, 0), {
-    once: true,
-  });
+  if (typeof mq.addEventListener === "function") {
+    mq.addEventListener("change", syncMobileState);
+  } else if (typeof mq.addListener === "function") {
+    mq.addListener(syncMobileState);
+  }
+
+  window.addEventListener(
+    "load",
+    () => {
+      window.requestAnimationFrame(() => {
+        measureShell();
+        updateMobileBars();
+      });
+    },
+    { once: true },
+  );
 
   if ("ResizeObserver" in window) {
-    if (mobilePremiumHeaderObserver) mobilePremiumHeaderObserver.disconnect();
-    mobilePremiumHeaderObserver = new ResizeObserver(() => {
-      setVars();
-      setHeaderOffset();
+    if (mobileShellResizeObserver) mobileShellResizeObserver.disconnect();
+    mobileShellResizeObserver = new ResizeObserver(() => {
+      measureShell();
       updateMobileBars();
     });
-    mobilePremiumHeaderObserver.observe(header);
-    mobilePremiumHeaderObserver.observe(topbar);
-    if (dock) mobilePremiumHeaderObserver.observe(dock);
+    mobileShellResizeObserver.observe(header);
+    if (topbar) mobileShellResizeObserver.observe(topbar);
+    if (dock) mobileShellResizeObserver.observe(dock);
   }
 
   mobilePremiumHeaderBound = true;
-  initState();
+  syncMobileState();
 }
 
 function setupActiveNavObserver() {
