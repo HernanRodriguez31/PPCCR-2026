@@ -2,15 +2,20 @@
 
 /**
  * Gatekeeper modal de autenticación client-side (control UX, no seguridad real).
- * Se monta de forma reutilizable en todas las paginas que cargan este script.
+ * Módulo reutilizable para todas las páginas que cargan este script.
  */
 (() => {
-  const AUTH_STORAGE_KEY = "ppccr_auth_user";
-  const AUTH_PASSWORD = "marzo31";
   const AUTH_MODAL_ID = "auth-gate";
+  const AUTH_PASS = "marzo31";
   const AUTH_CLOSE_CLASS = "auth-gate--closing";
+  const AUTH_HIDING_CLASS = "is-hiding";
   const VIEWPORT_MQ = "(max-width: 767.98px)";
-  const AUTH_USERS = [
+
+  const AUTH_STORAGE_LEGACY = "ppccr_auth_user";
+  const AUTH_STORAGE_FLAG = "ppccr_auth";
+  const AUTH_STORAGE_STATION = "ppccr_station";
+
+  const AUTH_STATIONS = [
     "Parque Saavedra",
     "Aristóbulo del Valle",
     "Parque Rivadavia",
@@ -24,15 +29,29 @@
   let lastFocusedBeforeGate = null;
   /** @type {(() => void) | null} */
   let viewportChangeHandler = null;
+  /** @type {number} */
+  let headerSyncRaf = 0;
+  /** @type {boolean} */
+  let headerSyncBound = false;
+  /** @type {ResizeObserver | null} */
+  let headerResizeObserver = null;
 
   /**
-   * Devuelve el usuario guardado para la pestaña actual.
+   * Normaliza la clave para validación case-insensitive.
+   * @param {string} value
    * @returns {string}
    */
-  function getStoredUser() {
+  function normalizePass(value) {
+    return String(value ?? "").trim().toLowerCase();
+  }
+
+  /**
+   * @param {string} key
+   * @returns {string}
+   */
+  function safeSessionGet(key) {
     try {
-      const rawUser = sessionStorage.getItem(AUTH_STORAGE_KEY) || "";
-      return AUTH_USERS.includes(rawUser) ? rawUser : "";
+      return sessionStorage.getItem(key) || "";
     } catch (error) {
       console.warn("[auth-gate] No se pudo leer sessionStorage", error);
       return "";
@@ -40,19 +59,45 @@
   }
 
   /**
-   * Persiste el usuario autenticado en la pestaña actual.
-   * @param {string} user
+   * @param {string} key
+   * @param {string} value
    */
-  function setStoredUser(user) {
+  function safeSessionSet(key, value) {
     try {
-      sessionStorage.setItem(AUTH_STORAGE_KEY, user);
+      sessionStorage.setItem(key, value);
     } catch (error) {
       console.warn("[auth-gate] No se pudo escribir sessionStorage", error);
     }
   }
 
   /**
-   * Obtiene un logo compatible con el sitio actual.
+   * Obtiene estación persistida de la pestaña actual.
+   * @returns {string}
+   */
+  function getStoredStation() {
+    const authFlag = safeSessionGet(AUTH_STORAGE_FLAG);
+    const storedStation = safeSessionGet(AUTH_STORAGE_STATION);
+
+    if (authFlag === "1" && AUTH_STATIONS.includes(storedStation)) {
+      return storedStation;
+    }
+
+    const legacyStation = safeSessionGet(AUTH_STORAGE_LEGACY);
+    return AUTH_STATIONS.includes(legacyStation) ? legacyStation : "";
+  }
+
+  /**
+   * Persiste sesión y estación actual.
+   * @param {string} station
+   */
+  function setStoredStation(station) {
+    safeSessionSet(AUTH_STORAGE_FLAG, "1");
+    safeSessionSet(AUTH_STORAGE_STATION, station);
+    // Compatibilidad con implementación previa.
+    safeSessionSet(AUTH_STORAGE_LEGACY, station);
+  }
+
+  /**
    * @returns {string}
    */
   function getAuthLogoSrc() {
@@ -73,12 +118,25 @@
   }
 
   /**
-   * Asegura que el markup del gatekeeper exista en DOM.
+   * Crea el modal si todavía no existe en la página.
    */
   function ensureAuthGateExists() {
     if (document.getElementById(AUTH_MODAL_ID)) return;
 
     const logoSrc = getAuthLogoSrc();
+    const stationsMarkup = AUTH_STATIONS.map(
+      (station) => `
+        <button
+          type="button"
+          class="auth-station auth-tile"
+          data-station="${station}"
+          aria-pressed="false"
+        >
+          <span>${station}</span>
+        </button>
+      `,
+    ).join("");
+
     const gate = document.createElement("div");
     gate.id = AUTH_MODAL_ID;
     gate.className = "auth-gate";
@@ -86,27 +144,57 @@
     gate.setAttribute("aria-modal", "true");
     gate.setAttribute("aria-labelledby", "authTitle");
     gate.setAttribute("aria-describedby", "authHint");
+
     gate.innerHTML = `
       <div class="auth-card" role="document">
         <header class="auth-header">
-          <img class="auth-logo" src="${logoSrc}" alt="PPCCR" />
-          <h2 id="authTitle" class="auth-title">Inicio de Sesión</h2>
-          <p class="auth-subtitle">Seleccione estación y clave para continuar.</p>
+          <div class="auth-brand">
+            <img class="auth-brand__logo auth-logo" src="${logoSrc}" alt="PPCCR" />
+            <div class="auth-brand__copy">
+              <span class="auth-brand__kicker">Inicio de sesión</span>
+              <h1 id="authTitle" class="auth-brand__title">Programa de Prevención de Cáncer Colorrectal</h1>
+              <p id="authHint" class="auth-brand__subtitle">Selecciona la estación saludable</p>
+            </div>
+          </div>
         </header>
 
         <section class="auth-section">
           <div class="auth-grid" role="list" aria-label="Seleccionar ubicación">
-            <button type="button" class="auth-tile" data-user="Parque Saavedra">Parque Saavedra</button>
-            <button type="button" class="auth-tile" data-user="Aristóbulo del Valle">Aristóbulo del Valle</button>
-            <button type="button" class="auth-tile" data-user="Parque Rivadavia">Parque Rivadavia</button>
-            <button type="button" class="auth-tile" data-user="Parque Chacabuco">Parque Chacabuco</button>
-            <button type="button" class="auth-tile" data-user="Administrador">Administrador</button>
+            ${stationsMarkup}
           </div>
 
           <div class="auth-field">
             <label class="auth-label" for="authPass">Clave</label>
-            <input id="authPass" class="auth-input" type="password" inputmode="text" placeholder="Ingrese clave de acceso" autocomplete="current-password" disabled />
-            <p id="authHint" class="auth-hint">Seleccione una estación antes de ingresar la clave.</p>
+            <div class="auth-inputWrap">
+              <input
+                id="authPass"
+                class="auth-input"
+                type="password"
+                inputmode="text"
+                placeholder="Ingrese clave de acceso"
+                autocomplete="current-password"
+                disabled
+              />
+              <button
+                id="authPassToggle"
+                class="auth-passToggle"
+                type="button"
+                aria-label="Mostrar clave"
+                aria-pressed="false"
+              >
+                <svg class="auth-passToggle__icon auth-eye" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                  <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"></circle>
+                </svg>
+                <svg class="auth-passToggle__icon auth-eye-off" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden>
+                  <path d="M3 3l18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                  <path d="M10.6 10.7a3 3 0 0 0 4.2 4.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                  <path d="M9.9 5.2A11 11 0 0 1 12 5c6.5 0 10 7 10 7a16.8 16.8 0 0 1-3.1 3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                  <path d="M6.3 6.4A16.1 16.1 0 0 0 2 12s3.5 7 10 7c1.7 0 3.1-.4 4.4-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </button>
+            </div>
+            <p id="authFieldHelp" class="auth-helper">Seleccione una estación antes de ingresar la clave.</p>
             <p id="authError" class="auth-error" aria-live="polite" hidden>Clave incorrecta.</p>
           </div>
 
@@ -125,6 +213,71 @@
    */
   function getGate() {
     return document.getElementById(AUTH_MODAL_ID);
+  }
+
+  /**
+   * @returns {HTMLElement | null}
+   */
+  function findPrimaryHeader() {
+    return (
+      document.querySelector(".site-header.site-topbar") ||
+      document.querySelector("header")
+    );
+  }
+
+  /**
+   * Sincroniza variable CSS con alto real del header fijo.
+   */
+  function syncHeaderHeight() {
+    const headerEl = findPrimaryHeader();
+    if (!headerEl) return;
+
+    const headerHeight = Math.max(0, Math.round(headerEl.getBoundingClientRect().height));
+    document.documentElement.style.setProperty("--app-header-h", `${headerHeight}px`);
+  }
+
+  /**
+   * Programa sincronización en RAF para evitar jank.
+   */
+  function scheduleHeaderSync() {
+    if (headerSyncRaf) return;
+    headerSyncRaf = window.requestAnimationFrame(() => {
+      headerSyncRaf = 0;
+      syncHeaderHeight();
+    });
+  }
+
+  /**
+   * Vincula listeners para recalcular alto de header durante scroll/resize/compact mode.
+   */
+  function bindHeaderHeightSync() {
+    if (headerSyncBound) {
+      scheduleHeaderSync();
+      return;
+    }
+
+    window.addEventListener("scroll", scheduleHeaderSync, { passive: true });
+    window.addEventListener("resize", scheduleHeaderSync, { passive: true });
+    window.addEventListener("orientationchange", scheduleHeaderSync, {
+      passive: true,
+    });
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", scheduleHeaderSync, {
+        passive: true,
+      });
+    }
+
+    if ("ResizeObserver" in window) {
+      const headerEl = findPrimaryHeader();
+      if (headerEl) {
+        headerResizeObserver = new ResizeObserver(() => scheduleHeaderSync());
+        headerResizeObserver.observe(headerEl);
+      }
+    }
+
+    headerSyncBound = true;
+    scheduleHeaderSync();
   }
 
   /**
@@ -158,84 +311,65 @@
   }
 
   /**
-   * Bloquea scroll y gestos del body mientras el gate esta activo.
+   * Bloquea interacción subyacente cuando el gate está abierto.
    */
   function lockBody() {
     document.body.classList.add("is-auth-locked");
   }
 
   /**
-   * Libera body al cerrar gate.
+   * Libera el body cuando el gate se cierra.
    */
   function unlockBody() {
     document.body.classList.remove("is-auth-locked");
   }
 
   /**
-   * Limpia nodos de identidad para evitar duplicados.
+   * Remueve elementos de identidad previos para evitar duplicados.
    */
   function removeIdentityNodes() {
-    const banner = document.getElementById("user-banner");
-    const tile = document.getElementById("user-identity-tile");
-    if (banner) banner.remove();
-    if (tile) tile.remove();
+    const ids = ["user-banner", "user-dock-tile", "user-identity-tile"];
+    ids.forEach((id) => {
+      const node = document.getElementById(id);
+      if (node) node.remove();
+    });
   }
 
   /**
-   * @param {string} user
+   * @param {string} station
    * @returns {HTMLElement}
    */
-  function buildUserBanner(user) {
+  function buildUserBanner(station) {
     const banner = document.createElement("div");
     banner.id = "user-banner";
     banner.className = "user-banner";
     banner.setAttribute("role", "status");
     banner.setAttribute("aria-live", "polite");
-    banner.textContent = user;
+    banner.textContent = station;
     return banner;
   }
 
   /**
-   * @param {string} user
+   * @param {string} station
    * @param {boolean} useListItem
    * @returns {HTMLElement}
    */
-  function buildUserIdentityTile(user, useListItem) {
+  function buildUserDockTile(station, useListItem) {
     const tile = document.createElement(useListItem ? "li" : "div");
-    tile.id = "user-identity-tile";
-    tile.className = "user-identity-tile";
-    tile.setAttribute("aria-label", `Usuario actual: ${user}`);
-
-    const label = document.createElement("span");
-    label.className = "user-identity-label";
-    label.textContent = user;
-
-    tile.appendChild(label);
+    tile.id = "user-dock-tile";
+    tile.className = "user-dock-tile";
+    tile.setAttribute("aria-label", `Estación activa: ${station}`);
+    tile.innerHTML = `
+      <span class="user-dock-tile__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <path d="M12 20.6s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M12 8.7v4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
+          <path d="M9.6 11.1h4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
+        </svg>
+      </span>
+      <span class="user-dock-tile__label">${station}</span>
+    `;
     return tile;
-  }
-
-  /**
-   * @returns {HTMLElement | null}
-   */
-  function findPrimaryHeader() {
-    return (
-      document.querySelector(".site-header.site-topbar") ||
-      document.querySelector("header")
-    );
-  }
-
-  /**
-   * Inserta banner en mobile justo debajo del header.
-   * @param {string} user
-   * @returns {boolean}
-   */
-  function insertMobileBanner(user) {
-    const header = findPrimaryHeader();
-    if (!header || !header.parentElement) return false;
-
-    const banner = buildUserBanner(user);
-    header.insertAdjacentElement("afterend", banner);
-    return true;
   }
 
   /**
@@ -255,7 +389,6 @@
     }
 
     if (candidate.hasAttribute("hidden")) return true;
-
     if (candidate.getAttribute("aria-hidden") === "true") return true;
 
     const insideHeader = Boolean(candidate.closest("header"));
@@ -271,8 +404,7 @@
   }
 
   /**
-   * Busca un contenedor desktop para insertar el cubo de identidad.
-   * Aplica orden de prioridad solicitado y evita nav de header no lateral.
+   * Busca contenedor de dock desktop por prioridad.
    * @returns {HTMLElement | null}
    */
   function findDesktopDockContainer() {
@@ -322,15 +454,34 @@
   }
 
   /**
-   * Inserta tile en desktop y hace fallback al header si no hay dock valido.
-   * @param {string} user
+   * Inserta banner móvil debajo del header fijo.
+   * @param {string} station
    * @returns {boolean}
    */
-  function insertDesktopIdentityTile(user) {
+  function insertMobileBanner(station) {
+    const header = findPrimaryHeader();
+    if (!header || !header.parentElement) return false;
+
+    const banner = buildUserBanner(station);
+    header.insertAdjacentElement("afterend", banner);
+    document.body.classList.add("has-user-banner");
+    bindHeaderHeightSync();
+    scheduleHeaderSync();
+    return true;
+  }
+
+  /**
+   * Inserta tile de estación en desktop (dock izquierdo o fallback en header).
+   * @param {string} station
+   * @returns {boolean}
+   */
+  function insertDesktopIdentityTile(station) {
+    document.body.classList.remove("has-user-banner");
+
     const target = findDesktopDockContainer();
     if (target) {
       const useListItem = target.matches("ul, ol");
-      const tile = buildUserIdentityTile(user, useListItem);
+      const tile = buildUserDockTile(station, useListItem);
       target.prepend(tile);
       return true;
     }
@@ -345,56 +496,106 @@
       header.querySelector('[class*="header-inner"]') ||
       header;
 
-    const inlineTile = buildUserIdentityTile(user, false);
-    inlineTile.classList.add("user-identity-tile--inline");
+    const inlineTile = buildUserDockTile(station, false);
+    inlineTile.classList.add("user-dock-tile--inline");
     inlineTarget.prepend(inlineTile);
     return true;
   }
 
   /**
-   * Inserta banner o tile segun viewport. Reintenta hasta 3 veces si falta DOM.
-   * @param {string} user
+   * Inserta identidad según viewport (banner móvil / tile desktop).
+   * @param {string} station
    * @param {number} attempt
    */
-  function applyUserIdentityUI(user, attempt = 0) {
-    if (!user) return;
+  function applyUserIdentityUI(station, attempt = 0) {
+    if (!station) return;
 
     removeIdentityNodes();
 
     const isMobile = authMq ? authMq.matches : window.innerWidth < 768;
     const inserted = isMobile
-      ? insertMobileBanner(user)
-      : insertDesktopIdentityTile(user);
+      ? insertMobileBanner(station)
+      : insertDesktopIdentityTile(station);
 
     if (!inserted && attempt < 2) {
-      window.setTimeout(() => applyUserIdentityUI(user, attempt + 1), 120);
+      window.setTimeout(() => applyUserIdentityUI(station, attempt + 1), 120);
     }
   }
 
   /**
-   * Limpia feedback visual de error.
+   * @returns {{
+   * stations: HTMLButtonElement[];
+   * input: HTMLInputElement | null;
+   * enterBtn: HTMLButtonElement | null;
+   * toggleBtn: HTMLButtonElement | null;
+   * error: HTMLElement | null;
+   * field: HTMLElement | null;
+   * help: HTMLElement | null;
+   * grid: HTMLElement | null;
+   * inputWrap: HTMLElement | null;
+   * }}
    */
-  function clearAuthError() {
-    const field = document.querySelector(".auth-field");
-    const error = document.getElementById("authError");
-    const input = document.getElementById("authPass");
-    const card = document.querySelector(".auth-card");
+  function getAuthControls() {
+    const stations = Array.from(
+      document.querySelectorAll(".auth-station"),
+    ).filter((el) => el instanceof HTMLButtonElement);
 
-    if (field) field.classList.remove("is-error");
-    if (error) error.hidden = true;
-    if (input) input.classList.remove("is-shaking");
-    if (card) card.classList.remove("is-shaking");
+    const input = document.getElementById("authPass");
+    const enterBtn = document.getElementById("authEnter");
+    const toggleBtn = document.getElementById("authPassToggle");
+    const error = document.getElementById("authError");
+    const field = document.querySelector(".auth-field");
+    const help = document.getElementById("authFieldHelp");
+    const grid = document.querySelector(".auth-grid");
+    const inputWrap = document.querySelector(".auth-inputWrap");
+
+    return {
+      stations,
+      input: input instanceof HTMLInputElement ? input : null,
+      enterBtn: enterBtn instanceof HTMLButtonElement ? enterBtn : null,
+      toggleBtn: toggleBtn instanceof HTMLButtonElement ? toggleBtn : null,
+      error: error instanceof HTMLElement ? error : null,
+      field: field instanceof HTMLElement ? field : null,
+      help: help instanceof HTMLElement ? help : null,
+      grid: grid instanceof HTMLElement ? grid : null,
+      inputWrap: inputWrap instanceof HTMLElement ? inputWrap : null,
+    };
   }
 
   /**
-   * Muestra estado de error y anima shake.
+   * @param {string} text
+   * @param {boolean} isError
+   */
+  function setFieldHelp(text, isError = false) {
+    const { help } = getAuthControls();
+    if (!help) return;
+
+    help.textContent = text;
+    help.classList.toggle("is-error", isError);
+    help.hidden = false;
+  }
+
+  /**
+   * Limpia feedback de error.
+   */
+  function clearAuthError() {
+    const { field, error, inputWrap, grid } = getAuthControls();
+
+    if (field) field.classList.remove("is-error");
+    if (error) {
+      error.textContent = "Clave incorrecta.";
+      error.hidden = true;
+    }
+    if (inputWrap) inputWrap.classList.remove("is-shaking");
+    if (grid) grid.classList.remove("is-error");
+  }
+
+  /**
+   * Muestra error visual y animación de shake.
    * @param {string} message
    */
   function showAuthError(message) {
-    const field = document.querySelector(".auth-field");
-    const error = document.getElementById("authError");
-    const input = document.getElementById("authPass");
-    const card = document.querySelector(".auth-card");
+    const { field, error, inputWrap } = getAuthControls();
 
     if (field) field.classList.add("is-error");
     if (error) {
@@ -402,49 +603,45 @@
       error.hidden = false;
     }
 
-    if (input) {
-      input.classList.remove("is-shaking");
-      void input.offsetWidth;
-      input.classList.add("is-shaking");
-    }
-
-    if (card) {
-      card.classList.remove("is-shaking");
-      void card.offsetWidth;
-      card.classList.add("is-shaking");
+    if (inputWrap) {
+      inputWrap.classList.remove("is-shaking");
+      void inputWrap.offsetWidth;
+      inputWrap.classList.add("is-shaking");
     }
   }
 
   /**
-   * @returns {{tiles: HTMLButtonElement[], input: HTMLInputElement | null, enterBtn: HTMLButtonElement | null}}
+   * Actualiza estado del botón ingresar.
+   * @param {string | null} selectedStation
    */
-  function getAuthControls() {
-    const tiles = Array.from(
-      document.querySelectorAll(".auth-tile"),
-    ).filter((tile) => tile instanceof HTMLButtonElement);
-    const input = document.getElementById("authPass");
-    const enterBtn = document.getElementById("authEnter");
-
-    return {
-      tiles,
-      input: input instanceof HTMLInputElement ? input : null,
-      enterBtn: enterBtn instanceof HTMLButtonElement ? enterBtn : null,
-    };
-  }
-
-  /**
-   * @param {string} selectedUser
-   */
-  function updateAuthEnterButton(selectedUser) {
+  function updateEnterButton(selectedStation) {
     const { input, enterBtn } = getAuthControls();
     if (!input || !enterBtn) return;
 
     const hasPassword = input.value.trim().length > 0;
-    enterBtn.disabled = !(Boolean(selectedUser) && hasPassword);
+    enterBtn.disabled = !(Boolean(selectedStation) && hasPassword);
   }
 
   /**
-   * Muestra gate inmediatamente y setea foco inicial.
+   * @param {boolean} shouldReveal
+   */
+  function setPasswordVisibility(shouldReveal) {
+    const { input, toggleBtn } = getAuthControls();
+    if (!input || !toggleBtn) return;
+
+    const eye = toggleBtn.querySelector(".auth-eye");
+    const eyeOff = toggleBtn.querySelector(".auth-eye-off");
+
+    input.type = shouldReveal ? "text" : "password";
+    toggleBtn.setAttribute("aria-label", shouldReveal ? "Ocultar clave" : "Mostrar clave");
+    toggleBtn.setAttribute("aria-pressed", String(shouldReveal));
+
+    if (eye instanceof HTMLElement) eye.hidden = shouldReveal;
+    if (eyeOff instanceof HTMLElement) eyeOff.hidden = !shouldReveal;
+  }
+
+  /**
+   * Muestra gate y mueve foco inicial.
    */
   function showAuthGate() {
     const gate = getGate();
@@ -452,24 +649,24 @@
 
     gate.hidden = false;
     gate.style.display = "grid";
-    gate.classList.remove(AUTH_CLOSE_CLASS);
+    gate.classList.remove(AUTH_CLOSE_CLASS, AUTH_HIDING_CLASS);
     gate.setAttribute("aria-hidden", "false");
     lockBody();
 
-    const firstTile = gate.querySelector(".auth-tile");
-    if (firstTile instanceof HTMLElement) {
-      window.requestAnimationFrame(() => firstTile.focus());
+    const firstStation = gate.querySelector(".auth-station");
+    if (firstStation instanceof HTMLElement) {
+      window.requestAnimationFrame(() => firstStation.focus());
     }
   }
 
   /**
-   * Oculta gate sin animacion.
+   * Oculta gate sin animación.
    */
   function hideAuthGateImmediately() {
     const gate = getGate();
     if (!gate) return;
 
-    gate.classList.remove(AUTH_CLOSE_CLASS);
+    gate.classList.remove(AUTH_CLOSE_CLASS, AUTH_HIDING_CLASS);
     gate.setAttribute("aria-hidden", "true");
     gate.hidden = true;
     gate.style.display = "none";
@@ -477,7 +674,7 @@
   }
 
   /**
-   * Cierra gate con animacion de salida.
+   * Cierra gate con transición y luego ejecuta callback.
    * @param {() => void} done
    */
   function closeAuthGate(done) {
@@ -487,19 +684,19 @@
       return;
     }
 
-    gate.classList.add(AUTH_CLOSE_CLASS);
+    gate.classList.add(AUTH_CLOSE_CLASS, AUTH_HIDING_CLASS);
     gate.setAttribute("aria-hidden", "true");
 
     window.setTimeout(() => {
       gate.hidden = true;
       gate.style.display = "none";
-      gate.classList.remove(AUTH_CLOSE_CLASS);
+      gate.classList.remove(AUTH_CLOSE_CLASS, AUTH_HIDING_CLASS);
       done();
-    }, 240);
+    }, 250);
   }
 
   /**
-   * Mantiene el foco dentro del modal mientras este visible.
+   * Trap de foco básico mientras el modal está visible.
    * @param {KeyboardEvent} event
    */
   function trapAuthFocus(event) {
@@ -534,13 +731,15 @@
   }
 
   /**
-   * @param {string} user
+   * Finaliza login exitoso.
+   * @param {string} station
    */
-  function completeAuth(user) {
-    setStoredUser(user);
+  function completeAuth(station) {
+    setStoredStation(station);
+
     closeAuthGate(() => {
       unlockBody();
-      applyUserIdentityUI(user);
+      applyUserIdentityUI(station);
 
       if (lastFocusedBeforeGate && typeof lastFocusedBeforeGate.focus === "function") {
         window.setTimeout(() => {
@@ -551,71 +750,89 @@
   }
 
   /**
-   * Inicializa listeners de login y estados interactivos.
+   * Configura eventos y validaciones del formulario de auth.
    */
   function wireAuthInteractions() {
-    const gate = getGate();
-    if (!gate) return;
+    const { stations, input, enterBtn, toggleBtn, grid } = getAuthControls();
 
-    const { tiles, input, enterBtn } = getAuthControls();
-    const error = document.getElementById("authError");
+    if (!input || !enterBtn || !toggleBtn || stations.length === 0) return;
 
-    if (!input || !enterBtn || tiles.length === 0 || !error) return;
-
-    let selectedUser = "";
+    let selectedStation = null;
     let isAuthenticating = false;
+    let isPassVisible = false;
 
     input.disabled = true;
     input.value = "";
     enterBtn.disabled = true;
-    error.hidden = true;
-    tiles.forEach((tile) => tile.setAttribute("aria-pressed", "false"));
+    setPasswordVisibility(false);
+    clearAuthError();
+    setFieldHelp("Seleccione una estación antes de ingresar la clave.");
 
-    const setSelectedUser = (nextUser) => {
-      if (!AUTH_USERS.includes(nextUser)) return;
-      selectedUser = nextUser;
+    stations.forEach((stationBtn) => {
+      stationBtn.classList.remove("is-selected");
+      stationBtn.setAttribute("aria-pressed", "false");
+    });
 
-      tiles.forEach((tile) => {
-        const isActive = tile.dataset.user === nextUser;
-        tile.classList.toggle("is-selected", isActive);
-        tile.setAttribute("aria-pressed", String(isActive));
+    const setSelectedStation = (stationName) => {
+      if (!AUTH_STATIONS.includes(stationName)) return;
+      selectedStation = stationName;
+
+      stations.forEach((stationBtn) => {
+        const isActive = stationBtn.dataset.station === stationName;
+        stationBtn.classList.toggle("is-selected", isActive);
+        stationBtn.setAttribute("aria-pressed", String(isActive));
       });
 
+      if (grid) grid.classList.remove("is-error");
       input.disabled = false;
-      input.focus();
       clearAuthError();
-      updateAuthEnterButton(selectedUser);
+      setFieldHelp(`Estación seleccionada: ${stationName}`);
+      updateEnterButton(selectedStation);
+      input.focus();
     };
 
     const tryLogin = () => {
-      if (!selectedUser || isAuthenticating) return;
+      if (isAuthenticating) return;
 
-      if (input.value === AUTH_PASSWORD) {
+      if (!selectedStation) {
+        if (grid) grid.classList.add("is-error");
+        showAuthError("Seleccione una estación saludable.");
+        setFieldHelp("Seleccione una estación antes de ingresar la clave.", true);
+        const firstStation = stations[0];
+        if (firstStation) firstStation.focus();
+        return;
+      }
+
+      const passOK = normalizePass(input.value) === AUTH_PASS;
+
+      if (passOK) {
         isAuthenticating = true;
         input.disabled = true;
         enterBtn.disabled = true;
+        toggleBtn.disabled = true;
         clearAuthError();
-        completeAuth(selectedUser);
+        completeAuth(selectedStation);
         return;
       }
 
       showAuthError("Clave incorrecta.");
-      input.value = "";
-      updateAuthEnterButton(selectedUser);
+      setFieldHelp(`Estación seleccionada: ${selectedStation}`);
       input.focus();
+      input.select();
+      updateEnterButton(selectedStation);
     };
 
-    tiles.forEach((tile) => {
-      tile.addEventListener("click", () => {
-        const nextUser = tile.dataset.user || "";
-        if (!nextUser) return;
-        setSelectedUser(nextUser);
+    stations.forEach((stationBtn) => {
+      stationBtn.addEventListener("click", () => {
+        const stationName = stationBtn.dataset.station || "";
+        setSelectedStation(stationName);
       });
     });
 
     input.addEventListener("input", () => {
       clearAuthError();
-      updateAuthEnterButton(selectedUser);
+      if (selectedStation) setFieldHelp(`Estación seleccionada: ${selectedStation}`);
+      updateEnterButton(selectedStation);
     });
 
     input.addEventListener("keydown", (event) => {
@@ -624,11 +841,18 @@
       tryLogin();
     });
 
+    toggleBtn.addEventListener("click", () => {
+      if (input.disabled) return;
+      isPassVisible = !isPassVisible;
+      setPasswordVisibility(isPassVisible);
+      input.focus();
+    });
+
     enterBtn.addEventListener("click", tryLogin);
   }
 
   /**
-   * Construye/oculta gate segun estado de sesion y aplica UI de usuario.
+   * Inicializa gate según sesión guardada.
    */
   function bootstrapAuthGate() {
     ensureAuthGateExists();
@@ -636,13 +860,16 @@
     const gate = getGate();
     if (!gate) return;
 
-    const savedUser = getStoredUser();
+    const savedStation = getStoredStation();
 
-    if (savedUser) {
+    if (savedStation) {
       hideAuthGateImmediately();
-      applyUserIdentityUI(savedUser);
+      applyUserIdentityUI(savedStation);
       return;
     }
+
+    removeIdentityNodes();
+    document.body.classList.remove("has-user-banner");
 
     lastFocusedBeforeGate =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -652,7 +879,7 @@
   }
 
   /**
-   * Registra listeners de cambios de viewport/orientacion.
+   * Registra listeners de cambio de viewport/orientación.
    */
   function bindViewportListeners() {
     if (!authMq || !viewportChangeHandler) return;
@@ -674,15 +901,15 @@
     try {
       authMq = window.matchMedia(VIEWPORT_MQ);
       viewportChangeHandler = () => {
-        const user = getStoredUser();
-        if (!user) return;
-        applyUserIdentityUI(user);
+        const station = getStoredStation();
+        if (!station) return;
+        applyUserIdentityUI(station);
       };
 
       bootstrapAuthGate();
       bindViewportListeners();
     } catch (error) {
-      console.error("[auth-gate] Error de inicializacion", error);
+      console.error("[auth-gate] Error de inicialización", error);
     }
   });
 })();
