@@ -473,7 +473,7 @@ function loadEmbedWithSkeleton(iframeEl, wrapperEl, src) {
 function renderPartnerLogos() {
   const wrap = $("#partner-logos");
   const footerWrap = $("#footer-logos");
-  if (!wrap || !footerWrap) return;
+  if (!wrap) return;
 
   const partners = [
     { key: "fep", ...CONFIG.assets.logos.fep },
@@ -502,14 +502,16 @@ function renderPartnerLogos() {
     chip.appendChild(label);
     wrap.appendChild(chip);
 
-    // Footer mini logo
-    const fImg = document.createElement("img");
-    fImg.src = p.src;
-    fImg.alt = p.alt;
-    fImg.loading = "lazy";
-    fImg.decoding = "async";
-    fImg.dataset.partner = p.key;
-    footerWrap.appendChild(fImg);
+    if (footerWrap) {
+      // Footer mini logo (si existe footer)
+      const fImg = document.createElement("img");
+      fImg.src = p.src;
+      fImg.alt = p.alt;
+      fImg.loading = "lazy";
+      fImg.decoding = "async";
+      fImg.dataset.partner = p.key;
+      footerWrap.appendChild(fImg);
+    }
   });
 }
 

@@ -3388,10 +3388,13 @@ code {
   .page-home img,
   .page-home svg,
   .page-home video,
-  .page-home canvas,
-  .page-home iframe {
+  .page-home canvas {
     max-width: 100%;
     height: auto;
+  }
+
+  .page-home iframe {
+    max-width: 100%;
   }
 
   body.page-home,
@@ -3460,14 +3463,23 @@ code {
     line-height: 1.15;
     font-weight: 800;
     letter-spacing: -0.01em;
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     text-wrap: balance;
+    max-width: 18ch;
+    margin-inline: auto;
   }
 
   body.page-home header.site-header.site-topbar.is-compact #siteTopbar.site-topbar__inner,
   body.page-home.is-header-compact #siteTopbar.site-topbar__inner {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 6px);
-    padding-bottom: 6px;
-    box-shadow: 0 14px 28px rgba(12, 36, 64, 0.12);
+    /* Mantener proporción original del header también al scrollear */
+    padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
+    padding-bottom: 10px;
+    box-shadow: 0 10px 24px rgba(12, 36, 64, 0.09);
   }
 
   body.page-home header.site-header.site-topbar.is-compact #siteTopbar .brand-title,
@@ -3476,11 +3488,15 @@ code {
   body.page-home.is-header-compact #siteTopbar .brand-title,
   body.page-home.is-header-compact #siteTopbar h1,
   body.page-home.is-header-compact #siteTopbar .site-title {
-    font-size: 15px;
-    line-height: 1.08;
-    white-space: nowrap;
+    /* No reducir el H1 en mobile durante scroll */
+    font-size: clamp(1.2rem, 5.2vw, 1.42rem);
+    line-height: 1.14;
+    white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
 
   body.page-home .logo-strip.partners-bar,
@@ -3488,7 +3504,7 @@ code {
     position: relative;
     z-index: 1;
     margin-top: 6px;
-    padding: 0 10px 10px;
+    padding: 4px 10px 8px;
     overflow: hidden;
     max-height: 140px;
     opacity: 1;
@@ -3523,9 +3539,10 @@ code {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 7px;
     align-items: center;
+    justify-items: center;
     width: 100%;
     max-width: 100%;
-    padding: 4px 0 6px;
+    padding: 2px 0;
   }
 
   #partner-logos.partners-strip > * {
@@ -3538,8 +3555,8 @@ code {
   #partner-logos.partners-strip .partner-pill {
     min-width: 0;
     width: 100%;
-    height: 34px;
-    padding: 2px 6px;
+    height: 40px;
+    padding: 4px 8px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.92);
     border: 1px solid rgba(13, 79, 145, 0.12);
@@ -3555,10 +3572,38 @@ code {
   #partner-logos.partners-strip img {
     width: auto !important;
     max-width: 100% !important;
-    height: 20px;
-    max-height: 20px;
+    height: 22px;
+    max-height: 22px;
     object-fit: contain;
+    object-position: center;
     display: block;
+    transform: translateY(1px);
+  }
+
+  body.page-home #kpis .embed-shell--looker {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: 1.40;
+  }
+
+  body.page-home #kpis #looker-iframe,
+  body.page-home #kpis .embed-shell--looker .embed-iframe {
+    height: 100% !important;
+    pointer-events: none; /* evita scroll interno del iframe en mobile */
+  }
+
+  body.page-home #cronograma .embed-shell--calendar {
+    height: clamp(390px, 52vh, 440px);
+    min-height: 390px;
+    max-height: 440px;
+  }
+
+  body.page-home .embed-shell .embed-iframe,
+  body.page-home .embed-iframe {
+    width: 100%;
+    height: 100% !important;
+    min-height: 100%;
   }
 
   body.page-home main.site-main,
