@@ -1,4 +1,17 @@
-"use strict";
+import { getApps, initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  get,
+  getDatabase,
+  onDisconnect,
+  onValue,
+  ref as dbRef,
+  remove,
+  runTransaction,
+  serverTimestamp,
+  set,
+  update,
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 /**
  * @file Teleconsulta embebida P2P para PPCCR 2026.
@@ -18,8 +31,20 @@
   const JITSI_DOMAIN = "meet.jit.si";
   const JITSI_SCRIPT_SRC = `https://${JITSI_DOMAIN}/external_api.js`;
 
-  const FIREBASE_CONFIG =
-    window.PPCCR_FIREBASE_CONFIG || window.firebaseConfig || window.FIREBASE_CONFIG || null;
+  const firebaseConfig = {
+    apiKey: "AIzaSyAlMXR8EuV2bIK8wOlemqVjZr82AQI7bQI",
+    authDomain: "ppccr-2026.firebaseapp.com",
+    databaseURL: "https://ppccr-2026-default-rtdb.firebaseio.com",
+    projectId: "ppccr-2026",
+    storageBucket: "ppccr-2026.firebasestorage.app",
+    messagingSenderId: "506248242378",
+    appId: "1:506248242378:web:f42048eb076b5b41e40033",
+  };
+
+  window.PPCCR_FIREBASE_CONFIG = firebaseConfig;
+  window.firebaseConfig = firebaseConfig;
+  window.FIREBASE_CONFIG = firebaseConfig;
+  const FIREBASE_CONFIG = firebaseConfig;
 
   const STORAGE_KEYS = Object.freeze({
     station: "ppccr_station",
@@ -255,17 +280,13 @@
       if (this.initPromise) return this.initPromise;
 
       this.initPromise = (async () => {
-        if (!window.firebase || !window.firebase.initializeApp) {
-          throw new Error("Firebase SDK no disponible");
-        }
-
-        const apps = Array.isArray(window.firebase.apps) ? window.firebase.apps : [];
-        this.app = apps.length > 0 ? apps[0] : window.firebase.initializeApp(this.config);
-        this.auth = window.firebase.auth(this.app);
-        this.db = window.firebase.database(this.app);
+        const apps = getApps();
+        this.app = apps.length > 0 ? apps[0] : initializeApp(this.config);
+        this.auth = getAuth(this.app);
+        this.db = getDatabase(this.app);
 
         if (!this.auth.currentUser) {
-          await this.auth.signInAnonymously();
+          await signInAnonymously(this.auth);
         }
       })().catch((error) => {
         this.initPromise = null;
@@ -279,7 +300,7 @@
      * @returns {any}
      */
     getServerTimestamp() {
-      return window.firebase.database.ServerValue.TIMESTAMP;
+      return serverTimestamp();
     }
 
     /**
@@ -287,7 +308,7 @@
      * @returns {any}
      */
     ref(path) {
-      return this.db.ref(path);
+      return dbRef(this.db, path);
     }
 
     /**
@@ -303,7 +324,7 @@
       const previous = this.presenceStation;
       if (previous && previous.id !== nextStation.id) {
         try {
-          await this.ref(getPresencePath(previous.id)).set({
+          await set(this.ref(getPresencePath(previous.id)), {
             online: false,
             name: previous.name,
             ts: this.getServerTimestamp(),
@@ -322,20 +343,20 @@
       }
 
       this.presenceRef = this.ref(getPresencePath(nextStation.id));
-      await this.presenceRef.set({
+      await set(this.presenceRef, {
         online: true,
         name: nextStation.name,
         ts: this.getServerTimestamp(),
       });
 
-      const onDisconnect = this.presenceRef.onDisconnect();
-      await onDisconnect.set({
+      const disconnectOp = onDisconnect(this.presenceRef);
+      await disconnectOp.set({
         online: false,
         name: nextStation.name,
         ts: this.getServerTimestamp(),
       });
 
-      this.presenceOnDisconnect = onDisconnect;
+      this.presenceOnDisconnect = disconnectOp;
       this.presenceStation = nextStation;
     }
 
@@ -356,7 +377,7 @@
       }
 
       try {
-        await this.ref(getPresencePath(station.id)).set({
+        await set(this.ref(getPresencePath(station.id)), {
           online: false,
           name: station.name,
           ts: this.getServerTimestamp(),
@@ -377,8 +398,8 @@
      * @returns {() => void}
      */
     listen(path, handler, onError) {
-      const ref = this.ref(path);
-      const onValue = (snapshot) => {
+      const refValue = this.ref(path);
+      const handleSnapshot = (snapshot) => {
         handler(snapshot.val());
       };
 
@@ -390,9 +411,9 @@
         console.error("[teleconsulta] Listener error", error);
       };
 
-      ref.on("value", onValue, onListenError);
+      const unsubscribe = onValue(refValue, handleSnapshot, onListenError);
       return () => {
-        ref.off("value", onValue);
+        unsubscribe();
       };
     }
 
@@ -435,7 +456,7 @@
         ...call,
         updatedAt: this.getServerTimestamp(),
       };
-      await this.ref(getCallsPath(stationId)).set(payload);
+      await set(this.ref(getCallsPath(stationId)), payload);
     }
 
     /**
@@ -446,14 +467,14 @@
      */
     async createCallIfInboxFree(stationId, callPayload) {
       await this.init();
-      const ref = this.ref(getCallsPath(stationId));
+      const refValue = this.ref(getCallsPath(stationId));
 
       const payload = {
         ...callPayload,
         updatedAt: this.getServerTimestamp(),
       };
 
-      const result = await ref.transaction((current) => {
+      const result = await runTransaction(refValue, (current) => {
         if (current && typeof current === "object") {
           const currentCall = /** @type {{status?: unknown}} */ (current);
           const currentStatus = String(currentCall.status || "")
@@ -482,7 +503,7 @@
         ...patch,
         updatedAt: this.getServerTimestamp(),
       };
-      await this.ref(getCallsPath(stationId)).update(payload);
+      await update(this.ref(getCallsPath(stationId)), payload);
     }
 
     /**
@@ -491,7 +512,7 @@
      */
     async clearCall(stationId) {
       await this.init();
-      await this.ref(getCallsPath(stationId)).remove();
+      await remove(this.ref(getCallsPath(stationId)));
     }
 
     /**
@@ -501,12 +522,12 @@
      */
     async clearCallIfMatch(stationId, callId) {
       await this.init();
-      const ref = this.ref(getCallsPath(stationId));
-      const snapshot = await ref.once("value");
+      const refValue = this.ref(getCallsPath(stationId));
+      const snapshot = await get(refValue);
       const value = snapshot.val();
 
       if (value && String(value.callId || "") === callId) {
-        await ref.remove();
+        await remove(refValue);
       }
     }
   }
