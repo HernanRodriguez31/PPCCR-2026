@@ -73,7 +73,7 @@
   const CALL_CLEANUP_DELAY_MS = 6_000;
   const CHAT_MAX_MESSAGES = 150;
   const CHAT_SEND_DEBOUNCE_MS = 1_000;
-  const PENDING_CALL_STATUSES = new Set(["ringing", "queued"]);
+  const PENDING_CALL_STATUSES = new Set(["ringing", "queued", "calling"]);
 
   /**
    * @param {string | null | undefined} value
@@ -2874,6 +2874,7 @@
     async handleOwnCallsSnapshot(snapshotValue) {
       if (!this.currentStation) return;
       const myStationId = this.currentStation.id;
+      const isCurrentRoleStation = normalizeRole(this.currentRole) === ROLE_STATION;
 
       const ownCalls = this.parseStationCalls(snapshotValue).filter(
         (call) => call.toId === myStationId,
@@ -2881,10 +2882,32 @@
       this.callInboxCache = ownCalls;
 
       const activeCallId = this.activeCall ? String(this.activeCall.callId || "") : "";
-      const activeSnapshot =
+      let activeSnapshot =
         this.activeCall && activeCallId
           ? ownCalls.find((call) => call.callId === activeCallId) || null
           : null;
+
+      if (!activeSnapshot && isCurrentRoleStation) {
+        const stationJoinableCalls = ownCalls.slice().reverse();
+        activeSnapshot =
+          stationJoinableCalls.find(
+            (call) =>
+              call.fromId !== myStationId &&
+              (call.status === "calling" || call.status === "accepted" || call.status === "in-call"),
+          ) || null;
+      }
+
+      if (activeSnapshot && (!this.activeCall || this.activeCall.callId !== activeSnapshot.callId)) {
+        this.activeCall = {
+          ...activeSnapshot,
+          peerId: activeSnapshot.fromId,
+          peerName: activeSnapshot.fromName,
+          direction: "incoming",
+          inboxStationId: myStationId,
+          hasJoinedConference: false,
+          wasQueued: false,
+        };
+      }
 
       if (!activeSnapshot && this.state === "incoming" && this.activeCall?.direction === "incoming") {
         this.closeIncomingModal();
@@ -2912,32 +2935,96 @@
         return;
       }
 
-      if (activeSnapshot && activeSnapshot.status === "accepted") {
-        if (!this.activeCall || this.activeCall.callId !== activeSnapshot.callId) {
-          this.activeCall = {
-            ...activeSnapshot,
-            peerId: activeSnapshot.fromId,
-            peerName: activeSnapshot.fromName,
-            direction: "incoming",
-            inboxStationId: myStationId,
-          };
+      if (activeSnapshot && activeSnapshot.status === "calling") {
+        this.activeCall = {
+          ...(this.activeCall || {}),
+          ...activeSnapshot,
+          peerId: activeSnapshot.fromId,
+          peerName: activeSnapshot.fromName,
+          direction: "incoming",
+          inboxStationId: myStationId,
+          hasJoinedConference: Boolean(this.activeCall?.hasJoinedConference),
+          wasQueued: Boolean(this.activeCall?.wasQueued),
+        };
+
+        this.audioService.stop();
+        this.closeIncomingModal();
+        this.state = "outgoing";
+
+        const op = this.opSeq;
+        const currentCall = this.activeCall;
+        if (!currentCall) return;
+
+        this.setStatus(`Llamada entrante de ${currentCall.peerName}. Conectando...`, "info");
+        this.setPlaceholder(
+          "Conectando videollamada",
+          `Ingresando a sala con ${currentCall.peerName}.`,
+        );
+
+        if (isCurrentRoleStation && this.firebaseReady) {
+          try {
+            await this.firebase.patchCall(myStationId, currentCall.callId, {
+              status: "accepted",
+              acceptedAt: this.firebase.getServerTimestamp(),
+            });
+          } catch (error) {
+            // no-op
+          }
         }
 
-        if (this.isCurrentStationHost(this.activeCall)) {
-          if (!this.jitsi.hasMeeting()) {
-            await this.mountActiveMeeting(this.opSeq, { signalInCallOnJoin: true });
-          }
-          if (this.state !== "in-call") {
-            this.setStatus(`Conectando con ${this.activeCall.peerName}...`, "info");
-          }
-        } else {
-          this.setStatus("Esperando al médico...", "info");
-          this.setPlaceholder(
-            "Esperando al médico",
-            "El médico debe ingresar primero para habilitar la sala.",
-          );
+        if (!currentCall.hasJoinedConference && !this.jitsi.hasMeeting()) {
+          await this.mountActiveMeeting(op, {
+            signalInCallOnJoin: this.isCurrentStationHost(currentCall),
+          });
         }
+        if (!this.isOpCurrent(op)) return;
+        if (!this.activeCall || this.activeCall.callId !== currentCall.callId) return;
+
+        this.state = "in-call";
+        this.refs.fsLabel.textContent = `En llamada con ${this.activeCall.peerName}`;
+        this.setStatus(`En llamada con ${this.activeCall.peerName}.`, "ok");
         this.syncUI();
+        return;
+      }
+
+      if (activeSnapshot && activeSnapshot.status === "accepted") {
+        this.activeCall = {
+          ...(this.activeCall || {}),
+          ...activeSnapshot,
+          peerId: activeSnapshot.fromId,
+          peerName: activeSnapshot.fromName,
+          direction: "incoming",
+          inboxStationId: myStationId,
+          hasJoinedConference: Boolean(this.activeCall?.hasJoinedConference),
+          wasQueued: Boolean(this.activeCall?.wasQueued),
+        };
+        this.audioService.stop();
+        this.closeIncomingModal();
+        this.state = "outgoing";
+
+        const op = this.opSeq;
+        const currentCall = this.activeCall;
+        if (!currentCall) return;
+
+        this.setStatus(`Llamada aceptada. Ingresando con ${currentCall.peerName}...`, "info");
+        this.setPlaceholder(
+          "Conectando videollamada",
+          `Ingresando a sala con ${currentCall.peerName}.`,
+        );
+
+        if (!currentCall.hasJoinedConference && !this.jitsi.hasMeeting()) {
+          await this.mountActiveMeeting(op, {
+            signalInCallOnJoin: this.isCurrentStationHost(currentCall),
+          });
+        }
+        if (!this.isOpCurrent(op)) return;
+        if (!this.activeCall || this.activeCall.callId !== currentCall.callId) return;
+
+        this.state = "in-call";
+        this.refs.fsLabel.textContent = `En llamada con ${this.activeCall.peerName}`;
+        this.setStatus(`En llamada con ${this.activeCall.peerName}.`, "ok");
+        this.syncUI();
+        return;
       }
 
       if (activeSnapshot && activeSnapshot.status === "in-call") {
@@ -2949,8 +3036,10 @@
           peerName: activeSnapshot.fromName,
           direction: "incoming",
           inboxStationId: myStationId,
+          hasJoinedConference: Boolean(this.activeCall?.hasJoinedConference),
+          wasQueued: Boolean(this.activeCall?.wasQueued),
         };
-        if (!this.jitsi.hasMeeting()) {
+        if (!this.activeCall.hasJoinedConference && !this.jitsi.hasMeeting()) {
           await this.mountActiveMeeting(op, { signalInCallOnJoin: false });
         }
         if (!this.isOpCurrent(op)) return;
@@ -2958,6 +3047,7 @@
         this.refs.fsLabel.textContent = `En llamada con ${this.activeCall.peerName}`;
         this.setStatus(`En llamada con ${this.activeCall.peerName}.`, "ok");
         this.syncUI();
+        return;
       }
 
       const pendingCalls = ownCalls.filter(
@@ -2977,7 +3067,7 @@
       if (shouldQueueIncoming) {
         for (const pendingCall of pendingCalls) {
           if (pendingCall.callId === activeCallId) continue;
-          if (pendingCall.status !== "ringing") continue;
+          if (!["ringing", "calling"].includes(pendingCall.status)) continue;
           this.firebase
             .patchCall(myStationId, pendingCall.callId, {
               status: "queued",
@@ -3188,6 +3278,8 @@
         targetRole,
       );
 
+      const initialCallStatus = callerRole === ROLE_MEDIC ? "calling" : "ringing";
+
       const callPayload = {
         callId,
         room,
@@ -3198,7 +3290,7 @@
         hostId,
         callerRole,
         targetRole,
-        status: "ringing",
+        status: initialCallStatus,
         createdAt: this.firebase.getServerTimestamp(),
         updatedAt: this.firebase.getServerTimestamp(),
         acceptedAt: null,
@@ -3206,10 +3298,19 @@
         reason: "",
       };
 
-      await this.audioService.startRingback();
+      if (initialCallStatus === "ringing") {
+        await this.audioService.startRingback();
+      } else {
+        this.audioService.stop();
+      }
       this.state = "outgoing";
-      this.setStatus(`Llamando a ${target.name}...`, "info");
-      this.setPlaceholder("Llamada saliente", `Llamando a ${target.name}...`);
+      if (initialCallStatus === "calling") {
+        this.setStatus(`Iniciando videollamada con ${target.name}...`, "info");
+        this.setPlaceholder("Conectando videollamada", `Ingresando con ${target.name}...`);
+      } else {
+        this.setStatus(`Llamando a ${target.name}...`, "info");
+        this.setPlaceholder("Llamada saliente", `Llamando a ${target.name}...`);
+      }
       this.closeIncomingModal();
       this.syncUI();
 
@@ -3257,8 +3358,26 @@
         return null;
       }
 
-      this.bindOutgoingWatch(target.id, callId);
-      this.armOutgoingTimeout(callId, target.id, target.name);
+      if (initialCallStatus === "ringing") {
+        this.bindOutgoingWatch(target.id, callId);
+        this.armOutgoingTimeout(callId, target.id, target.name);
+      } else {
+        this.clearOutgoingTimeout();
+        const mountOp = this.opSeq;
+        const currentCall = this.activeCall;
+        if (currentCall && !currentCall.hasJoinedConference && !this.jitsi.hasMeeting()) {
+          await this.mountActiveMeeting(mountOp, {
+            signalInCallOnJoin: this.isCurrentStationHost(currentCall),
+          });
+        }
+        if (!this.isOpCurrent(mountOp) || !this.activeCall || this.activeCall.callId !== callId) {
+          return callId;
+        }
+        this.state = "in-call";
+        this.refs.fsLabel.textContent = `En llamada con ${target.name}`;
+        this.setStatus(`En llamada con ${target.name}.`, "ok");
+        this.bindOutgoingWatch(target.id, callId);
+      }
       this.syncUI();
       return callId;
     }
@@ -3370,6 +3489,30 @@
         return;
       }
 
+      if (parsed.status === "calling") {
+        this.clearOutgoingTimeout();
+        this.audioService.stop();
+        const op = this.opSeq;
+        this.setStatus(`Llamada iniciada con ${activeCall.peerName}. Conectando...`, "info");
+        this.setPlaceholder(
+          "Conectando videollamada",
+          `Ingresando a sala con ${activeCall.peerName}.`,
+        );
+        if (!this.activeCall.hasJoinedConference && !this.jitsi.hasMeeting()) {
+          await this.mountActiveMeeting(op, {
+            signalInCallOnJoin: this.isCurrentStationHost(this.activeCall),
+          });
+        }
+        if (!this.isOpCurrent(op)) return;
+        if (!this.activeCall || this.activeCall.callId !== callId) return;
+
+        this.state = "in-call";
+        this.refs.fsLabel.textContent = `En llamada con ${activeCall.peerName}`;
+        this.setStatus(`En llamada con ${activeCall.peerName}.`, "ok");
+        this.syncUI();
+        return;
+      }
+
       if (parsed.status === "queued") {
         this.clearOutgoingTimeout();
         this.activeCall.wasQueued = true;
@@ -3386,22 +3529,23 @@
       if (parsed.status === "accepted") {
         this.clearOutgoingTimeout();
         this.audioService.stop();
-
-        if (this.state !== "outgoing") return;
-
         const op = this.opSeq;
-        if (this.isCurrentStationHost(this.activeCall)) {
-          this.setStatus(`Llamada aceptada. Ingresando a sala con ${activeCall.peerName}...`, "info");
-          if (!this.jitsi.hasMeeting()) {
-            await this.mountActiveMeeting(op, { signalInCallOnJoin: true });
-          }
-        } else {
-          this.setStatus("Esperando al médico...", "info");
-          this.setPlaceholder(
-            "Esperando al médico",
-            "El médico debe ingresar primero para habilitar la sala.",
-          );
+        this.setStatus(`Llamada aceptada. Ingresando a sala con ${activeCall.peerName}...`, "info");
+        this.setPlaceholder(
+          "Conectando videollamada",
+          `Ingresando a sala con ${activeCall.peerName}.`,
+        );
+        if (!this.activeCall.hasJoinedConference && !this.jitsi.hasMeeting()) {
+          await this.mountActiveMeeting(op, {
+            signalInCallOnJoin: this.isCurrentStationHost(this.activeCall),
+          });
         }
+        if (!this.isOpCurrent(op)) return;
+        if (!this.activeCall || this.activeCall.callId !== callId) return;
+
+        this.state = "in-call";
+        this.refs.fsLabel.textContent = `En llamada con ${activeCall.peerName}`;
+        this.setStatus(`En llamada con ${activeCall.peerName}.`, "ok");
         this.syncUI();
         return;
       }
@@ -3411,7 +3555,7 @@
         this.audioService.stop();
 
         const op = this.opSeq;
-        if (!this.jitsi.hasMeeting()) {
+        if (!this.activeCall.hasJoinedConference && !this.jitsi.hasMeeting()) {
           await this.mountActiveMeeting(op, { signalInCallOnJoin: false });
         }
         if (!this.isOpCurrent(op)) return;
@@ -3470,20 +3614,23 @@
         return;
       }
 
-      if (this.isCurrentStationHost(call)) {
-        await this.mountActiveMeeting(op, { signalInCallOnJoin: true });
-        if (!this.isOpCurrent(op)) return;
-        if (!this.activeCall || this.activeCall.callId !== call.callId) return;
-        if (this.state !== "in-call") {
-          this.setStatus(`Conectando con ${call.peerName}...`, "info");
-        }
-      } else {
-        this.setStatus("Esperando al médico...", "info");
-        this.setPlaceholder(
-          "Esperando al médico",
-          "El médico debe ingresar primero para habilitar la sala.",
-        );
+      const currentCall = this.activeCall;
+      if (!currentCall) return;
+      this.setPlaceholder(
+        "Conectando videollamada",
+        `Ingresando a sala con ${currentCall.peerName}.`,
+      );
+
+      if (!currentCall.hasJoinedConference && !this.jitsi.hasMeeting()) {
+        await this.mountActiveMeeting(op, {
+          signalInCallOnJoin: this.isCurrentStationHost(currentCall),
+        });
       }
+      if (!this.isOpCurrent(op) || !this.activeCall || this.activeCall.callId !== call.callId) return;
+
+      this.state = "in-call";
+      this.refs.fsLabel.textContent = `En llamada con ${this.activeCall.peerName}`;
+      this.setStatus(`En llamada con ${this.activeCall.peerName}.`, "ok");
 
       this.updateQueueVisual(this.waitingIncomingCount);
       this.syncUI();
@@ -3728,6 +3875,7 @@
         if (!opened) {
           throw new Error("No se pudo abrir la pestaña de Jitsi.");
         }
+        call.hasJoinedConference = true;
         this.refs.externalHint.hidden = false;
         this.setPlaceholder(
           "Llamada en pestaña",
@@ -3787,6 +3935,9 @@
           });
         },
       });
+      if (this.activeCall && this.activeCall.callId === call.callId) {
+        this.activeCall.hasJoinedConference = true;
+      }
 
       if (!this.isOpCurrent(op)) {
         await this.jitsi.disposeMeeting();

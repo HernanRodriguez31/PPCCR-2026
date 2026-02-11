@@ -57,7 +57,7 @@
                 ".validate": "newData.isString() && newData.val().matches(/^(station|medic)$/)"
               },
               "status": {
-                ".validate": "newData.isString() && newData.val().matches(/^(ringing|queued|accepted|in-call|declined|cancelled|ended|missed|timeout)$/)"
+                ".validate": "newData.isString() && newData.val().matches(/^(ringing|calling|queued|accepted|in-call|declined|cancelled|ended|missed|timeout)$/)"
               },
               "createdAt": {
                 ".validate": "newData.isNumber()"
