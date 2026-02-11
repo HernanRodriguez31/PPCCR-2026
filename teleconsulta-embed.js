@@ -173,18 +173,36 @@
   }
 
   /**
-   * @param {number} [size]
+   * Genera un sufijo hexadecimal seguro para ids.
+   * Prioriza `crypto.getRandomValues` y usa fallback con Math.random.
+   * @param {number} [bytes]
    * @returns {string}
    */
-  function randomSuffix(size = 6) {
-    return Math.random().toString(36).slice(2, 2 + size);
+  function randomHex(bytes = 10) {
+    const size = Math.max(1, Math.floor(bytes));
+    const cryptoApi = window.crypto;
+
+    if (cryptoApi && typeof cryptoApi.getRandomValues === "function") {
+      const values = new Uint8Array(size);
+      cryptoApi.getRandomValues(values);
+      return Array.from(values)
+        .map((value) => value.toString(16).padStart(2, "0"))
+        .join("");
+    }
+
+    let output = "";
+    for (let index = 0; index < size; index += 1) {
+      const value = Math.floor(Math.random() * 256);
+      output += value.toString(16).padStart(2, "0");
+    }
+    return output;
   }
 
   /**
    * @returns {string}
    */
   function buildCallId() {
-    return `${Date.now()}_${randomSuffix(6)}`;
+    return `${Date.now()}_${randomHex(10)}`;
   }
 
   /**
@@ -418,6 +436,39 @@
         updatedAt: this.getServerTimestamp(),
       };
       await this.ref(getCallsPath(stationId)).set(payload);
+    }
+
+    /**
+     * Crea una llamada solo si el inbox está libre.
+     * @param {string} stationId
+     * @param {Record<string, unknown>} callPayload
+     * @returns {Promise<boolean>}
+     */
+    async createCallIfInboxFree(stationId, callPayload) {
+      await this.init();
+      const ref = this.ref(getCallsPath(stationId));
+
+      const payload = {
+        ...callPayload,
+        updatedAt: this.getServerTimestamp(),
+      };
+
+      const result = await ref.transaction((current) => {
+        if (current && typeof current === "object") {
+          const currentCall = /** @type {{status?: unknown}} */ (current);
+          const currentStatus = String(currentCall.status || "")
+            .trim()
+            .toLowerCase();
+
+          if (LIVE_CALL_STATUSES.has(currentStatus)) {
+            return;
+          }
+        }
+
+        return payload;
+      });
+
+      return Boolean(result?.committed);
     }
 
     /**
@@ -1676,7 +1727,27 @@
       this.syncUI();
 
       try {
-        await this.firebase.setCall(target.id, callPayload);
+        const committed = await this.firebase.createCallIfInboxFree(
+          target.id,
+          callPayload,
+        );
+
+        if (!committed) {
+          if (this.isOpCurrent(op)) {
+            this.activeCall = null;
+            this.state = "idle";
+            this.setStatus(
+              "Estación ocupada o ya recibiendo una llamada.",
+              "warn",
+            );
+            this.setPlaceholder(
+              "Teleconsulta",
+              "Iniciá una llamada o esperá una entrante.",
+            );
+            this.syncUI();
+          }
+          return;
+        }
       } catch (error) {
         if (this.isOpCurrent(op)) {
           this.activeCall = null;
