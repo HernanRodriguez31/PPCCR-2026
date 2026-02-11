@@ -4,60 +4,70 @@
       "teleconsulta": {
         ".read": "auth != null",
         ".write": "auth != null",
-        "presence": {
+        "estaciones": {
           "$stationId": {
             ".validate": "$stationId.matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/)",
-            "online": {
-              ".validate": "newData.isBoolean()"
+            "presence": {
+              ".validate": "!newData.exists() || newData.hasChildren(['name','online','role','lastSeen'])",
+              "name": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+              },
+              "online": {
+                ".validate": "newData.isBoolean()"
+              },
+              "role": {
+                ".validate": "newData.isString() && newData.val().matches(/^(station|medic)$/)"
+              },
+              "lastSeen": {
+                ".validate": "newData.isNumber()"
+              },
+              "busy": {
+                ".validate": "!newData.exists() || newData.isBoolean()"
+              },
+              "$other": {
+                ".validate": false
+              }
             },
-            "busy": {
-              ".validate": "!newData.exists() || newData.isBoolean()"
-            },
-            "stationName": {
-              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
-            },
-            "role": {
-              ".validate": "newData.isString() && newData.val().matches(/^(station|medic)$/)"
-            },
-            "ts": {
-              ".validate": "newData.isNumber()"
-            }
-          }
-        },
-        "calls": {
-          "$toStationId": {
-            ".validate": "$toStationId.matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/)",
-            "$callId": {
-              ".validate": "newData.hasChildren(['callId','fromId','toId','fromName','toName','status','room','hostId','callerRole','targetRole','createdAt','updatedAt'])",
+            "active": {
+              ".validate": "!newData.exists() || newData.hasChildren(['callId','peerId','peerName','direction','status','room','createdAt','updatedAt','fromId','toId'])",
               "callId": {
-                ".validate": "newData.isString() && newData.val() === $callId"
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+              },
+              "peerId": {
+                ".validate": "newData.isString() && newData.val().matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/)"
+              },
+              "peerName": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+              },
+              "direction": {
+                ".validate": "newData.isString() && newData.val().matches(/^(in|out)$/)"
+              },
+              "status": {
+                ".validate": "newData.isString() && newData.val().matches(/^(calling|ringing|queued|accepted|in_call|in-call|declined|cancelled|ended|missed|timeout)$/)"
+              },
+              "room": {
+                ".validate": "newData.isString() && newData.val().length >= 8 && newData.val().length <= 140"
               },
               "fromId": {
                 ".validate": "newData.isString() && newData.val().matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/)"
               },
               "toId": {
-                ".validate": "newData.isString() && newData.val() === $toStationId"
-              },
-              "fromName": {
-                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
-              },
-              "toName": {
-                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
-              },
-              "room": {
-                ".validate": "newData.isString() && newData.val().length >= 8 && newData.val().length <= 140"
-              },
-              "hostId": {
                 ".validate": "newData.isString() && newData.val().matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/)"
               },
+              "fromName": {
+                ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 80)"
+              },
+              "toName": {
+                ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 80)"
+              },
+              "hostId": {
+                ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/))"
+              },
               "callerRole": {
-                ".validate": "newData.isString() && newData.val().matches(/^(station|medic)$/)"
+                ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(station|medic)$/))"
               },
               "targetRole": {
-                ".validate": "newData.isString() && newData.val().matches(/^(station|medic)$/)"
-              },
-              "status": {
-                ".validate": "newData.isString() && newData.val().matches(/^(ringing|calling|queued|accepted|in-call|declined|cancelled|ended|missed|timeout)$/)"
+                ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(station|medic)$/))"
               },
               "createdAt": {
                 ".validate": "newData.isNumber()"
@@ -77,11 +87,115 @@
               "$other": {
                 ".validate": false
               }
+            },
+            "queue": {
+              "$callId": {
+                ".validate": "!newData.exists() || newData.hasChildren(['fromId','fromName','room','createdAt'])",
+                "callId": {
+                  ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 80)"
+                },
+                "fromId": {
+                  ".validate": "newData.isString() && newData.val().matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/)"
+                },
+                "fromName": {
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+                },
+                "toId": {
+                  ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/))"
+                },
+                "toName": {
+                  ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 80)"
+                },
+                "room": {
+                  ".validate": "newData.isString() && newData.val().length >= 8 && newData.val().length <= 140"
+                },
+                "hostId": {
+                  ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/))"
+                },
+                "callerRole": {
+                  ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(station|medic)$/))"
+                },
+                "targetRole": {
+                  ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(station|medic)$/))"
+                },
+                "status": {
+                  ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(queued)$/))"
+                },
+                "createdAt": {
+                  ".validate": "newData.isNumber()"
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "calls": {
+          "$callId": {
+            ".validate": "!newData.exists() || newData.hasChildren(['callId','fromId','toId','status','room','updatedAt'])",
+            "callId": {
+              ".validate": "newData.isString() && newData.val() === $callId"
+            },
+            "fromId": {
+              ".validate": "newData.isString() && newData.val().matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/)"
+            },
+            "toId": {
+              ".validate": "newData.isString() && newData.val().matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/)"
+            },
+            "status": {
+              ".validate": "newData.isString() && newData.val().matches(/^(calling|ringing|queued|accepted|in_call|in-call|declined|cancelled|ended|missed|timeout)$/)"
+            },
+            "room": {
+              ".validate": "newData.isString() && newData.val().length >= 8 && newData.val().length <= 140"
+            },
+            "fromName": {
+              ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 80)"
+            },
+            "toName": {
+              ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 80)"
+            },
+            "hostId": {
+              ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/))"
+            },
+            "callerRole": {
+              ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(station|medic)$/))"
+            },
+            "targetRole": {
+              ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(station|medic)$/))"
+            },
+            "createdAt": {
+              ".validate": "!newData.exists() || newData.isNumber()"
+            },
+            "updatedAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "callerStatus": {
+              ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(calling|ringing|queued|accepted|in_call|in-call|declined|cancelled|ended|missed|timeout)$/))"
+            },
+            "calleeStatus": {
+              ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(calling|ringing|queued|accepted|in_call|in-call|declined|cancelled|ended|missed|timeout)$/))"
+            },
+            "acceptedAt": {
+              ".validate": "!newData.exists() || newData.isNumber()"
+            },
+            "endedAt": {
+              ".validate": "!newData.exists() || newData.isNumber()"
+            },
+            "reason": {
+              ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 120)"
+            },
+            "$other": {
+              ".validate": false
             }
           }
         },
         "chat": {
           "messages": {
+            ".indexOn": ["ts", "callId"],
             "$messageId": {
               ".validate": "newData.hasChildren(['ts','type','stationId','stationName','authorName'])",
               "ts": {
