@@ -16,7 +16,7 @@
   const STATION_MAP = new Map(STATIONS.map((station) => [station.id, station]));
 
   const JITSI_DOMAIN =
-    String(window.PPCCR_JITSI_DOMAIN || "").trim() || "meet.jit.si";
+    String(window.PPCCR_JITSI_DOMAIN || "").trim() || "8x8.vc";
   const JITSI_SCRIPT_SRC = `https://${JITSI_DOMAIN}/external_api.js`;
   const CHAT_ENABLED = Boolean(window.PPCCR_CHAT_ENABLED !== false);
 
@@ -1060,6 +1060,7 @@
      *   roomName: string,
      *   displayName: string,
      *   parentNode: HTMLElement,
+     *   jwt?: string,
      *   onReadyToClose?: () => void,
      *   onAudioMuteStatus?: (muted: boolean) => void,
      *   onVideoMuteStatus?: (muted: boolean) => void,
@@ -1073,6 +1074,7 @@
         roomName,
         displayName,
         parentNode,
+        jwt = "",
         onReadyToClose,
         onAudioMuteStatus,
         onVideoMuteStatus,
@@ -1118,6 +1120,9 @@
           displayName,
         },
       };
+      if (jwt) {
+        jitsiOptions.jwt = jwt;
+      }
 
       const api = new window.JitsiMeetExternalAPI(JITSI_DOMAIN, jitsiOptions);
       if (typeof api.getIFrame === "function") {
@@ -3524,11 +3529,69 @@
 
     /**
      * @param {string} roomName
+     * @param {string} [jwt]
      * @returns {string}
      */
-    buildJitsiOpenUrl(roomName) {
+    buildJitsiOpenUrl(roomName, jwt = "") {
       const safeRoom = encodeURIComponent(String(roomName || "").trim());
-      return `https://${JITSI_DOMAIN}/${safeRoom}#config.prejoinPageEnabled=false&config.requireDisplayName=false`;
+      const tokenQuery = jwt ? `?jwt=${encodeURIComponent(jwt)}` : "";
+      return `https://${JITSI_DOMAIN}/${safeRoom}${tokenQuery}#config.prejoinPageEnabled=false&config.requireDisplayName=false`;
+    }
+
+    /**
+     * @param {{room?: string, jaasJwt?: string}} [call]
+     * @returns {Promise<string>}
+     */
+    async requestJaasJwtForCall(call = this.activeCall) {
+      if (!call || !call.room) {
+        throw new Error("No hay llamada activa para solicitar JWT.");
+      }
+
+      if (call.jaasJwt) {
+        return String(call.jaasJwt);
+      }
+
+      const isModerator = this.currentRole === ROLE_MEDIC;
+      let doctorPin = "";
+
+      if (isModerator) {
+        const input = window.prompt("Ingresá PIN médico:", "");
+        if (input === null) {
+          throw new Error("PIN médico cancelado.");
+        }
+        doctorPin = String(input).trim();
+        if (!doctorPin) {
+          throw new Error("PIN médico requerido.");
+        }
+      }
+
+      const response = await fetch("/api/generateJitsiToken", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          roomName: call.room,
+          isModerator,
+          doctorPin,
+        }),
+      });
+
+      const payload = await response
+        .json()
+        .catch(() => /** @type {{token?: string, error?: string}} */ ({}));
+
+      if (!response.ok) {
+        throw new Error(String(payload?.error || "No se pudo generar token JWT."));
+      }
+
+      const token = String(payload?.token || "").trim();
+      if (!token) {
+        throw new Error("Respuesta JWT inválida.");
+      }
+
+      call.jaasJwt = token;
+      return token;
     }
 
     /**
@@ -3554,9 +3617,21 @@
       const station = this.currentStation;
 
       if (!call || !station) return;
+      let jaasJwt = "";
+      try {
+        jaasJwt = await this.requestJaasJwtForCall(call);
+      } catch (error) {
+        const message = String(error?.message || "No se pudo obtener token JWT.");
+        this.setStatus(message, "error");
+        throw error;
+      }
 
       if (this.openInNewTab) {
-        const opened = window.open(this.buildJitsiOpenUrl(call.room), "_blank", "noopener,noreferrer");
+        const opened = window.open(
+          this.buildJitsiOpenUrl(call.room, jaasJwt),
+          "_blank",
+          "noopener,noreferrer",
+        );
         if (!opened) {
           throw new Error("No se pudo abrir la pestaña de Jitsi.");
         }
@@ -3581,6 +3656,7 @@
       await this.jitsi.mountMeeting({
         roomName: call.room,
         displayName: this.getDisplayNameForMeeting(),
+        jwt: jaasJwt,
         parentNode,
         onReadyToClose: () => {
           this.hangup("Llamada finalizada.", {

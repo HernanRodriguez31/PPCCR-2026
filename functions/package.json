@@ -1,0 +1,17 @@
+{
+  "name": "ppccr-functions",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions",
+    "lint": "echo \"No lint configured\""
+  },
+  "dependencies": {
+    "firebase-functions": "^4.9.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
