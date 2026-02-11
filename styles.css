@@ -6273,6 +6273,10 @@ iframe {
   flex-wrap: wrap;
 }
 
+.telew__infoRow {
+  align-items: center;
+}
+
 .telew__status {
   display: inline-flex;
   align-items: center;
@@ -6412,13 +6416,35 @@ iframe {
   outline-offset: 2px;
 }
 
+.telew__soundUnlock {
+  border: 1px solid rgba(11, 87, 208, 0.24);
+  border-radius: 999px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 0.78rem;
+  font-weight: 720;
+  color: #0a3e7d;
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    transform 150ms ease,
+    border-color 160ms ease;
+}
+
+.telew__soundUnlock:hover {
+  transform: translateY(-1px);
+  border-color: rgba(11, 87, 208, 0.34);
+  background: rgba(237, 247, 255, 0.95);
+}
+
 .telew__chat {
   border: 1px solid rgba(11, 87, 208, 0.16);
   border-radius: 16px;
   background: linear-gradient(
     155deg,
-    rgba(255, 255, 255, 0.88),
-    rgba(236, 246, 255, 0.84)
+    rgba(255, 255, 255, 0.9),
+    rgba(236, 246, 255, 0.85)
   );
   box-shadow:
     0 8px 20px rgba(8, 32, 63, 0.08),
@@ -6428,14 +6454,14 @@ iframe {
   gap: 10px;
 }
 
-.telew__chatHead {
+.telew__chatHeader {
   display: grid;
   gap: 2px;
 }
 
 .telew__chatTitle {
   margin: 0;
-  font-size: 0.98rem;
+  font-size: 1rem;
   font-weight: 760;
   color: #0a2f60;
 }
@@ -6446,19 +6472,80 @@ iframe {
   color: rgba(11, 27, 43, 0.62);
 }
 
-.telew__chatMessages {
-  max-height: 240px;
-  min-height: 128px;
-  overflow: auto;
-  border: 1px solid rgba(9, 55, 110, 0.13);
+.telew__chatLog {
+  height: 220px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid rgba(9, 55, 110, 0.14);
   border-radius: 14px;
-  background: rgba(248, 252, 255, 0.86);
+  background: rgba(248, 252, 255, 0.88);
   padding: 8px;
   display: grid;
   gap: 8px;
 }
 
-.telew__chatItem {
+.telew__chatForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.telew__chatAuthor,
+.telew__chatInput {
+  min-height: 40px;
+  border: 1px solid rgba(10, 46, 93, 0.21);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #0e2542;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.telew__chatAuthor {
+  flex: 1 1 240px;
+  min-width: 170px;
+}
+
+.telew__chatInput {
+  flex: 3 1 360px;
+  min-width: 220px;
+}
+
+.telew__chatAuthor:focus,
+.telew__chatInput:focus {
+  border-color: rgba(10, 87, 184, 0.58);
+  box-shadow: 0 0 0 3px rgba(10, 125, 224, 0.18);
+}
+
+.telew__chatSend,
+.telew__chatRequest {
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(9, 52, 106, 0.2);
+  padding: 0 16px;
+  font-size: 0.88rem;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.telew__chatSend {
+  background: rgba(255, 255, 255, 0.94);
+  color: #0a3d78;
+}
+
+.telew__chatRequest {
+  background: linear-gradient(145deg, #0b57d0, #083b8a);
+  color: #fff;
+  border-color: rgba(8, 59, 138, 0.42);
+}
+
+.telew__chatSend:hover,
+.telew__chatRequest:hover {
+  transform: translateY(-1px);
+}
+
+.telemsg {
   border: 1px solid rgba(11, 87, 208, 0.14);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.9);
@@ -6467,25 +6554,16 @@ iframe {
   gap: 6px;
 }
 
-.telew__chatMeta {
+.telemsg__meta {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 8px;
   font-size: 0.73rem;
   color: rgba(11, 27, 43, 0.62);
 }
 
-.telew__chatAuthor {
-  font-weight: 720;
-  color: #0b366d;
-}
-
-.telew__chatTime {
-  font-variant-numeric: tabular-nums;
-}
-
-.telew__chatBody {
+.telemsg__text {
   margin: 0;
   font-size: 0.9rem;
   color: #0f233b;
@@ -6494,32 +6572,13 @@ iframe {
   word-break: break-word;
 }
 
-.telew__chatActionsInline {
+.telemsg__actions {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 8px;
 }
 
-.telew__chatTag {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  min-height: 24px;
-  padding: 0 9px;
-  font-size: 0.72rem;
-  font-weight: 740;
-  border: 1px solid rgba(11, 87, 208, 0.22);
-  background: rgba(227, 241, 255, 0.86);
-  color: #0b3f7a;
-}
-
-.telew__chatTag[data-state="called"] {
-  border-color: rgba(18, 126, 74, 0.28);
-  background: rgba(212, 247, 232, 0.88);
-  color: #0f6b45;
-}
-
-.telew__chatBtn {
+.telemsg__btn {
   border: 1px solid rgba(11, 87, 208, 0.2);
   background: rgba(255, 255, 255, 0.92);
   color: #0a3974;
@@ -6531,59 +6590,34 @@ iframe {
   cursor: pointer;
 }
 
-.telew__chatBtn:hover {
-  background: rgba(238, 247, 255, 0.96);
-}
-
-.telew__chatBtn[disabled] {
-  opacity: 0.6;
+.telemsg__btn:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
-.telew__chatForm {
-  display: grid;
-  gap: 10px;
+.telemsg__badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  min-height: 24px;
+  padding: 0 10px;
+  font-size: 0.72rem;
+  font-weight: 740;
+  border: 1px solid rgba(11, 87, 208, 0.22);
+  background: rgba(227, 241, 255, 0.86);
+  color: #0b3f7a;
 }
 
-.telew__chatField {
-  display: grid;
-  gap: 5px;
+.telemsg__badge[data-state="pending"] {
+  border-color: rgba(165, 108, 0, 0.28);
+  background: rgba(255, 239, 208, 0.88);
+  color: #7a4c00;
 }
 
-.telew__chatField > span {
-  font-size: 0.76rem;
-  font-weight: 720;
-  letter-spacing: 0.02em;
-  color: rgba(11, 27, 43, 0.7);
-}
-
-.telew__chatInput {
-  width: 100%;
-  min-height: 38px;
-  border: 1px solid rgba(10, 46, 93, 0.21);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #0e2542;
-  padding: 8px 10px;
-  font-size: 0.9rem;
-  outline: none;
-}
-
-.telew__chatInput:focus {
-  border-color: rgba(10, 87, 184, 0.58);
-  box-shadow: 0 0 0 3px rgba(10, 125, 224, 0.18);
-}
-
-.telew__chatActions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.telew__chatEmpty {
-  margin: 0;
-  font-size: 0.84rem;
-  color: rgba(11, 27, 43, 0.62);
+.telemsg__badge[data-state="called"] {
+  border-color: rgba(18, 126, 74, 0.28);
+  background: rgba(212, 247, 232, 0.88);
+  color: #0f6b45;
 }
 
 .telemodal {
@@ -6760,8 +6794,15 @@ html.telefs-open {
     min-width: 0;
   }
 
-  .telew__chatActions {
+  .telew__chatForm {
     flex-direction: column;
+  }
+
+  .telew__chatAuthor,
+  .telew__chatInput,
+  .telew__chatSend,
+  .telew__chatRequest {
+    width: 100%;
   }
 
   .telemodal__actions {

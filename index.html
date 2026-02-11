@@ -19,7 +19,23 @@
     <link rel="stylesheet" href="styles.css" />
     <script src="app.js" defer></script>
     <script src="auth-gate.js" defer></script>
-    <script src="firebase-config.js" defer></script>
+    <script>
+      window.PPCCR_FIREBASE_CONFIG = window.PPCCR_FIREBASE_CONFIG || {
+        apiKey: "AIzaSyAlMXR8EuV2bIK8wOlemqVjZr82AQI7bQI",
+        authDomain: "ppccr-2026.firebaseapp.com",
+        databaseURL: "https://ppccr-2026-default-rtdb.firebaseio.com",
+        projectId: "ppccr-2026",
+        storageBucket: "ppccr-2026.firebasestorage.app",
+        messagingSenderId: "506248242378",
+        appId: "1:506248242378:web:f42048eb076b5b41e40033",
+      };
+      window.PPCCR_JITSI_DOMAIN =
+        window.PPCCR_JITSI_DOMAIN || "meet.jit.si";
+      window.PPCCR_CHAT_ENABLED =
+        typeof window.PPCCR_CHAT_ENABLED === "boolean"
+          ? window.PPCCR_CHAT_ENABLED
+          : true;
+    </script>
     <script
       src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"
       defer
@@ -446,7 +462,7 @@
               </div>
 
               <!-- Estado / acciones -->
-              <div class="telew__statusRow">
+              <div class="telew__statusRow telew__infoRow">
                 <div id="telewStatus" class="telew__status">Listo.</div>
                 <div class="telew__statusActions">
                   <button
@@ -466,6 +482,14 @@
                     Colgar
                   </button>
                 </div>
+                <button
+                  id="telewSoundUnlock"
+                  class="telew__soundUnlock"
+                  type="button"
+                  title="Activar sonido para tonos (iPhone)"
+                >
+                  Activar sonido
+                </button>
               </div>
 
               <!-- Stage video embebido -->
@@ -514,67 +538,56 @@
                 </div>
               </div>
 
-              <section
+              <div
                 class="telew__chat"
-                aria-label="Chat operativo entre estaciones"
+                id="telewChat"
+                aria-label="Chat de estaciones"
               >
-                <header class="telew__chatHead">
-                  <h3 class="telew__chatTitle">Chat operativo</h3>
-                  <p class="telew__chatHint">
-                    Coordinación entre estaciones y solicitudes de llamada.
-                  </p>
-                </header>
-
-                <div
-                  id="telewChatMessages"
-                  class="telew__chatMessages"
-                  role="log"
-                  aria-live="polite"
-                  aria-label="Mensajes del chat"
-                ></div>
-
-                <div class="telew__chatForm">
-                  <label class="telew__chatField telew__chatField--author">
-                    <span>Tu nombre</span>
-                    <input
-                      id="telewChatAuthor"
-                      class="telew__chatInput"
-                      type="text"
-                      maxlength="40"
-                      placeholder="Nombre visible en chat"
-                      autocomplete="name"
-                    />
-                  </label>
-
-                  <label class="telew__chatField telew__chatField--text">
-                    <span>Mensaje</span>
-                    <input
-                      id="telewChatText"
-                      class="telew__chatInput"
-                      type="text"
-                      maxlength="300"
-                      placeholder="Escribí un mensaje operativo"
-                    />
-                  </label>
-
-                  <div class="telew__chatActions">
-                    <button
-                      type="button"
-                      id="telewChatSend"
-                      class="btn btn-secondary telew__btn"
-                    >
-                      Enviar
-                    </button>
-                    <button
-                      type="button"
-                      id="telewChatRequestCall"
-                      class="btn btn-primary telew__btn"
-                    >
-                      Solicitar llamada
-                    </button>
+                <div class="telew__chatHeader">
+                  <div class="telew__chatTitle">Chat</div>
+                  <div class="telew__chatHint">
+                    Sin datos de paciente. Solo coordinación.
                   </div>
                 </div>
-              </section>
+
+                <div
+                  id="telewChatLog"
+                  class="telew__chatLog"
+                  role="log"
+                  aria-live="polite"
+                ></div>
+
+                <form id="telewChatForm" class="telew__chatForm" autocomplete="off">
+                  <input
+                    id="telewChatAuthor"
+                    class="telew__chatAuthor"
+                    type="text"
+                    maxlength="40"
+                    placeholder="Tu nombre (ej: Dr. Hernán)"
+                  />
+                  <input
+                    id="telewChatInput"
+                    class="telew__chatInput"
+                    type="text"
+                    maxlength="500"
+                    placeholder="Escribí un mensaje…"
+                  />
+                  <button
+                    id="telewChatSend"
+                    class="telew__chatSend"
+                    type="submit"
+                  >
+                    Enviar
+                  </button>
+                  <button
+                    id="telewChatRequestCall"
+                    class="telew__chatRequest"
+                    type="button"
+                  >
+                    Solicitar llamada
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </div>

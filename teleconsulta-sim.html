@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PPCCR Teleconsulta Sim</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #f3f7fc;
+        color: #12253d;
+      }
+      main {
+        max-width: 920px;
+        margin: 24px auto;
+        padding: 0 16px 24px;
+      }
+      .card {
+        border: 1px solid rgba(8, 59, 138, 0.2);
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 8px 22px rgba(7, 30, 62, 0.1);
+        padding: 16px;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 1.3rem;
+      }
+      p {
+        margin: 0;
+      }
+      .controls {
+        margin-top: 14px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      button {
+        min-height: 38px;
+        border: 1px solid rgba(8, 59, 138, 0.24);
+        border-radius: 999px;
+        background: #fff;
+        color: #0a3d78;
+        padding: 0 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button#simRun {
+        background: linear-gradient(145deg, #0b57d0, #083b8a);
+        color: #fff;
+      }
+      #simLog {
+        margin-top: 14px;
+        height: 420px;
+        overflow: auto;
+        border: 1px solid rgba(8, 59, 138, 0.18);
+        border-radius: 10px;
+        background: #091f3a;
+        color: #dcecff;
+        font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        padding: 12px;
+        white-space: pre-wrap;
+      }
+    </style>
+    <script src="firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  </head>
+  <body>
+    <main>
+      <div class="card">
+        <h1>Simulador Teleconsulta RTDB (A/B/C)</h1>
+        <p>
+          Prueba automática: cola por ocupación y publicación de <code>call-request</code>
+          en chat sin usar Jitsi.
+        </p>
+        <div class="controls">
+          <button id="simRun" type="button">Ejecutar simulación</button>
+          <button id="simClear" type="button">Limpiar log</button>
+        </div>
+        <pre id="simLog" aria-live="polite"></pre>
+      </div>
+    </main>
+    <script src="teleconsulta-sim.js"></script>
+  </body>
+</html>
