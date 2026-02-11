@@ -132,12 +132,10 @@
       stationId: fromStation.id,
       stationName: fromStation.name,
       authorName: fromStation.name,
-      type: "call-request",
-      text: `${fromStation.name} solicita una llamada (cola).`,
+      type: "call_request",
+      text: "Solicito videollamada",
       targetId,
-      status: "pending",
-      handledBy: "",
-      handledAt: 0,
+      requestStatus: "pending",
     });
     return ref.key || "";
   }
@@ -188,7 +186,7 @@
       log("OK: C->B commit=false por slot ocupado.");
 
       const reqId = await pushCallRequest(clientC, STATIONS.c, STATIONS.b.id);
-      log(`OK: call-request publicado en chat messageId=${reqId}`);
+      log(`OK: call_request publicado en chat messageId=${reqId}`);
 
       const chatSnap = await clientA.db
         .ref(PATHS.chat)
@@ -198,12 +196,12 @@
       const hasQueuedRequest = chatSnap.exists();
       log(
         hasQueuedRequest
-          ? "VALIDACIÓN: Existe call-request con targetId='rivadavia' (B)."
-          : "VALIDACIÓN FALLIDA: No se encontró call-request para B.",
+          ? "VALIDACIÓN: Existe call_request con targetId='rivadavia' (B)."
+          : "VALIDACIÓN FALLIDA: No se encontró call_request para B.",
       );
 
       if (!hasQueuedRequest) {
-        throw new Error("No se detectó call-request de cola para B.");
+        throw new Error("No se detectó call_request de cola para B.");
       }
 
       log("Resultado final: SIM OK");

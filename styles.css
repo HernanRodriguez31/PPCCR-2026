@@ -6167,6 +6167,65 @@ iframe {
   color: var(--tele-ink);
 }
 
+.telew__prefs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.telew__roleGroup {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.telew__prefsLabel {
+  font-size: 0.76rem;
+  font-weight: 760;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(11, 27, 43, 0.62);
+}
+
+.telew__chip {
+  min-height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(9, 52, 106, 0.24);
+  background: rgba(255, 255, 255, 0.94);
+  color: #0a3d78;
+  padding: 0 12px;
+  font-size: 0.82rem;
+  font-weight: 720;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.telew__chip[aria-pressed="true"] {
+  background: linear-gradient(145deg, #0b57d0, #083b8a);
+  border-color: rgba(8, 59, 138, 0.42);
+  color: #fff;
+}
+
+.telew__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #0b2e5e;
+  font-weight: 620;
+}
+
+.telew__toggle input {
+  width: 16px;
+  height: 16px;
+}
+
 .telew__targets {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6216,6 +6275,12 @@ iframe {
   text-wrap: pretty;
 }
 
+.telew-target__meta {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(11, 27, 43, 0.6);
+}
+
 .telew-target__status {
   display: inline-flex;
   align-items: center;
@@ -6259,6 +6324,10 @@ iframe {
 
 .telew-target.is-selected .telew-target__status {
   color: rgba(255, 255, 255, 0.9);
+}
+
+.telew-target.is-selected .telew-target__meta {
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .telew-target[disabled] {
@@ -6438,6 +6507,15 @@ iframe {
   background: rgba(237, 247, 255, 0.95);
 }
 
+.telew__externalHint {
+  border: 1px solid rgba(11, 87, 208, 0.2);
+  border-radius: 12px;
+  background: rgba(230, 243, 255, 0.92);
+  color: #0a3d78;
+  font-size: 0.84rem;
+  padding: 8px 10px;
+}
+
 .telew__chat {
   border: 1px solid rgba(11, 87, 208, 0.16);
   border-radius: 16px;
@@ -6510,6 +6588,9 @@ iframe {
 .telew__chatInput {
   flex: 3 1 360px;
   min-width: 220px;
+  resize: vertical;
+  min-height: 40px;
+  max-height: 140px;
 }
 
 .telew__chatAuthor:focus,
@@ -6618,6 +6699,12 @@ iframe {
   border-color: rgba(18, 126, 74, 0.28);
   background: rgba(212, 247, 232, 0.88);
   color: #0f6b45;
+}
+
+.telew__debugTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .telemodal {
@@ -6783,6 +6870,11 @@ html.telefs-open {
   .telew__statusRow {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .telew__prefs {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .telew__statusActions {

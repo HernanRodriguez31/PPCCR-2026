@@ -20,15 +20,6 @@
     <script src="app.js" defer></script>
     <script src="auth-gate.js" defer></script>
     <script>
-      window.PPCCR_FIREBASE_CONFIG = window.PPCCR_FIREBASE_CONFIG || {
-        apiKey: "AIzaSyAlMXR8EuV2bIK8wOlemqVjZr82AQI7bQI",
-        authDomain: "ppccr-2026.firebaseapp.com",
-        databaseURL: "https://ppccr-2026-default-rtdb.firebaseio.com",
-        projectId: "ppccr-2026",
-        storageBucket: "ppccr-2026.firebasestorage.app",
-        messagingSenderId: "506248242378",
-        appId: "1:506248242378:web:f42048eb076b5b41e40033",
-      };
       window.PPCCR_JITSI_DOMAIN =
         window.PPCCR_JITSI_DOMAIN || "meet.jit.si";
       window.PPCCR_CHAT_ENABLED =
@@ -48,6 +39,8 @@
       src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"
       defer
     ></script>
+    <script src="/__/firebase/init.js" defer></script>
+    <script src="firebase-config.local.js" defer></script>
     <script src="teleconsulta-embed.js" defer></script>
   </head>
 
@@ -451,6 +444,34 @@
                 </div>
               </div>
 
+              <div class="telew__prefs">
+                <div class="telew__roleGroup" role="group" aria-label="Rol operativo">
+                  <span class="telew__prefsLabel">Rol</span>
+                  <button
+                    type="button"
+                    id="telewRoleStation"
+                    class="telew__chip"
+                    data-role="station"
+                    aria-pressed="true"
+                  >
+                    Estación
+                  </button>
+                  <button
+                    type="button"
+                    id="telewRoleMedic"
+                    class="telew__chip"
+                    data-role="medic"
+                    aria-pressed="false"
+                  >
+                    Médico
+                  </button>
+                </div>
+                <label class="telew__toggle" for="telewOpenNewTab">
+                  <input id="telewOpenNewTab" type="checkbox" />
+                  <span>Abrir llamada en pestaña</span>
+                </label>
+              </div>
+
               <!-- Targets -->
               <div
                 id="telewTargets"
@@ -490,6 +511,9 @@
                 >
                   Activar sonido
                 </button>
+              </div>
+              <div id="telewExternalHint" class="telew__externalHint" hidden>
+                La llamada se abrió en una pestaña. Volvé acá para colgar.
               </div>
 
               <!-- Stage video embebido -->
@@ -565,13 +589,13 @@
                     maxlength="40"
                     placeholder="Tu nombre (ej: Dr. Hernán)"
                   />
-                  <input
+                  <textarea
                     id="telewChatInput"
                     class="telew__chatInput"
-                    type="text"
                     maxlength="500"
+                    rows="2"
                     placeholder="Escribí un mensaje…"
-                  />
+                  ></textarea>
                   <button
                     id="telewChatSend"
                     class="telew__chatSend"
@@ -587,6 +611,18 @@
                     Solicitar llamada
                   </button>
                 </form>
+
+                <div id="telewDebugTools" class="telew__debugTools" hidden>
+                  <button id="telewDebugRequest" type="button" class="telemsg__btn">
+                    Simular solicitud de llamada
+                  </button>
+                  <button id="telewDebugBusy" type="button" class="telemsg__btn">
+                    Simular busy
+                  </button>
+                  <button id="telewDebugClearChat" type="button" class="telemsg__btn">
+                    Vaciar chat
+                  </button>
+                </div>
               </div>
             </div>
           </div>

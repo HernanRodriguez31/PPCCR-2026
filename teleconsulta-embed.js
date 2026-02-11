@@ -54,6 +54,8 @@
     stationName: "ppccr_station_name",
     stationLegacy: "ppccr_auth_user",
     chatAuthor: "ppccr_chat_author",
+    role: "ppccr_tele_role",
+    openNewTab: "ppccr_tele_open_newtab",
   });
 
   const DB_PATHS = Object.freeze({
@@ -62,15 +64,15 @@
     chatMessages: "ppccr/teleconsulta/chat/messages",
   });
 
-  const HOST_STATION_IDS = new Set(["admin"]);
+  const ROLE_STATION = "station";
+  const ROLE_MEDIC = "medic";
+  const VALID_ROLES = new Set([ROLE_STATION, ROLE_MEDIC]);
 
   const CALL_TIMEOUT_MS = 35_000;
   const CALL_CLEANUP_DELAY_MS = 6_000;
   const CHAT_MAX_MESSAGES = 150;
   const CHAT_SEND_DEBOUNCE_MS = 1_000;
-  const BUSY_CALL_STATUSES = new Set(["accepted", "in-call", "ringing"]);
   const PENDING_CALL_STATUSES = new Set(["ringing", "queued"]);
-  const LIVE_CALL_STATUSES = new Set(["ringing", "accepted", "in-call"]);
 
   /**
    * @param {string | null | undefined} value
@@ -139,6 +141,61 @@
     } catch (error) {
       // no-op
     }
+  }
+
+  /**
+   * @param {string | null | undefined} value
+   * @returns {'station'|'medic'}
+   */
+  function normalizeRole(value) {
+    const role = String(value || "")
+      .trim()
+      .toLowerCase();
+    return VALID_ROLES.has(role) ? role : ROLE_STATION;
+  }
+
+  /**
+   * @returns {'station'|'medic'}
+   */
+  function getStoredRole() {
+    return normalizeRole(safeLocalGet(STORAGE_KEYS.role));
+  }
+
+  /**
+   * @returns {boolean}
+   */
+  function isIosLikeDevice() {
+    const ua = String(window.navigator?.userAgent || "");
+    const platform = String(window.navigator?.platform || "");
+    const touchPoints = Number(window.navigator?.maxTouchPoints || 0);
+    return (
+      /iPad|iPhone|iPod/i.test(ua) ||
+      (platform === "MacIntel" && touchPoints > 1)
+    );
+  }
+
+  /**
+   * @param {string | null | undefined} value
+   * @returns {boolean}
+   */
+  function parseBooleanLike(value) {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase();
+    return ["1", "true", "yes", "on"].includes(normalized);
+  }
+
+  /**
+   * @returns {boolean}
+   */
+  function getStoredOpenNewTab() {
+    const raw = safeLocalGet(STORAGE_KEYS.openNewTab);
+    if (!raw) {
+      const defaultValue = isIosLikeDevice();
+      safeLocalSet(STORAGE_KEYS.openNewTab, defaultValue ? "1" : "0");
+      return defaultValue;
+    }
+    return parseBooleanLike(raw);
   }
 
   /**
@@ -230,6 +287,53 @@
     safeSessionSet(STORAGE_KEYS.stationId, station.id);
     safeSessionSet(STORAGE_KEYS.stationName, station.name);
     safeSessionSet(STORAGE_KEYS.stationLegacy, station.name);
+  }
+
+  /**
+   * Soporta override por URL para pruebas:
+   * ?station=rivadavia&role=medic&name=Hernan
+   * @returns {boolean} true cuando aplica cambios y dispara recarga.
+   */
+  function applyUrlOverridesIfNeeded() {
+    const params = new URLSearchParams(window.location.search);
+    const stationParam = String(params.get("station") || "").trim();
+    const roleParam = String(params.get("role") || "").trim();
+    const nameParam = String(params.get("name") || "").trim();
+
+    let changed = false;
+
+    if (stationParam) {
+      const station = resolveStation(stationParam);
+      if (station) {
+        persistStationState(station);
+        safeLocalSet(STORAGE_KEYS.stationId, station.id);
+        safeLocalSet(STORAGE_KEYS.stationName, station.name);
+        changed = true;
+      }
+    }
+
+    if (roleParam) {
+      safeLocalSet(STORAGE_KEYS.role, normalizeRole(roleParam));
+      changed = true;
+    }
+
+    if (nameParam) {
+      safeSessionSet(STORAGE_KEYS.chatAuthor, nameParam.slice(0, 40));
+      safeLocalSet(STORAGE_KEYS.chatAuthor, nameParam.slice(0, 40));
+      changed = true;
+    }
+
+    if (!changed) return false;
+
+    params.delete("station");
+    params.delete("role");
+    params.delete("name");
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${
+      nextQuery ? `?${nextQuery}` : ""
+    }${window.location.hash}`;
+    window.location.replace(nextUrl);
+    return true;
   }
 
   /**
@@ -326,6 +430,7 @@
       this.presenceRef = null;
       this.presenceOnDisconnect = null;
       this.presenceStation = null;
+      this.presenceRole = ROLE_STATION;
     }
 
     /**
@@ -344,18 +449,27 @@
           );
         }
 
-        const cfg =
-          this.config && typeof this.config === "object"
-            ? this.config
-            : await waitForFirebaseConfig();
+        const apps = Array.isArray(window.firebase.apps) ? window.firebase.apps : [];
+        const hasApp = apps && apps.length > 0;
 
-        if (!cfg) {
-          throw new Error("Falta window.PPCCR_FIREBASE_CONFIG (ver firebase-config.js / CSP).");
+        if (hasApp) {
+          this.app = apps[0];
+        } else {
+          const cfg =
+            this.config && typeof this.config === "object"
+              ? this.config
+              : await waitForFirebaseConfig();
+
+          if (!cfg) {
+            throw new Error(
+              "Error de Config: no existe app Firebase inicializada y falta window.PPCCR_FIREBASE_CONFIG.",
+            );
+          }
+
+          this.config = cfg;
+          this.app = window.firebase.initializeApp(cfg);
         }
 
-        this.config = cfg;
-        const apps = Array.isArray(window.firebase.apps) ? window.firebase.apps : [];
-        this.app = apps.length > 0 ? apps[0] : window.firebase.initializeApp(cfg);
         this.auth = window.firebase.auth(this.app);
         this.db = window.firebase.database(this.app);
 
@@ -387,13 +501,15 @@
 
     /**
      * @param {{id: string, name: string}} station
+     * @param {'station'|'medic'} role
      * @returns {Promise<void>}
      */
-    async setPresence(station) {
+    async setPresence(station, role = ROLE_STATION) {
       await this.init();
 
       const nextStation = resolveStation(station);
       if (!nextStation) return;
+      const nextRole = normalizeRole(role);
 
       const previous = this.presenceStation;
       if (previous && previous.id !== nextStation.id) {
@@ -401,7 +517,8 @@
           await this.ref(getPresencePath(previous.id)).set({
             online: false,
             busy: false,
-            name: previous.name,
+            stationName: previous.name,
+            role: nextRole,
             ts: this.getServerTimestamp(),
           });
         } catch (error) {
@@ -421,7 +538,8 @@
       await this.presenceRef.set({
         online: true,
         busy: false,
-        name: nextStation.name,
+        stationName: nextStation.name,
+        role: nextRole,
         ts: this.getServerTimestamp(),
       });
 
@@ -429,12 +547,14 @@
       await disconnectOp.set({
         online: false,
         busy: false,
-        name: nextStation.name,
+        stationName: nextStation.name,
+        role: nextRole,
         ts: this.getServerTimestamp(),
       });
 
       this.presenceOnDisconnect = disconnectOp;
       this.presenceStation = nextStation;
+      this.presenceRole = nextRole;
     }
 
     /**
@@ -457,7 +577,8 @@
         await this.ref(getPresencePath(station.id)).set({
           online: false,
           busy: false,
-          name: station.name,
+          stationName: station.name,
+          role: this.presenceRole || ROLE_STATION,
           ts: this.getServerTimestamp(),
         });
       } catch (error) {
@@ -467,6 +588,7 @@
       this.presenceOnDisconnect = null;
       this.presenceRef = null;
       this.presenceStation = null;
+      this.presenceRole = ROLE_STATION;
     }
 
     /**
@@ -537,92 +659,6 @@
     }
 
     /**
-     * Intenta reservar el slot único de llamada de una estación destino.
-     * Si hay llamada viva en curso, aborta sin pisar el nodo.
-     * @param {string} stationId
-     * @param {Record<string, unknown>} callPayload
-     * @returns {Promise<{committed: boolean, current: any | null}>}
-     */
-    async trySetCallSlot(stationId, callPayload) {
-      await this.init();
-      const targetId = normalizeStationId(stationId);
-      if (!targetId) return { committed: false, current: null };
-
-      const slotRef = this.ref(getCallsPath(targetId));
-      const txResult = await slotRef.transaction((current) => {
-        const existing = current && typeof current === "object" ? current : null;
-        const existingStatus = String(existing?.status || "").trim().toLowerCase();
-        if (existing && LIVE_CALL_STATUSES.has(existingStatus)) {
-          return;
-        }
-        return {
-          ...callPayload,
-          updatedAt: this.getServerTimestamp(),
-        };
-      });
-
-      const currentValue = txResult?.snapshot?.val?.() || null;
-      return {
-        committed: Boolean(txResult?.committed),
-        current: currentValue,
-      };
-    }
-
-    /**
-     * @param {string} stationId
-     * @param {string} callId
-     * @param {Record<string, unknown>} patch
-     * @returns {Promise<void>}
-     */
-    async patchCallSlotIfMatch(stationId, callId, patch) {
-      await this.init();
-      const targetId = normalizeStationId(stationId);
-      const normalizedCallId = String(callId || "").trim();
-      if (!targetId || !normalizedCallId) return;
-      const slotRef = this.ref(getCallsPath(targetId));
-      await slotRef.transaction((current) => {
-        if (!current || typeof current !== "object") return current;
-        if (String(current.callId || "").trim() !== normalizedCallId) return current;
-        return {
-          ...current,
-          ...patch,
-          updatedAt: this.getServerTimestamp(),
-        };
-      });
-    }
-
-    /**
-     * @param {string} stationId
-     * @param {string} callId
-     * @returns {Promise<void>}
-     */
-    async clearCallSlotIfMatch(stationId, callId) {
-      await this.init();
-      const targetId = normalizeStationId(stationId);
-      const normalizedCallId = String(callId || "").trim();
-      if (!targetId || !normalizedCallId) return;
-      const slotRef = this.ref(getCallsPath(targetId));
-      await slotRef.transaction((current) => {
-        if (!current || typeof current !== "object") return current;
-        if (String(current.callId || "").trim() !== normalizedCallId) return current;
-        return null;
-      });
-    }
-
-    /**
-     * @param {string} stationId
-     * @param {string} callId
-     * @param {(value: any) => void} handler
-     * @param {(error: Error) => void} [onError]
-     * @returns {() => void}
-     */
-    listenCall(stationId, callId, handler, onError) {
-      const normalizedCallId = String(callId || "").trim();
-      if (!normalizedCallId) return () => {};
-      return this.listen(getCallPath(stationId, normalizedCallId), handler, onError);
-    }
-
-    /**
      * @param {string} toStationId
      * @param {string} callId
      * @param {Record<string, unknown>} payload
@@ -671,31 +707,6 @@
         ...patch,
         updatedAt: this.getServerTimestamp(),
       });
-    }
-
-    /**
-     * @param {string} toStationId
-     * @param {string} callId
-     * @returns {Promise<void>}
-     */
-    async deleteCall(toStationId, callId) {
-      await this.init();
-      const targetId = normalizeStationId(toStationId);
-      const normalizedCallId = String(callId || "").trim();
-      if (!targetId || !normalizedCallId) return;
-
-      const slotSnapshot = await this.ref(getCallsPath(targetId)).once("value");
-      const slotValue = slotSnapshot.val();
-      if (
-        slotValue &&
-        typeof slotValue === "object" &&
-        String(slotValue.callId || "").trim() === normalizedCallId
-      ) {
-        await this.ref(getCallsPath(targetId)).remove();
-        return;
-      }
-
-      await this.ref(getCallPath(targetId, normalizedCallId)).remove();
     }
 
     /**
@@ -768,16 +779,6 @@
 
     /**
      * @param {string} stationId
-     * @param {(value: any) => void} handler
-     * @param {(error: Error) => void} [onError]
-     * @returns {Promise<void>}
-     */
-    listenInbox(stationId, handler, onError) {
-      return this.listenStationCalls(stationId, handler, onError);
-    }
-
-    /**
-     * @param {string} stationId
      * @param {string} callId
      * @param {Record<string, unknown>} payload
      * @returns {Promise<void>}
@@ -785,18 +786,9 @@
     async setCall(stationId, callId, payload) {
       return this.createCall(stationId, callId, payload);
     }
-
-    /**
-     * @param {string} stationId
-     * @param {string} callId
-     * @returns {Promise<void>}
-     */
-    async clearCall(stationId, callId) {
-      return this.deleteCall(stationId, callId);
-    }
   }
 
-  class ToneService {
+  class AudioService {
     constructor() {
       this.audioContext = null;
       this.intervalId = 0;
@@ -818,18 +810,6 @@
       if (this.audioContext.state === "suspended") {
         await this.audioContext.resume();
       }
-    }
-
-    /**
-     * @param {'ringtone'|'ringback'} [type]
-     * @returns {Promise<void>}
-     */
-    async start(type = "ringtone") {
-      if (type === "ringback") {
-        await this.startOutgoing();
-        return;
-      }
-      await this.startIncoming();
     }
 
     /**
@@ -891,7 +871,7 @@
     /**
      * @returns {Promise<void>}
      */
-    async startOutgoing() {
+    async startRingback() {
       if (this.running && this.currentMode === "outgoing") return;
       this.stop();
       try {
@@ -1240,10 +1220,7 @@
     normalizeEvent(event) {
       const payload = event.payload && typeof event.payload === "object" ? event.payload : {};
       const rawType = String(payload.type || "").trim().toLowerCase();
-      const normalizedType =
-        rawType === "call_request" || rawType === "call-request"
-          ? "call-request"
-          : rawType;
+      const normalizedType = rawType === "call-request" ? "call_request" : rawType;
 
       return {
         type: event.type,
@@ -1255,9 +1232,13 @@
         messageType: normalizedType,
         text: String(payload.text || "").trim(),
         targetId: normalizeStationId(payload.targetId),
-        status: String(payload.status || "").trim().toLowerCase(),
+        requestStatus: String(payload.requestStatus || payload.status || "")
+          .trim()
+          .toLowerCase(),
         handledBy: normalizeStationId(payload.handledBy),
+        handledByName: String(payload.handledByName || "").trim(),
         handledAt: Number(payload.handledAt || 0),
+        callId: String(payload.callId || "").trim(),
       };
     }
 
@@ -1342,20 +1323,19 @@
     async sendCallRequest(payload) {
       const { fromStation, author, targetId, reason = "" } = payload;
       const targetStation = getStationById(targetId);
-      const messageText = reason
-        ? `${fromStation.name} solicita llamada: ${String(reason).trim().slice(0, 240)}`
-        : `${fromStation.name} solicita una llamada.`;
+      const reasonText = String(reason || "").trim().slice(0, 240);
+      const messageText = reasonText
+        ? `Solicito videollamada (${reasonText})`
+        : "Solicito videollamada";
 
       return this.firebase.createChatMessage({
         stationId: fromStation.id,
         stationName: fromStation.name,
         authorName: String(author || "").trim().slice(0, 40),
-        type: "call-request",
+        type: "call_request",
         text: messageText,
         targetId: targetStation ? targetStation.id : "",
-        status: "pending",
-        handledBy: "",
-        handledAt: 0,
+        requestStatus: "pending",
       });
     }
 
@@ -1366,10 +1346,34 @@
      */
     async markHandled(messageId, handlerStation) {
       await this.firebase.patchChatMessage(messageId, {
-        status: "called",
+        requestStatus: "called",
         handledBy: handlerStation.id,
         handledByName: handlerStation.name,
         handledAt: Date.now(),
+      });
+    }
+
+    /**
+     * @param {{station: {id: string, name: string}, text: string, requestStatus?: string, targetId?: string, callId?: string}} payload
+     * @returns {Promise<string>}
+     */
+    async sendSystem(payload) {
+      const {
+        station,
+        text,
+        requestStatus = "",
+        targetId = "",
+        callId = "",
+      } = payload;
+      return this.firebase.createChatMessage({
+        stationId: station.id,
+        stationName: station.name,
+        authorName: "Sistema",
+        type: "system",
+        text: String(text || "").trim().slice(0, 500),
+        requestStatus: String(requestStatus || "").trim().toLowerCase(),
+        targetId: normalizeStationId(targetId),
+        callId: String(callId || "").trim().slice(0, 80),
       });
     }
   }
@@ -1391,13 +1395,21 @@
      *  toggleCam: HTMLButtonElement,
      *  fullscreenBtn: HTMLButtonElement,
      *  soundUnlockBtn: HTMLButtonElement,
+     *  roleStationBtn: HTMLButtonElement,
+     *  roleMedicBtn: HTMLButtonElement,
+     *  openNewTabToggle: HTMLInputElement,
+     *  externalHint: HTMLElement,
      *  chatRoot: HTMLElement,
      *  chatLog: HTMLElement,
      *  chatForm: HTMLFormElement,
      *  chatAuthorInput: HTMLInputElement,
-     *  chatTextInput: HTMLInputElement,
+     *  chatTextInput: HTMLTextAreaElement,
      *  chatSendBtn: HTMLButtonElement,
      *  chatRequestBtn: HTMLButtonElement,
+     *  debugTools: HTMLElement,
+     *  debugRequestBtn: HTMLButtonElement,
+     *  debugBusyBtn: HTMLButtonElement,
+     *  debugClearChatBtn: HTMLButtonElement,
      *  incomingModal: HTMLElement,
      *  incomingFrom: HTMLElement,
      *  incomingAccept: HTMLButtonElement,
@@ -1415,13 +1427,17 @@
       this.firebase = new FirebaseTeleconsultaService(getFirebaseConfigNow());
       this.chatService = new ChatService(this.firebase);
       this.jitsi = JitsiSingleton.getInstance();
-      this.incomingTone = new ToneService();
-      this.outgoingTone = new ToneService();
+      this.audioService = new AudioService();
       this.chatEnabled = CHAT_ENABLED;
 
       this.state = "idle";
       this.activeCall = null;
       this.currentStation = null;
+      this.currentRole = getStoredRole();
+      this.openInNewTab = getStoredOpenNewTab();
+      this.teleDebugEnabled =
+        parseBooleanLike(new URLSearchParams(window.location.search).get("teleDebug")) ||
+        false;
       this.selectedTargetId = null;
       this.callInboxCache = [];
       this.waitingIncomingCount = 0;
@@ -1438,11 +1454,12 @@
       this.presencePatchInFlight = false;
       this.lastQueuedNotifyAt = 0;
       this.queuePublishedCallIds = new Set();
-      this.hostReadyHintTimer = 0;
       this.chatMessages = [];
       this.lastChatSendAt = 0;
       this.chatAuthorName = "";
       this.chatMessageMap = new Map();
+      this.debugBusyTimeoutId = 0;
+      this.debugForceBusyUntil = 0;
 
       this.outgoingTimeoutId = 0;
       this.unsubscribePresence = null;
@@ -1456,7 +1473,8 @@
      * @returns {boolean}
      */
     get hasFirebaseConfig() {
-      return Boolean(getFirebaseConfigNow());
+      const apps = Array.isArray(window.firebase?.apps) ? window.firebase.apps : [];
+      return Boolean(getFirebaseConfigNow()) || apps.length > 0;
     }
 
     /**
@@ -1573,6 +1591,20 @@
         });
       });
 
+      this.on(this.refs.roleStationBtn, "click", () => {
+        this.setRole(ROLE_STATION);
+      });
+
+      this.on(this.refs.roleMedicBtn, "click", () => {
+        this.setRole(ROLE_MEDIC);
+      });
+
+      this.on(this.refs.openNewTabToggle, "change", () => {
+        this.openInNewTab = Boolean(this.refs.openNewTabToggle.checked);
+        safeLocalSet(STORAGE_KEYS.openNewTab, this.openInNewTab ? "1" : "0");
+        this.renderRoleAndPrefs();
+      });
+
       this.on(this.refs.chatRequestBtn, "click", () => {
         this.sendChatCallRequest().catch((error) => {
           console.error("[teleconsulta] Error enviando solicitud de llamada", error);
@@ -1589,6 +1621,7 @@
       this.on(this.refs.chatTextInput, "keydown", (event) => {
         if (!(event instanceof KeyboardEvent)) return;
         if (event.key !== "Enter") return;
+        if (event.shiftKey) return;
         event.preventDefault();
         this.sendChatTextMessage().catch((error) => {
           console.error("[teleconsulta] Error enviando mensaje por Enter", error);
@@ -1610,6 +1643,24 @@
         if (!(actionBtn instanceof HTMLButtonElement)) return;
         this.handleChatAction(actionBtn).catch((error) => {
           console.error("[teleconsulta] Error ejecutando acción de chat", error);
+        });
+      });
+
+      this.on(this.refs.debugRequestBtn, "click", () => {
+        this.debugSimulateCallRequest().catch((error) => {
+          console.error("[teleconsulta] Error en debug solicitud", error);
+        });
+      });
+
+      this.on(this.refs.debugBusyBtn, "click", () => {
+        this.debugSimulateBusy().catch((error) => {
+          console.error("[teleconsulta] Error en debug busy", error);
+        });
+      });
+
+      this.on(this.refs.debugClearChatBtn, "click", () => {
+        this.debugClearChat().catch((error) => {
+          console.error("[teleconsulta] Error en debug clear chat", error);
         });
       });
 
@@ -1670,6 +1721,8 @@
     async init() {
       this.bindUI();
       this.bindGlobalEvents();
+      this.renderRoleAndPrefs();
+      this.renderDebugTools();
 
       const unlockAudio = () => {
         this.unlockAudioTones().catch(() => {
@@ -1692,14 +1745,16 @@
       });
 
       const cfg = await waitForFirebaseConfig();
-      if (!cfg || !this.hasFirebaseConfig) {
+      const apps = Array.isArray(window.firebase?.apps) ? window.firebase.apps : [];
+      const hasApp = apps.length > 0;
+      if (!hasApp && (!cfg || !this.hasFirebaseConfig)) {
         console.error(
-          "[teleconsulta] Error de Config: window.PPCCR_FIREBASE_CONFIG no esta definido o es invalido.",
+          "[teleconsulta] Error de Config: no existe app Firebase inicializada ni window.PPCCR_FIREBASE_CONFIG.",
         );
         this.setStatus("Error de Config: Firebase no esta configurado.", "error");
         this.setPlaceholder(
           "Error de Config",
-          "Falta cargar firebase-config.js antes de teleconsulta-embed.js.",
+          "Cargá /__/firebase/init.js (Hosting) o firebase-config.local.js.",
         );
         this.renderTargets();
         this.syncUI();
@@ -1889,13 +1944,14 @@
 
               const payload =
                 value && typeof value === "object"
-                  ? /** @type {{online?: unknown, busy?: unknown, name?: unknown}} */ (value)
+                  ? /** @type {{online?: unknown, busy?: unknown, stationName?: unknown, name?: unknown, role?: unknown}} */ (value)
                   : {};
 
               nextPresence[normalizedId] = {
                 online: Boolean(payload.online),
                 busy: Boolean(payload.busy),
-                name: String(payload.name || "").trim(),
+                stationName: String(payload.stationName || payload.name || "").trim(),
+                role: normalizeRole(payload.role),
               };
             });
           }
@@ -1936,7 +1992,7 @@
      */
     async bindStationRealtime(station) {
       this.clearInboxListener();
-      await this.firebase.setPresence(station);
+      await this.firebase.setPresence(station, this.currentRole);
       this.ownPresenceBusy = false;
 
       this.unsubscribeInbox = this.firebase.listenStationCalls(
@@ -1983,32 +2039,10 @@
 
     clearOutgoingWatch() {
       this.clearOutgoingTimeout();
-      this.clearHostHintTimer();
       if (this.unsubscribeOutgoing) {
         this.unsubscribeOutgoing();
         this.unsubscribeOutgoing = null;
       }
-    }
-
-    clearHostHintTimer() {
-      if (this.hostReadyHintTimer) {
-        window.clearTimeout(this.hostReadyHintTimer);
-        this.hostReadyHintTimer = 0;
-      }
-    }
-
-    /**
-     * @param {string} targetName
-     */
-    armHostHintTimer(targetName) {
-      this.clearHostHintTimer();
-      this.hostReadyHintTimer = window.setTimeout(() => {
-        if (this.state !== "outgoing") return;
-        this.setStatus(
-          `Esperando a ${targetName}. Esta instancia de Jitsi puede requerir que el Administrador inicie sesión una vez para crear salas.`,
-          "warn",
-        );
-      }, 9000);
     }
 
     /**
@@ -2058,6 +2092,8 @@
 
       STATIONS.filter((station) => station.id !== activeStationId).forEach((station) => {
         const status = this.getTargetStatus(station.id);
+        const role = this.getRoleForStation(station.id);
+        const roleLabel = role === ROLE_MEDIC ? "Médico" : "Estación";
         const selected = station.id === this.selectedTargetId;
 
         const card = document.createElement("button");
@@ -2074,6 +2110,7 @@
 
         card.innerHTML = `
           <span class="telew-target__name">${station.name}</span>
+          <span class="telew-target__meta">${roleLabel}</span>
           <span class="telew-target__status">
             <span class="telew-target__dot" aria-hidden="true"></span>
             <span>${status.label}</span>
@@ -2113,8 +2150,7 @@
      */
     async unlockAudioTones() {
       try {
-        await this.incomingTone.unlock();
-        await this.outgoingTone.unlock();
+        await this.audioService.unlock();
         return true;
       } catch (error) {
         return false;
@@ -2127,7 +2163,7 @@
         return;
       }
       const storageKey = getChatAuthorStorageKey(this.currentStation.id);
-      const saved = safeSessionGet(storageKey).trim();
+      const saved = safeSessionGet(storageKey).trim() || safeLocalGet(storageKey).trim();
       this.setChatAuthorName(saved || this.currentStation.name, { persist: false });
     }
 
@@ -2142,6 +2178,7 @@
       this.refs.chatAuthorInput.value = normalized;
       if (persist && this.currentStation) {
         safeSessionSet(getChatAuthorStorageKey(this.currentStation.id), normalized);
+        safeLocalSet(getChatAuthorStorageKey(this.currentStation.id), normalized);
       }
     }
 
@@ -2166,7 +2203,7 @@
      */
     handleChatEvent(event) {
       if (!event || !event.messageId) return;
-      if (!["text", "call-request", "system"].includes(event.messageType)) return;
+      if (!["text", "call_request", "system"].includes(event.messageType)) return;
       this.chatMessageMap.set(event.messageId, event);
       const sorted = Array.from(this.chatMessageMap.values())
         .sort((a, b) => Number(a.ts || 0) - Number(b.ts || 0))
@@ -2228,24 +2265,26 @@
         body.className = "telemsg__text";
         body.textContent =
           message.text ||
-          (message.messageType === "call-request"
+          (message.messageType === "call_request"
             ? "Solicitud de llamada."
             : "Mensaje del sistema.");
         item.appendChild(body);
 
-        if (message.messageType === "call-request") {
+        if (message.messageType === "call_request") {
           const actions = document.createElement("div");
           actions.className = "telemsg__actions";
 
           const badge = document.createElement("span");
           badge.className = "telemsg__badge";
-          const isCalled = message.status === "called";
+          const currentRequestStatus = message.requestStatus || "pending";
+          const isCalled = currentRequestStatus === "called";
           badge.dataset.state = isCalled ? "called" : "pending";
           badge.textContent = isCalled ? "Llamado" : "Pendiente";
           actions.appendChild(badge);
 
           const canCall =
             this.currentStation &&
+            this.currentRole === ROLE_MEDIC &&
             message.stationId &&
             message.stationId !== this.currentStation.id &&
             (!message.targetId || message.targetId === this.currentStation.id) &&
@@ -2263,7 +2302,11 @@
           }
 
           if (isCalled) {
-            const handledBy = getStationById(message.handledBy)?.name || message.handledBy || "otra estación";
+            const handledBy =
+              message.handledByName ||
+              getStationById(message.handledBy)?.name ||
+              message.handledBy ||
+              "otra estación";
             const handledAt = this.formatChatTime(message.handledAt);
             const calledInfo = document.createElement("span");
             calledInfo.className = "telemsg__badge";
@@ -2294,6 +2337,7 @@
       if (!action || !messageId || !this.currentStation || !this.firebaseReady) return;
 
       if (action === "call-request") {
+        if (this.currentRole !== ROLE_MEDIC) return;
         const targetId = normalizeStationId(actionBtn.dataset.targetId);
         if (!targetId) return;
         const callId = await this.startOutgoingCallTo(targetId);
@@ -2357,19 +2401,55 @@
     }
 
     /**
-     * @param {string} targetId
      * @returns {Promise<void>}
      */
-    async publishBusyCallRequest(targetId) {
-      if (!this.chatEnabled) return;
-      if (!this.currentStation || !this.firebaseReady) return;
-      const authorName = this.getValidChatAuthorName() || this.currentStation.name;
-      await this.chatService.sendCallRequest({
-        fromStation: this.currentStation,
-        author: authorName,
-        targetId,
-        reason: "Destino ocupado. Solicitud enviada por cola.",
+    async debugSimulateCallRequest() {
+      if (!this.teleDebugEnabled || !this.currentStation || !this.firebaseReady) return;
+      const source =
+        STATIONS.find((station) => station.id !== this.currentStation.id) || null;
+      if (!source) return;
+      await this.firebase.createChatMessage({
+        stationId: source.id,
+        stationName: source.name,
+        authorName: "Debug Bot",
+        type: "call_request",
+        text: "Solicito videollamada",
+        targetId: this.currentStation.id,
+        requestStatus: "pending",
       });
+      this.setStatus("Debug: solicitud de llamada simulada.", "info");
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    async debugSimulateBusy() {
+      if (!this.teleDebugEnabled || !this.currentStation || !this.firebaseReady) return;
+      if (this.debugBusyTimeoutId) {
+        window.clearTimeout(this.debugBusyTimeoutId);
+        this.debugBusyTimeoutId = 0;
+      }
+      this.debugForceBusyUntil = Date.now() + 30_000;
+      this.setStatus("Debug: estado ocupado simulado por 30s.", "warn");
+      this.syncOwnPresenceBusy();
+      this.syncUI();
+      this.debugBusyTimeoutId = window.setTimeout(() => {
+        this.debugForceBusyUntil = 0;
+        this.syncOwnPresenceBusy();
+        this.syncUI();
+      }, 30_000);
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    async debugClearChat() {
+      if (!this.teleDebugEnabled || !this.currentStation || !this.firebaseReady) return;
+      await this.firebase.ref(getChatMessagesPath()).remove();
+      this.chatMessageMap.clear();
+      this.chatMessages = [];
+      this.renderChatMessages();
+      this.setStatus("Debug: chat vaciado.", "info");
     }
 
     /**
@@ -2392,8 +2472,95 @@
       this.refs.toggleCam.setAttribute("aria-pressed", String(!state.videoMuted));
     }
 
+    renderRoleAndPrefs() {
+      const isStation = this.currentRole === ROLE_STATION;
+      this.refs.roleStationBtn.setAttribute("aria-pressed", String(isStation));
+      this.refs.roleMedicBtn.setAttribute("aria-pressed", String(!isStation));
+      this.refs.openNewTabToggle.checked = Boolean(this.openInNewTab);
+      this.refs.externalHint.hidden = !(
+        this.openInNewTab &&
+        (this.state === "outgoing" || this.state === "in-call")
+      );
+    }
+
+    renderDebugTools() {
+      if (!(this.refs.debugTools instanceof HTMLElement)) return;
+      this.refs.debugTools.hidden = !this.teleDebugEnabled;
+    }
+
+    /**
+     * @param {'station'|'medic'} role
+     */
+    setRole(role) {
+      const nextRole = normalizeRole(role);
+      if (nextRole === this.currentRole) {
+        this.renderRoleAndPrefs();
+        return;
+      }
+      this.currentRole = nextRole;
+      safeLocalSet(STORAGE_KEYS.role, this.currentRole);
+      this.renderRoleAndPrefs();
+      if (this.firebaseReady && this.currentStation) {
+        this.firebase
+          .patchPresence(this.currentStation.id, {
+            role: this.currentRole,
+            stationName: this.currentStation.name,
+          })
+          .catch(() => {
+            // no-op
+          });
+      }
+      this.setStatus(
+        this.currentRole === ROLE_MEDIC
+          ? "Rol actual: Médico."
+          : "Rol actual: Estación.",
+        "info",
+      );
+      this.renderChatMessages();
+      this.renderTargets();
+      this.syncUI();
+    }
+
+    /**
+     * @param {string | null | undefined} stationId
+     * @returns {'station'|'medic'}
+     */
+    getRoleForStation(stationId) {
+      const normalizedStationId = normalizeStationId(stationId);
+      if (!normalizedStationId) return ROLE_STATION;
+      if (this.currentStation && normalizedStationId === this.currentStation.id) {
+        return this.currentRole;
+      }
+      const roleFromPresence = this.presenceById[normalizedStationId]?.role;
+      return normalizeRole(roleFromPresence);
+    }
+
+    /**
+     * @param {string} fromId
+     * @param {string} toId
+     * @param {'station'|'medic'} callerRole
+     * @param {'station'|'medic'} targetRole
+     * @returns {string}
+     */
+    computeHostId(fromId, toId, callerRole, targetRole) {
+      if (callerRole === ROLE_MEDIC) return fromId;
+      if (targetRole === ROLE_MEDIC) return toId;
+      return fromId;
+    }
+
+    /**
+     * @param {any} [call]
+     * @returns {boolean}
+     */
+    isCurrentStationHost(call = this.activeCall) {
+      if (!call || !this.currentStation) return false;
+      const hostId = normalizeStationId(call.hostId);
+      return Boolean(hostId && hostId === this.currentStation.id);
+    }
+
     syncUI() {
       const canCall = this.canCallSelectedTarget();
+      this.renderRoleAndPrefs();
 
       this.refs.callBtn.hidden = this.state !== "idle";
       this.refs.callBtn.disabled = !canCall;
@@ -2404,8 +2571,16 @@
         this.state === "ending"
       );
 
-      this.refs.controls.hidden = !(this.state === "in-call" && this.jitsi.hasMeeting());
-      this.refs.fullscreenBtn.disabled = !(this.state === "in-call" && this.jitsi.hasMeeting());
+      this.refs.controls.hidden = !(
+        this.state === "in-call" &&
+        this.jitsi.hasMeeting() &&
+        !this.openInNewTab
+      );
+      this.refs.fullscreenBtn.disabled = !(
+        this.state === "in-call" &&
+        this.jitsi.hasMeeting() &&
+        !this.openInNewTab
+      );
 
       const hasMeeting = this.jitsi.hasMeeting();
       this.refs.placeholder.hidden = hasMeeting;
@@ -2424,6 +2599,9 @@
         this.refs.chatTextInput.disabled = !canUseChat;
         this.refs.chatSendBtn.disabled = !canUseChat;
         this.refs.chatRequestBtn.disabled = !canUseChat;
+        this.refs.debugRequestBtn.disabled = !canUseChat;
+        this.refs.debugBusyBtn.disabled = !canUseChat;
+        this.refs.debugClearChatBtn.disabled = !canUseChat;
       }
 
       this.syncOwnPresenceBusy();
@@ -2433,12 +2611,17 @@
     syncOwnPresenceBusy() {
       if (!this.firebaseReady || !this.currentStation || this.presencePatchInFlight) return;
 
-      const isBusy = this.state !== "idle";
+      const isBusy =
+        this.state !== "idle" || Date.now() < Number(this.debugForceBusyUntil || 0);
       if (this.ownPresenceBusy === isBusy) return;
 
       this.presencePatchInFlight = true;
       this.firebase
-        .patchPresence(this.currentStation.id, { busy: isBusy })
+        .patchPresence(this.currentStation.id, {
+          busy: isBusy,
+          role: this.currentRole,
+          stationName: this.currentStation.name,
+        })
         .then(() => {
           this.ownPresenceBusy = isBusy;
         })
@@ -2507,6 +2690,9 @@
      *  fromName: string,
      *  toId: string,
      *  toName: string,
+     *  hostId: string,
+     *  callerRole: 'station'|'medic',
+     *  targetRole: 'station'|'medic',
      *  status: string,
      *  createdAt: number,
      *  updatedAt: number,
@@ -2525,6 +2711,9 @@
        * fromName?: unknown,
        * toId?: unknown,
        * toName?: unknown,
+       * hostId?: unknown,
+       * callerRole?: unknown,
+       * targetRole?: unknown,
        * status?: unknown,
        * createdAt?: unknown,
        * updatedAt?: unknown,
@@ -2537,6 +2726,7 @@
       const room = String(call.room || "").trim();
       const fromId = normalizeStationId(call.fromId);
       const toId = normalizeStationId(call.toId);
+      const hostId = normalizeStationId(call.hostId) || fromId;
 
       if (!callId || !room || !fromId || !toId) return null;
 
@@ -2560,6 +2750,9 @@
         fromName: String(call.fromName || "").trim() || fromStation.name,
         toId,
         toName: String(call.toName || "").trim() || toStation.name,
+        hostId,
+        callerRole: normalizeRole(call.callerRole),
+        targetRole: normalizeRole(call.targetRole),
         status: String(call.status || "").trim().toLowerCase(),
         createdAt,
         updatedAt,
@@ -2650,19 +2843,6 @@
     }
 
     /**
-     * @param {Array<{callId: string, status: string}>} calls
-     * @param {string} [excludeCallId]
-     * @returns {boolean}
-     */
-    isBusyByCalls(calls, excludeCallId = "") {
-      return calls.some((call) => {
-        if (!call) return false;
-        if (excludeCallId && call.callId === excludeCallId) return false;
-        return BUSY_CALL_STATUSES.has(String(call.status || "").toLowerCase());
-      });
-    }
-
-    /**
      * @param {number} count
      */
     updateQueueVisual(count) {
@@ -2691,7 +2871,7 @@
 
       if (!activeSnapshot && this.state === "incoming" && this.activeCall?.direction === "incoming") {
         this.closeIncomingModal();
-        this.incomingTone.stop();
+        this.audioService.stop();
         this.activeCall = null;
         this.state = "idle";
         this.setStatus("Llamada entrante cancelada.", "warn");
@@ -2713,6 +2893,54 @@
           peerName: activeSnapshot.fromName,
         });
         return;
+      }
+
+      if (activeSnapshot && activeSnapshot.status === "accepted") {
+        if (!this.activeCall || this.activeCall.callId !== activeSnapshot.callId) {
+          this.activeCall = {
+            ...activeSnapshot,
+            peerId: activeSnapshot.fromId,
+            peerName: activeSnapshot.fromName,
+            direction: "incoming",
+            inboxStationId: myStationId,
+          };
+        }
+
+        if (this.isCurrentStationHost(this.activeCall)) {
+          if (!this.jitsi.hasMeeting()) {
+            await this.mountActiveMeeting(this.opSeq, { signalInCallOnJoin: true });
+          }
+          if (this.state !== "in-call") {
+            this.setStatus(`Conectando con ${this.activeCall.peerName}...`, "info");
+          }
+        } else {
+          this.setStatus("Esperando al médico...", "info");
+          this.setPlaceholder(
+            "Esperando al médico",
+            "El médico debe ingresar primero para habilitar la sala.",
+          );
+        }
+        this.syncUI();
+      }
+
+      if (activeSnapshot && activeSnapshot.status === "in-call") {
+        const op = this.opSeq;
+        this.activeCall = {
+          ...(this.activeCall || {}),
+          ...activeSnapshot,
+          peerId: activeSnapshot.fromId,
+          peerName: activeSnapshot.fromName,
+          direction: "incoming",
+          inboxStationId: myStationId,
+        };
+        if (!this.jitsi.hasMeeting()) {
+          await this.mountActiveMeeting(op, { signalInCallOnJoin: false });
+        }
+        if (!this.isOpCurrent(op)) return;
+        this.state = "in-call";
+        this.refs.fsLabel.textContent = `En llamada con ${this.activeCall.peerName}`;
+        this.setStatus(`En llamada con ${this.activeCall.peerName}.`, "ok");
+        this.syncUI();
       }
 
       const pendingCalls = ownCalls.filter(
@@ -2746,8 +2974,8 @@
           const now = Date.now();
           if (now - this.lastQueuedNotifyAt > 500) {
             this.lastQueuedNotifyAt = now;
-            this.outgoingTone.stop();
-            this.incomingTone.notifyOnce().catch(() => {
+            this.audioService.stop();
+            this.audioService.notifyOnce().catch(() => {
               // no-op
             });
           }
@@ -2788,17 +3016,25 @@
       this.queuePublishedCallIds.add(callId);
 
       if (!this.chatEnabled || !this.currentStation || !this.firebaseReady) return;
-      await this.firebase.createChatMessage({
-        stationId: call.fromId,
-        stationName: call.fromName,
-        authorName: call.fromName,
-        type: "call-request",
-        text: `${call.fromName} solicita llamada. Destino ocupado.`,
-        targetId: call.toId,
-        status: "pending",
-        handledBy: "",
-        handledAt: 0,
-      });
+      await Promise.allSettled([
+        this.firebase.createChatMessage({
+          stationId: call.fromId,
+          stationName: call.fromName,
+          authorName: call.fromName,
+          type: "call_request",
+          text: "Solicito videollamada",
+          targetId: call.toId,
+          requestStatus: "queued",
+          callId,
+        }),
+        this.chatService.sendSystem({
+          station: this.currentStation,
+          text: `${call.fromName} llamó, quedó en cola.`,
+          requestStatus: "queued",
+          targetId: call.fromId,
+          callId,
+        }),
+      ]);
     }
 
     /**
@@ -2863,8 +3099,8 @@
       this.setStatus(`Llamada entrante de ${incomingCall.peerName}.`, "warn");
       this.setPlaceholder("Llamada entrante", `Desde ${incomingCall.peerName}.`);
       this.openIncomingModal(incomingCall.peerName);
-      this.outgoingTone.stop();
-      await this.incomingTone.start("ringtone");
+      this.audioService.stop();
+      await this.audioService.startIncoming();
 
       this.renderTargets();
       this.syncUI();
@@ -2875,13 +3111,6 @@
      */
     async startOutgoingCall() {
       await this.startOutgoingCallTo(this.selectedTargetId);
-    }
-
-    /**
-     * @returns {boolean}
-     */
-    isCurrentStationHost() {
-      return Boolean(this.currentStation && HOST_STATION_IDS.has(this.currentStation.id));
     }
 
     /**
@@ -2913,22 +3142,10 @@
       this.selectedTargetId = target.id;
       const targetStatus = this.getTargetStatus(target.id);
       if (targetStatus.code === "offline") {
-        this.setStatus("Estación offline. No se puede encolar la llamada.", "warn");
+        this.setStatus("Estación offline. No se puede iniciar la llamada.", "warn");
         return null;
       }
       await this.unlockAudioTones();
-      if (targetStatus.code === "busy") {
-        await this.publishBusyCallRequest(target.id).catch(() => {
-          // no-op
-        });
-        await this.incomingTone.notifyOnce();
-        this.setStatus("Estación ocupada: se envió solicitud por chat.", "warn");
-        this.setPlaceholder(
-          "Teleconsulta",
-          "Destino ocupado. Solicitud publicada en chat.",
-        );
-        return null;
-      }
 
       const op = this.beginOp();
       await this.hangup("", {
@@ -2945,6 +3162,14 @@
         toId: target.id,
         callId,
       });
+      const callerRole = this.currentRole;
+      const targetRole = this.getRoleForStation(target.id);
+      const hostId = this.computeHostId(
+        this.currentStation.id,
+        target.id,
+        callerRole,
+        targetRole,
+      );
 
       const callPayload = {
         callId,
@@ -2953,6 +3178,9 @@
         fromName: this.currentStation.name,
         toId: target.id,
         toName: target.name,
+        hostId,
+        callerRole,
+        targetRole,
         status: "ringing",
         createdAt: this.firebase.getServerTimestamp(),
         updatedAt: this.firebase.getServerTimestamp(),
@@ -2961,35 +3189,24 @@
         reason: "",
       };
 
-      await this.outgoingTone.start("ringback");
+      await this.audioService.startRingback();
       this.state = "outgoing";
       this.setStatus(`Llamando a ${target.name}...`, "info");
       this.setPlaceholder("Llamada saliente", `Llamando a ${target.name}...`);
       this.closeIncomingModal();
-      this.incomingTone.stop();
       this.syncUI();
 
-      let txResult = null;
       try {
-        txResult = await this.firebase.trySetCallSlot(target.id, callPayload);
+        await this.firebase.setCall(target.id, callId, callPayload);
       } catch (error) {
-        txResult = { committed: false, current: null };
-      }
-
-      if (!txResult?.committed) {
         if (!this.isOpCurrent(op)) return null;
-        this.outgoingTone.stop();
+        this.audioService.stop();
         this.activeCall = null;
         this.state = "idle";
-        try {
-          await this.publishBusyCallRequest(target.id);
-        } catch (error) {
-          console.warn("[teleconsulta] No se pudo publicar solicitud en chat.", error);
-        }
-        this.setStatus("Estación ocupada: se envió solicitud por chat.", "warn");
+        this.setStatus("No se pudo iniciar la llamada.", "error");
         this.setPlaceholder(
           "Teleconsulta",
-          "El destino está ocupado. Tu solicitud quedó en el chat.",
+          "Iniciá una llamada o esperá una entrante.",
         );
         this.syncUI();
         return null;
@@ -3001,11 +3218,16 @@
         peerName: target.name,
         direction: "outgoing",
         inboxStationId: target.id,
+        hostId,
+        callerRole,
+        targetRole,
+        hasJoinedConference: false,
+        wasQueued: false,
       };
 
       if (!this.isOpCurrent(op)) {
         try {
-          await this.firebase.patchCallSlotIfMatch(target.id, callId, {
+          await this.firebase.patchCall(target.id, callId, {
             status: "cancelled",
             reason: "superseded",
             endedAt: this.firebase.getServerTimestamp(),
@@ -3014,26 +3236,12 @@
         } catch (error) {
           // no-op
         }
-        this.outgoingTone.stop();
+        this.audioService.stop();
         return null;
       }
 
       this.bindOutgoingWatch(target.id, callId);
       this.armOutgoingTimeout(callId, target.id, target.name);
-
-      if (this.isCurrentStationHost()) {
-        try {
-          await this.mountActiveMeeting(op);
-        } catch (error) {
-          console.warn("[teleconsulta] No se pudo montar Jitsi en modo host.", error);
-        }
-        if (this.isOpCurrent(op) && this.state === "outgoing") {
-          this.setStatus(`Sala creada. Esperando a ${target.name}...`, "info");
-          this.armHostHintTimer(target.name);
-          this.syncUI();
-        }
-      }
-
       this.syncUI();
       return callId;
     }
@@ -3069,6 +3277,7 @@
       this.outgoingTimeoutId = window.setTimeout(async () => {
         if (!this.activeCall || this.activeCall.callId !== callId) return;
         if (this.state !== "outgoing") return;
+        if (this.activeCall.wasQueued) return;
 
         const op = this.beginOp();
 
@@ -3083,7 +3292,7 @@
         }
         this.deferCallCleanup(targetId, callId);
 
-        this.outgoingTone.stop();
+        this.audioService.stop();
         await this.jitsi.disposeMeeting();
 
         if (!this.isOpCurrent(op)) return;
@@ -3115,7 +3324,7 @@
       const parsed = this.getCallFromSnapshot(snapshotValue, callId);
       if (!parsed) {
         if (this.state === "outgoing") {
-          this.outgoingTone.stop();
+          this.audioService.stop();
           await this.handleRemoteTerminalStatus("ended", {
             ...activeCall,
             fromName: activeCall.fromName || "",
@@ -3125,8 +3334,19 @@
         return;
       }
 
+      this.activeCall = {
+        ...activeCall,
+        ...parsed,
+        peerId: parsed.toId,
+        peerName: parsed.toName,
+        direction: "outgoing",
+        inboxStationId: parsed.toId,
+        hasJoinedConference: Boolean(activeCall.hasJoinedConference),
+        wasQueued: Boolean(activeCall.wasQueued),
+      };
+
       if (parsed.status === "ringing") {
-        if (!this.outgoingTimeoutId) {
+        if (!this.outgoingTimeoutId && !this.activeCall.wasQueued) {
           this.armOutgoingTimeout(callId, activeCall.peerId, activeCall.peerName);
         }
         this.setStatus(`Llamando a ${activeCall.peerName}...`, "info");
@@ -3135,23 +3355,47 @@
 
       if (parsed.status === "queued") {
         this.clearOutgoingTimeout();
-        this.outgoingTone.stop();
-        await this.incomingTone.notifyOnce();
+        this.activeCall.wasQueued = true;
+        this.audioService.stop();
+        await this.audioService.notifyOnce();
         this.setStatus("Destino ocupado, quedaste en cola.", "warn");
+        this.setPlaceholder(
+          "En cola",
+          "Tu llamada sigue pendiente hasta que el médico pueda atender.",
+        );
         return;
       }
 
-      if (parsed.status === "accepted" || parsed.status === "in-call") {
+      if (parsed.status === "accepted") {
         this.clearOutgoingTimeout();
-        this.outgoingTone.stop();
-        this.clearHostHintTimer();
+        this.audioService.stop();
 
         if (this.state !== "outgoing") return;
 
         const op = this.opSeq;
-        this.setStatus(`Conectando con ${activeCall.peerName}...`, "info");
+        if (this.isCurrentStationHost(this.activeCall)) {
+          this.setStatus(`Llamada aceptada. Ingresando a sala con ${activeCall.peerName}...`, "info");
+          if (!this.jitsi.hasMeeting()) {
+            await this.mountActiveMeeting(op, { signalInCallOnJoin: true });
+          }
+        } else {
+          this.setStatus("Esperando al médico...", "info");
+          this.setPlaceholder(
+            "Esperando al médico",
+            "El médico debe ingresar primero para habilitar la sala.",
+          );
+        }
+        this.syncUI();
+        return;
+      }
+
+      if (parsed.status === "in-call") {
+        this.clearOutgoingTimeout();
+        this.audioService.stop();
+
+        const op = this.opSeq;
         if (!this.jitsi.hasMeeting()) {
-          await this.mountActiveMeeting(op);
+          await this.mountActiveMeeting(op, { signalInCallOnJoin: false });
         }
         if (!this.isOpCurrent(op)) return;
         if (!this.activeCall || this.activeCall.callId !== callId) return;
@@ -3164,8 +3408,7 @@
       }
 
       if (["declined", "missed", "ended", "cancelled", "timeout"].includes(parsed.status)) {
-        this.outgoingTone.stop();
-        this.clearHostHintTimer();
+        this.audioService.stop();
         await this.handleRemoteTerminalStatus(parsed.status, {
           ...activeCall,
           fromName: activeCall.fromName || "",
@@ -3186,10 +3429,10 @@
       const call = this.activeCall;
       const op = this.beginOp();
 
-      this.incomingTone.stop();
-      this.outgoingTone.stop();
+      this.audioService.stop();
       this.closeIncomingModal();
-      this.setStatus(`Conectando con ${call.peerName}...`, "info");
+      this.state = "outgoing";
+      this.setStatus(`Aceptando llamada de ${call.peerName}...`, "info");
 
       try {
         await this.firebase.patchCall(this.currentStation.id, call.callId, {
@@ -3198,7 +3441,10 @@
         });
       } catch (error) {
         if (this.isOpCurrent(op)) {
+          this.state = "incoming";
+          this.openIncomingModal(call.peerName);
           this.setStatus("No se pudo aceptar la llamada.", "error");
+          this.syncUI();
         }
         return;
       }
@@ -3207,21 +3453,21 @@
         return;
       }
 
-      await this.mountActiveMeeting(op);
-      if (!this.isOpCurrent(op)) return;
-      if (!this.activeCall || this.activeCall.callId !== call.callId) return;
+      if (this.isCurrentStationHost(call)) {
+        await this.mountActiveMeeting(op, { signalInCallOnJoin: true });
+        if (!this.isOpCurrent(op)) return;
+        if (!this.activeCall || this.activeCall.callId !== call.callId) return;
+        if (this.state !== "in-call") {
+          this.setStatus(`Conectando con ${call.peerName}...`, "info");
+        }
+      } else {
+        this.setStatus("Esperando al médico...", "info");
+        this.setPlaceholder(
+          "Esperando al médico",
+          "El médico debe ingresar primero para habilitar la sala.",
+        );
+      }
 
-      this.state = "in-call";
-      this.refs.fsLabel.textContent = `En llamada con ${call.peerName}`;
-      this.setStatus(`En llamada con ${call.peerName}.`, "ok");
-      this.firebase
-        .patchCall(this.currentStation.id, call.callId, {
-          status: "in-call",
-          acceptedAt: this.firebase.getServerTimestamp(),
-        })
-        .catch(() => {
-          // no-op
-        });
       this.updateQueueVisual(this.waitingIncomingCount);
       this.syncUI();
     }
@@ -3238,8 +3484,7 @@
       const call = this.activeCall;
       const op = this.beginOp();
 
-      this.incomingTone.stop();
-      this.outgoingTone.stop();
+      this.audioService.stop();
       this.closeIncomingModal();
 
       try {
@@ -3267,37 +3512,75 @@
     }
 
     /**
-     * @param {{callId?: unknown, room?: unknown, fromId?: unknown, toId?: unknown, peerName?: unknown}} call
-     * @returns {Promise<boolean>}
+     * @returns {string}
      */
-    async lockActiveCall(call) {
-      return Boolean(call);
+    getDisplayNameForMeeting() {
+      const stationName = this.currentStation?.name || "Estación";
+      const operatorName = String(this.chatAuthorName || "").trim();
+      if (!operatorName) return stationName;
+      if (operatorName.toLowerCase() === stationName.toLowerCase()) return stationName;
+      return `${stationName} - ${operatorName}`;
     }
 
     /**
-     * @param {{callId?: unknown, fromId?: unknown, toId?: unknown, peerId?: unknown} | null} call
+     * @param {string} roomName
+     * @returns {string}
+     */
+    buildJitsiOpenUrl(roomName) {
+      const safeRoom = encodeURIComponent(String(roomName || "").trim());
+      return `https://${JITSI_DOMAIN}/${safeRoom}#config.prejoinPageEnabled=false&config.requireDisplayName=false`;
+    }
+
+    /**
+     * @param {{inboxStationId?: string, callId?: string}} [call]
      * @returns {Promise<void>}
      */
-    async releaseActiveCall(call) {
-      return;
+    async patchCallInCall(call = this.activeCall) {
+      if (!call || !this.firebaseReady) return;
+      await this.firebase.patchCall(call.inboxStationId, call.callId, {
+        status: "in-call",
+        acceptedAt: this.firebase.getServerTimestamp(),
+      });
     }
 
     /**
      * @param {number} op
+     * @param {{signalInCallOnJoin?: boolean}} [options]
      * @returns {Promise<void>}
      */
-    async mountActiveMeeting(op) {
+    async mountActiveMeeting(op, options = {}) {
+      const { signalInCallOnJoin = false } = options;
       const call = this.activeCall;
       const station = this.currentStation;
 
       if (!call || !station) return;
+
+      if (this.openInNewTab) {
+        const opened = window.open(this.buildJitsiOpenUrl(call.room), "_blank", "noopener,noreferrer");
+        if (!opened) {
+          throw new Error("No se pudo abrir la pestaña de Jitsi.");
+        }
+        this.refs.externalHint.hidden = false;
+        this.setPlaceholder(
+          "Llamada en pestaña",
+          "La llamada se abrió en una pestaña. Volvé acá para colgar.",
+        );
+        if (signalInCallOnJoin && this.isCurrentStationHost(call)) {
+          await this.patchCallInCall(call);
+          this.state = "in-call";
+          this.refs.fsLabel.textContent = `En llamada con ${call.peerName || "la estación destino"}`;
+          this.setStatus(`En llamada con ${call.peerName || "la estación destino"}.`, "ok");
+          this.syncUI();
+        }
+        return;
+      }
 
       const parentNode = this.fullscreenOpen ? this.refs.fullscreenStage : this.refs.stage;
       this.jitsi.moveHost(parentNode);
 
       await this.jitsi.mountMeeting({
         roomName: call.room,
-        displayName: station.name,
+        displayName: this.getDisplayNameForMeeting(),
         parentNode,
         onReadyToClose: () => {
           this.hangup("Llamada finalizada.", {
@@ -3324,21 +3607,15 @@
           }
         },
         onConferenceJoined: () => {
-          this.clearHostHintTimer();
           const currentCall = this.activeCall;
           if (!currentCall || !this.firebaseReady) return;
           if (currentCall.callId !== call.callId) return;
-          const shouldPatchInCall =
-            this.state === "in-call" || currentCall.direction === "incoming";
-          if (!shouldPatchInCall) return;
-          this.firebase
-            .patchCall(currentCall.inboxStationId, currentCall.callId, {
-              status: "in-call",
-              acceptedAt: this.firebase.getServerTimestamp(),
-            })
-            .catch(() => {
-              // no-op
-            });
+          currentCall.hasJoinedConference = true;
+          if (!signalInCallOnJoin) return;
+          if (!this.isCurrentStationHost(currentCall)) return;
+          this.patchCallInCall(currentCall).catch(() => {
+            // no-op
+          });
         },
       });
 
@@ -3365,8 +3642,7 @@
       this.syncUI();
 
       this.clearOutgoingWatch();
-      this.incomingTone.stop();
-      this.outgoingTone.stop();
+      this.audioService.stop();
       this.closeIncomingModal();
 
       if (call && notifyPeer && this.firebaseReady) {
@@ -3381,8 +3657,6 @@
         }
         this.deferCallCleanup(call.inboxStationId, call.callId);
       }
-
-      await this.releaseActiveCall(call);
 
       await this.jitsi.disposeMeeting();
 
@@ -3419,16 +3693,13 @@
       const op = this.beginOp();
 
       this.clearOutgoingWatch();
-      this.incomingTone.stop();
-      this.outgoingTone.stop();
+      this.audioService.stop();
       this.closeIncomingModal();
       await this.jitsi.disposeMeeting();
 
       if (call && call.inboxStationId && call.callId && this.firebaseReady) {
         this.deferCallCleanup(call.inboxStationId, call.callId);
       }
-
-      await this.releaseActiveCall(call || null);
 
       if (!this.isOpCurrent(op)) return;
 
@@ -3519,24 +3790,25 @@
     async destroy() {
       if (this.destroyed) return;
       this.destroyed = true;
-      const call = this.activeCall;
 
       this.clearOutgoingWatch();
       this.clearInboxListener();
       this.clearGlobalRealtime();
       this.clearChatRealtime();
+      if (this.debugBusyTimeoutId) {
+        window.clearTimeout(this.debugBusyTimeoutId);
+        this.debugBusyTimeoutId = 0;
+      }
+      this.debugForceBusyUntil = 0;
 
-      this.incomingTone.stop();
-      this.outgoingTone.stop();
+      this.audioService.stop();
       this.closeIncomingModal();
       this.closeFullscreen({ restoreFocus: false });
 
       await this.jitsi.disposeMeeting();
-      await this.incomingTone.dispose();
-      await this.outgoingTone.dispose();
+      await this.audioService.dispose();
 
       if (this.firebaseReady) {
-        await this.releaseActiveCall(call);
         await this.firebase.clearPresence();
       }
 
@@ -3578,6 +3850,10 @@
    * Inicializa teleconsulta embebida si el widget está presente.
    */
   function initTeleconsultaEmbed() {
+    if (applyUrlOverridesIfNeeded()) {
+      return;
+    }
+
     const refs = {
       widget: document.getElementById("teleconsultaWidget"),
       stationPill: document.getElementById("telewStationPill"),
@@ -3593,6 +3869,10 @@
       toggleCam: document.getElementById("telewToggleCam"),
       fullscreenBtn: document.getElementById("telewFullscreen"),
       soundUnlockBtn: document.getElementById("telewSoundUnlock"),
+      roleStationBtn: document.getElementById("telewRoleStation"),
+      roleMedicBtn: document.getElementById("telewRoleMedic"),
+      openNewTabToggle: document.getElementById("telewOpenNewTab"),
+      externalHint: document.getElementById("telewExternalHint"),
       chatRoot: document.getElementById("telewChat"),
       chatLog: document.getElementById("telewChatLog"),
       chatForm: document.getElementById("telewChatForm"),
@@ -3600,6 +3880,10 @@
       chatTextInput: document.getElementById("telewChatInput"),
       chatSendBtn: document.getElementById("telewChatSend"),
       chatRequestBtn: document.getElementById("telewChatRequestCall"),
+      debugTools: document.getElementById("telewDebugTools"),
+      debugRequestBtn: document.getElementById("telewDebugRequest"),
+      debugBusyBtn: document.getElementById("telewDebugBusy"),
+      debugClearChatBtn: document.getElementById("telewDebugClearChat"),
       incomingModal: document.getElementById("telecallIncoming"),
       incomingFrom: document.getElementById("telecallIncomingFrom"),
       incomingAccept: document.getElementById("telecallAccept"),
@@ -3626,6 +3910,10 @@
       refs.toggleCam,
       refs.fullscreenBtn,
       refs.soundUnlockBtn,
+      refs.roleStationBtn,
+      refs.roleMedicBtn,
+      refs.openNewTabToggle,
+      refs.externalHint,
       refs.chatRoot,
       refs.chatLog,
       refs.chatForm,
@@ -3633,6 +3921,10 @@
       refs.chatTextInput,
       refs.chatSendBtn,
       refs.chatRequestBtn,
+      refs.debugTools,
+      refs.debugRequestBtn,
+      refs.debugBusyBtn,
+      refs.debugClearChatBtn,
       refs.incomingModal,
       refs.incomingFrom,
       refs.incomingAccept,
