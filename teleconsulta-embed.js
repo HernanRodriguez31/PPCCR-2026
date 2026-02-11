@@ -3564,6 +3564,22 @@
       }
 
       /**
+       * Rol efectivo priorizando estado visual del selector.
+       * Si no hay estado válido en UI, usa el estado interno actual.
+       * @returns {'station'|'medic'}
+       */
+      const getEffectiveRole = () => {
+        const stationPressed =
+          this.refs?.roleStationBtn?.getAttribute("aria-pressed") === "true";
+        const medicPressed =
+          this.refs?.roleMedicBtn?.getAttribute("aria-pressed") === "true";
+
+        if (stationPressed && !medicPressed) return ROLE_STATION;
+        if (medicPressed && !stationPressed) return ROLE_MEDIC;
+        return normalizeRole(this.currentRole);
+      };
+
+      /**
        * @returns {string}
        */
       const askDoctorPin = () => {
@@ -3611,12 +3627,14 @@
         return token;
       };
 
-      const isModerator = this.currentRole === ROLE_MEDIC;
+      const effectiveRole = getEffectiveRole();
+      const isModerator = effectiveRole === ROLE_MEDIC;
 
       if (!isModerator) {
         const result = await requestToken({
           roomName: call.room,
           isModerator: false,
+          doctorPin: null,
         });
         if (!result.response.ok) {
           throw new Error(

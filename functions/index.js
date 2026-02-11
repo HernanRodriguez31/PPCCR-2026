@@ -16,6 +16,16 @@ function getPrivateKeyFromEnv() {
   return raw.includes("\\n") ? raw.replace(/\\n/g, "\n") : raw;
 }
 
+function parseModeratorFlag(value) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1";
+  }
+  return false;
+}
+
 exports.generateJitsiToken = functions.https.onRequest(async (req, res) => {
   res.set("Cache-Control", "no-store");
 
@@ -27,7 +37,7 @@ exports.generateJitsiToken = functions.https.onRequest(async (req, res) => {
   try {
     const body = req.body && typeof req.body === "object" ? req.body : {};
     const roomName = String(body.roomName || "").trim();
-    const isModerator = Boolean(body.isModerator);
+    const isModerator = parseModeratorFlag(body.isModerator);
     const doctorPin = String(body.doctorPin || "").trim();
 
     if (!roomName) {
@@ -47,6 +57,14 @@ exports.generateJitsiToken = functions.https.onRequest(async (req, res) => {
     const kid = getEnvOrThrow("JAAS_KID");
     const privateKey = getPrivateKeyFromEnv();
 
+    const userContext = {
+      id: `ppccr-${Date.now()}`,
+      name: "PPCCR",
+    };
+    if (isModerator) {
+      userContext.moderator = true;
+    }
+
     const token = jwt.sign(
       {
         aud: "jitsi",
@@ -54,11 +72,7 @@ exports.generateJitsiToken = functions.https.onRequest(async (req, res) => {
         sub: appId,
         room: "*",
         context: {
-          user: {
-            id: `ppccr-${Date.now()}`,
-            name: "PPCCR",
-            moderator: isModerator,
-          },
+          user: userContext,
         },
       },
       privateKey,
