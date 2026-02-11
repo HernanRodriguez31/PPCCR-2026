@@ -56,6 +56,7 @@
     chatAuthor: "ppccr_chat_author",
     role: "ppccr_tele_role",
     openNewTab: "ppccr_tele_open_newtab",
+    savedDoctorPin: "savedDoctorPin",
   });
 
   const DB_PATHS = Object.freeze({
@@ -138,6 +139,17 @@
   function safeLocalSet(key, value) {
     try {
       localStorage.setItem(key, value);
+    } catch (error) {
+      // no-op
+    }
+  }
+
+  /**
+   * @param {string} key
+   */
+  function safeLocalRemove(key) {
+    try {
+      localStorage.removeItem(key);
     } catch (error) {
       // no-op
     }
@@ -3551,47 +3563,110 @@
         return String(call.jaasJwt);
       }
 
-      const isModerator = this.currentRole === ROLE_MEDIC;
-      let doctorPin = "";
-
-      if (isModerator) {
+      /**
+       * @returns {string}
+       */
+      const askDoctorPin = () => {
         const input = window.prompt("Ingresá PIN médico:", "");
         if (input === null) {
           throw new Error("PIN médico cancelado.");
         }
-        doctorPin = String(input).trim();
-        if (!doctorPin) {
+        const typedPin = String(input).trim();
+        if (!typedPin) {
           throw new Error("PIN médico requerido.");
         }
+        return typedPin;
+      };
+
+      /**
+       * @param {{roomName: string, isModerator: boolean, doctorPin?: string}} payload
+       * @returns {Promise<{response: Response, payload: {token?: string, error?: string}}>}
+       */
+      const requestToken = async (payload) => {
+        const response = await fetch("/api/generateJitsiToken", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const responsePayload = await response
+          .json()
+          .catch(() => /** @type {{token?: string, error?: string}} */ ({}));
+
+        return { response, payload: responsePayload };
+      };
+
+      /**
+       * @param {string} tokenValue
+       * @returns {string}
+       */
+      const finalizeToken = (tokenValue) => {
+        const token = String(tokenValue || "").trim();
+        if (!token) {
+          throw new Error("Respuesta JWT inválida.");
+        }
+        call.jaasJwt = token;
+        return token;
+      };
+
+      const isModerator = this.currentRole === ROLE_MEDIC;
+
+      if (!isModerator) {
+        const result = await requestToken({
+          roomName: call.room,
+          isModerator: false,
+        });
+        if (!result.response.ok) {
+          throw new Error(
+            String(result.payload?.error || "No se pudo generar token JWT."),
+          );
+        }
+        return finalizeToken(result.payload?.token || "");
       }
 
-      const response = await fetch("/api/generateJitsiToken", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          roomName: call.room,
-          isModerator,
-          doctorPin,
-        }),
+      let doctorPin = safeLocalGet(STORAGE_KEYS.savedDoctorPin).trim();
+      let attemptedWithSavedPin = Boolean(doctorPin);
+      if (!doctorPin) {
+        doctorPin = askDoctorPin();
+      }
+
+      const firstAttempt = await requestToken({
+        roomName: call.room,
+        isModerator: true,
+        doctorPin,
       });
 
-      const payload = await response
-        .json()
-        .catch(() => /** @type {{token?: string, error?: string}} */ ({}));
-
-      if (!response.ok) {
-        throw new Error(String(payload?.error || "No se pudo generar token JWT."));
+      if (firstAttempt.response.ok) {
+        safeLocalSet(STORAGE_KEYS.savedDoctorPin, doctorPin);
+        return finalizeToken(firstAttempt.payload?.token || "");
       }
 
-      const token = String(payload?.token || "").trim();
-      if (!token) {
-        throw new Error("Respuesta JWT inválida.");
+      if (firstAttempt.response.status === 403 && attemptedWithSavedPin) {
+        safeLocalRemove(STORAGE_KEYS.savedDoctorPin);
+        attemptedWithSavedPin = false;
+
+        const promptedPin = askDoctorPin();
+        const retryAttempt = await requestToken({
+          roomName: call.room,
+          isModerator: true,
+          doctorPin: promptedPin,
+        });
+
+        if (!retryAttempt.response.ok) {
+          throw new Error(
+            String(retryAttempt.payload?.error || "No se pudo generar token JWT."),
+          );
+        }
+
+        safeLocalSet(STORAGE_KEYS.savedDoctorPin, promptedPin);
+        return finalizeToken(retryAttempt.payload?.token || "");
       }
 
-      call.jaasJwt = token;
-      return token;
+      throw new Error(
+        String(firstAttempt.payload?.error || "No se pudo generar token JWT."),
+      );
     }
 
     /**
