@@ -51,11 +51,11 @@
           },
           {
             "key": "Permissions-Policy",
-            "value": "geolocation=(), microphone=(), camera=()"
+            "value": "geolocation=(), microphone=(self \"https://meet.jit.si\"), camera=(self \"https://meet.jit.si\"), fullscreen=(self \"https://meet.jit.si\")"
           },
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https:; script-src 'self' https://embed.typeform.com; style-src 'self' 'unsafe-inline'; font-src 'self' data: https:; connect-src 'self' https:; frame-src https://lookerstudio.google.com https://calendar.google.com https://*.typeform.com;"
+            "value": "default-src 'self'; img-src 'self' data: https:; font-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' https://embed.typeform.com https://www.gstatic.com https://meet.jit.si; connect-src 'self' https: wss:; frame-src https://meet.jit.si https://lookerstudio.google.com https://calendar.google.com https://embed.typeform.com https://form.typeform.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';"
           },
           {
             "key": "Strict-Transport-Security",
