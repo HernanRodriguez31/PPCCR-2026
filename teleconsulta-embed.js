@@ -806,30 +806,33 @@
       this.moveHost(parentNode);
       await this.disposeMeeting();
 
-      const api = new window.JitsiMeetExternalAPI(JITSI_DOMAIN, {
+      const jitsiOptions = {
         roomName,
-        parentNode: this.hostNode,
         width: "100%",
         height: "100%",
-        userInfo: {
-          displayName,
-        },
+        parentNode: this.hostNode,
         configOverwrite: {
+          startWithAudioMuted: false,
+          startWithVideoMuted: false,
           prejoinPageEnabled: false,
           disableDeepLinking: true,
-          startWithAudioMuted: false,
-          startWithVideoMuted: true,
           disableInviteFunctions: true,
           disableProfile: true,
           enableWelcomePage: false,
         },
         interfaceConfigOverwrite: {
+          TOOLBAR_BUTTONS: ["microphone", "camera", "hangup", "tileview", "fullscreen"],
           SHOW_JITSI_WATERMARK: false,
+          SHOW_PROMOTIONAL_CLOSE_PAGE: false,
           SHOW_WATERMARK_FOR_GUESTS: false,
           DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-          TOOLBAR_BUTTONS: [],
         },
-      });
+        userInfo: {
+          displayName,
+        },
+      };
+
+      const api = new window.JitsiMeetExternalAPI(JITSI_DOMAIN, jitsiOptions);
 
       this.api = api;
 
