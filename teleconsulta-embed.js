@@ -51,14 +51,23 @@
     stationId: "ppccr_station_id",
     stationName: "ppccr_station_name",
     stationLegacy: "ppccr_auth_user",
+    chatAuthorPrefix: "ppccr_teleconsulta_chat_author_",
   });
 
   const DB_PATHS = Object.freeze({
     presence: "ppccr/teleconsulta/presence",
-    inbox: "ppccr/teleconsulta/inbox",
+    calls: "ppccr/teleconsulta/calls",
+    chatMessages: "ppccr/teleconsulta/chat/global/messages",
   });
 
-  const CALL_TIMEOUT_MS = 30_000;
+  const HOST_STATION_IDS = new Set(["admin"]);
+
+  const CALL_TIMEOUT_MS = 35_000;
+  const CALL_CLEANUP_DELAY_MS = 6_000;
+  const CHAT_MAX_MESSAGES = 150;
+  const CHAT_SEND_DEBOUNCE_MS = 1_000;
+  const BUSY_CALL_STATUSES = new Set(["accepted", "in-call", "ringing"]);
+  const PENDING_CALL_STATUSES = new Set(["ringing", "queued"]);
 
   /**
    * @param {string | null | undefined} value
@@ -100,6 +109,30 @@
   function safeSessionSet(key, value) {
     try {
       sessionStorage.setItem(key, value);
+    } catch (error) {
+      // no-op
+    }
+  }
+
+  /**
+   * @param {string} key
+   * @returns {string}
+   */
+  function safeLocalGet(key) {
+    try {
+      return localStorage.getItem(key) || "";
+    } catch (error) {
+      return "";
+    }
+  }
+
+  /**
+   * @param {string} key
+   * @param {string} value
+   */
+  function safeLocalSet(key, value) {
+    try {
+      localStorage.setItem(key, value);
     } catch (error) {
       // no-op
     }
@@ -249,8 +282,8 @@
    * @param {string} stationId
    * @returns {string}
    */
-  function getInboxPath(stationId) {
-    return `${DB_PATHS.inbox}/${stationId}`;
+  function getCallsPath(stationId) {
+    return `${DB_PATHS.calls}/${stationId}`;
   }
 
   /**
@@ -259,7 +292,22 @@
    * @returns {string}
    */
   function getCallPath(stationId, callId) {
-    return `${getInboxPath(stationId)}/${callId}`;
+    return `${getCallsPath(stationId)}/${callId}`;
+  }
+
+  /**
+   * @returns {string}
+   */
+  function getChatMessagesPath() {
+    return DB_PATHS.chatMessages;
+  }
+
+  /**
+   * @param {string} stationId
+   * @returns {string}
+   */
+  function getChatAuthorStorageKey(stationId) {
+    return `${STORAGE_KEYS.chatAuthorPrefix}${normalizeStationId(stationId)}`;
   }
 
   class FirebaseTeleconsultaService {
@@ -481,8 +529,8 @@
      * @param {(error: Error) => void} [onError]
      * @returns {() => void}
      */
-    listenInboxList(stationId, handler, onError) {
-      return this.listen(getInboxPath(stationId), handler, onError);
+    listenStationCalls(stationId, handler, onError) {
+      return this.listen(getCallsPath(stationId), handler, onError);
     }
 
     /**
@@ -565,13 +613,50 @@
     }
 
     /**
+     * @param {(value: any) => void} handler
+     * @param {(error: Error) => void} [onError]
+     * @returns {() => void}
+     */
+    listenChatMessages(handler, onError) {
+      return this.listen(getChatMessagesPath(), handler, onError);
+    }
+
+    /**
+     * @param {Record<string, unknown>} payload
+     * @returns {Promise<string>}
+     */
+    async createChatMessage(payload) {
+      await this.init();
+      const messageRef = this.ref(getChatMessagesPath()).push();
+      await messageRef.set({
+        ...payload,
+        ts: this.getServerTimestamp(),
+      });
+      return messageRef.key || "";
+    }
+
+    /**
+     * @param {string} messageId
+     * @param {Record<string, unknown>} patch
+     * @returns {Promise<void>}
+     */
+    async patchChatMessage(messageId, patch) {
+      await this.init();
+      const normalizedId = String(messageId || "").trim();
+      if (!normalizedId) return;
+      await this.ref(`${getChatMessagesPath()}/${normalizedId}`).update({
+        ...patch,
+      });
+    }
+
+    /**
      * @param {string} stationId
      * @param {(value: any) => void} handler
      * @param {(error: Error) => void} [onError]
      * @returns {Promise<void>}
      */
     listenInbox(stationId, handler, onError) {
-      return this.listenInboxList(stationId, handler, onError);
+      return this.listenStationCalls(stationId, handler, onError);
     }
 
     /**
@@ -595,16 +680,11 @@
   }
 
   class ToneService {
-    /**
-     * @param {number} frequency
-     * @param {number} cadenceMs
-     */
-    constructor(frequency = 880, cadenceMs = 1500) {
-      this.frequency = Math.max(120, Number(frequency) || 880);
-      this.cadenceMs = Math.max(250, Number(cadenceMs) || 1500);
+    constructor() {
       this.audioContext = null;
       this.intervalId = 0;
       this.running = false;
+      this.currentMode = "";
     }
 
     /**
@@ -627,56 +707,106 @@
      * @returns {Promise<void>}
      */
     async start() {
-      if (this.running) return;
+      await this.startIncoming();
+    }
 
-      try {
-        await this.unlock();
-      } catch (error) {
-        this.audioContext = null;
-        return;
-      }
+    /**
+     * @param {{frequency: number, duration: number, gain: number}} options
+     * @returns {void}
+     */
+    playTone(options) {
+      if (!this.audioContext || this.audioContext.state === "closed") return;
+      const now = this.audioContext.currentTime;
+      const frequency = Math.max(120, Number(options.frequency) || 440);
+      const duration = Math.max(0.05, Number(options.duration) || 0.2);
+      const gainValue = Math.max(0.0001, Number(options.gain) || 0.05);
 
-      this.running = true;
-
-      const beep = () => {
-        if (!this.audioContext || this.audioContext.state === "closed") return;
-
-        const now = this.audioContext.currentTime;
-        const osc = this.audioContext.createOscillator();
-        const gain = this.audioContext.createGain();
-
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(this.frequency, now);
-
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.07, now + 0.03);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-
-        osc.connect(gain);
-        gain.connect(this.audioContext.destination);
-
-        osc.start(now);
-        osc.stop(now + 0.6);
-      };
-
-      beep();
-      this.intervalId = window.setInterval(beep, this.cadenceMs);
+      const osc = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(frequency, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(gainValue, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      osc.connect(gain);
+      gain.connect(this.audioContext.destination);
+      osc.start(now);
+      osc.stop(now + duration + 0.02);
     }
 
     stop() {
       this.running = false;
-
+      this.currentMode = "";
       if (this.intervalId) {
         window.clearInterval(this.intervalId);
         this.intervalId = 0;
       }
+    }
 
-      if (this.audioContext) {
-        this.audioContext.close().catch(() => {
-          // no-op
-        });
+    /**
+     * @returns {Promise<void>}
+     */
+    async startIncoming() {
+      if (this.running && this.currentMode === "incoming") return;
+      this.stop();
+      try {
+        await this.unlock();
+      } catch (error) {
+        return;
       }
+      this.running = true;
+      this.currentMode = "incoming";
+      const pulse = () => {
+        this.playTone({ frequency: 880, duration: 0.22, gain: 0.08 });
+        window.setTimeout(() => {
+          this.playTone({ frequency: 720, duration: 0.2, gain: 0.065 });
+        }, 180);
+      };
+      pulse();
+      this.intervalId = window.setInterval(pulse, 1400);
+    }
 
+    /**
+     * @returns {Promise<void>}
+     */
+    async startOutgoing() {
+      if (this.running && this.currentMode === "outgoing") return;
+      this.stop();
+      try {
+        await this.unlock();
+      } catch (error) {
+        return;
+      }
+      this.running = true;
+      this.currentMode = "outgoing";
+      const pulse = () => {
+        this.playTone({ frequency: 440, duration: 0.24, gain: 0.055 });
+      };
+      pulse();
+      this.intervalId = window.setInterval(pulse, 1650);
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    async notifyOnce() {
+      try {
+        await this.unlock();
+      } catch (error) {
+        return;
+      }
+      this.playTone({ frequency: 620, duration: 0.18, gain: 0.06 });
+    }
+
+    async dispose() {
+      this.stop();
+      if (this.audioContext) {
+        try {
+          await this.audioContext.close();
+        } catch (error) {
+          // no-op
+        }
+      }
       this.audioContext = null;
     }
   }
@@ -831,7 +961,8 @@
      *   onReadyToClose?: () => void,
      *   onAudioMuteStatus?: (muted: boolean) => void,
      *   onVideoMuteStatus?: (muted: boolean) => void,
-     *   onParticipantJoined?: () => void
+     *   onParticipantJoined?: () => void,
+     *   onConferenceJoined?: () => void
      * }} options
      * @returns {Promise<void>}
      */
@@ -844,6 +975,7 @@
         onAudioMuteStatus,
         onVideoMuteStatus,
         onParticipantJoined,
+        onConferenceJoined,
       } = options;
 
       if (!roomName) throw new Error("Room inválida");
@@ -889,7 +1021,11 @@
       if (typeof api.getIFrame === "function") {
         const iframe = api.getIFrame();
         if (iframe instanceof HTMLIFrameElement) {
-          iframe.setAttribute("allow", "camera; microphone; fullscreen; display-capture");
+          iframe.setAttribute(
+            "allow",
+            "camera; microphone; autoplay; fullscreen; display-capture",
+          );
+          iframe.setAttribute("allowfullscreen", "true");
         }
       }
 
@@ -913,6 +1049,10 @@
 
       this.bind(api, "participantJoined", () => {
         if (typeof onParticipantJoined === "function") onParticipantJoined();
+      });
+
+      this.bind(api, "videoConferenceJoined", () => {
+        if (typeof onConferenceJoined === "function") onConferenceJoined();
       });
     }
 
@@ -971,6 +1111,11 @@
      *  toggleMic: HTMLButtonElement,
      *  toggleCam: HTMLButtonElement,
      *  fullscreenBtn: HTMLButtonElement,
+     *  chatMessages: HTMLElement,
+     *  chatAuthorInput: HTMLInputElement,
+     *  chatTextInput: HTMLInputElement,
+     *  chatSendBtn: HTMLButtonElement,
+     *  chatRequestBtn: HTMLButtonElement,
      *  incomingModal: HTMLElement,
      *  incomingFrom: HTMLElement,
      *  incomingAccept: HTMLButtonElement,
@@ -987,14 +1132,14 @@
 
       this.firebase = new FirebaseTeleconsultaService(getFirebaseConfigNow());
       this.jitsi = JitsiSingleton.getInstance();
-      this.incomingTone = new ToneService(880, 1500);
-      this.outgoingTone = new ToneService(440, 1200);
+      this.incomingTone = new ToneService();
+      this.outgoingTone = new ToneService();
 
       this.state = "idle";
       this.activeCall = null;
       this.currentStation = null;
       this.selectedTargetId = null;
-      this.inboxCache = [];
+      this.callInboxCache = [];
       this.waitingIncomingCount = 0;
       this.statusMessage = "Listo.";
       this.statusTone = "info";
@@ -1007,11 +1152,19 @@
       this.presenceById = {};
       this.ownPresenceBusy = null;
       this.presencePatchInFlight = false;
+      this.lastQueuedNotifyAt = 0;
+      this.queuePublishedCallIds = new Set();
+      this.hostReadyHintTimer = 0;
+      this.chatMessages = [];
+      this.lastChatSendAt = 0;
+      this.chatAuthorName = "";
+      this.chatMessageMap = new Map();
 
       this.outgoingTimeoutId = 0;
       this.unsubscribePresence = null;
       this.unsubscribeInbox = null;
       this.unsubscribeOutgoing = null;
+      this.unsubscribeChat = null;
       this.cleanupFns = [];
     }
 
@@ -1126,6 +1279,45 @@
         });
       });
 
+      this.on(this.refs.chatSendBtn, "click", () => {
+        this.sendChatTextMessage().catch((error) => {
+          console.error("[teleconsulta] Error enviando mensaje de chat", error);
+        });
+      });
+
+      this.on(this.refs.chatRequestBtn, "click", () => {
+        this.sendChatCallRequest().catch((error) => {
+          console.error("[teleconsulta] Error enviando solicitud de llamada", error);
+        });
+      });
+
+      this.on(this.refs.chatTextInput, "keydown", (event) => {
+        if (!(event instanceof KeyboardEvent)) return;
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        this.sendChatTextMessage().catch((error) => {
+          console.error("[teleconsulta] Error enviando mensaje por Enter", error);
+        });
+      });
+
+      this.on(this.refs.chatAuthorInput, "change", () => {
+        this.persistChatAuthorInput();
+      });
+
+      this.on(this.refs.chatAuthorInput, "blur", () => {
+        this.persistChatAuthorInput();
+      });
+
+      this.on(this.refs.chatMessages, "click", (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target) return;
+        const actionBtn = target.closest("[data-chat-action]");
+        if (!(actionBtn instanceof HTMLButtonElement)) return;
+        this.handleChatAction(actionBtn).catch((error) => {
+          console.error("[teleconsulta] Error ejecutando acción de chat", error);
+        });
+      });
+
       this.on(document, "keydown", (event) => {
         if (!(event instanceof KeyboardEvent)) return;
 
@@ -1200,6 +1392,7 @@
         "Teleconsulta",
         "Iniciá una llamada o esperá una entrante.",
       );
+      this.renderChatMessages();
 
       await this.handleStationChange(getActiveStation(), {
         force: true,
@@ -1250,6 +1443,7 @@
       }
 
       this.subscribeGlobalRealtime();
+      this.subscribeChatRealtime();
 
       if (this.currentStation) {
         try {
@@ -1283,6 +1477,7 @@
         this.selectedTargetId = null;
         this.ownPresenceBusy = null;
         this.refs.stationName.textContent = "Sin estación";
+        this.setChatAuthorName("", { persist: false });
 
         this.clearInboxListener();
         this.clearOutgoingWatch();
@@ -1332,6 +1527,9 @@
       this.currentStation = nextStation;
       persistStationState(nextStation);
       this.refs.stationName.textContent = nextStation.name;
+      this.loadChatAuthorForCurrentStation();
+      this.queuePublishedCallIds.clear();
+      this.callInboxCache = [];
 
       if (this.selectedTargetId === nextStation.id) {
         this.selectedTargetId = null;
@@ -1416,6 +1614,18 @@
       );
     }
 
+    subscribeChatRealtime() {
+      this.clearChatRealtime();
+      this.unsubscribeChat = this.firebase.listenChatMessages(
+        (snapshotValue) => {
+          this.handleChatSnapshot(snapshotValue);
+        },
+        (error) => {
+          console.error("[teleconsulta] Chat listener error", error);
+        },
+      );
+    }
+
     /**
      * @param {{id: string, name: string}} station
      * @returns {Promise<void>}
@@ -1425,15 +1635,15 @@
       await this.firebase.setPresence(station);
       this.ownPresenceBusy = false;
 
-      this.unsubscribeInbox = this.firebase.listenInboxList(
+      this.unsubscribeInbox = this.firebase.listenStationCalls(
         station.id,
         (snapshotValue) => {
-          this.handleOwnInboxSnapshot(snapshotValue).catch((error) => {
-            console.error("[teleconsulta] Inbox handler error", error);
+          this.handleOwnCallsSnapshot(snapshotValue).catch((error) => {
+            console.error("[teleconsulta] Calls handler error", error);
           });
         },
         (error) => {
-          console.error("[teleconsulta] Inbox listener error", error);
+          console.error("[teleconsulta] Calls listener error", error);
         },
       );
     }
@@ -1442,6 +1652,13 @@
       if (this.unsubscribePresence) {
         this.unsubscribePresence();
         this.unsubscribePresence = null;
+      }
+    }
+
+    clearChatRealtime() {
+      if (this.unsubscribeChat) {
+        this.unsubscribeChat();
+        this.unsubscribeChat = null;
       }
     }
 
@@ -1461,10 +1678,48 @@
 
     clearOutgoingWatch() {
       this.clearOutgoingTimeout();
+      this.clearHostHintTimer();
       if (this.unsubscribeOutgoing) {
         this.unsubscribeOutgoing();
         this.unsubscribeOutgoing = null;
       }
+    }
+
+    clearHostHintTimer() {
+      if (this.hostReadyHintTimer) {
+        window.clearTimeout(this.hostReadyHintTimer);
+        this.hostReadyHintTimer = 0;
+      }
+    }
+
+    /**
+     * @param {string} targetName
+     */
+    armHostHintTimer(targetName) {
+      this.clearHostHintTimer();
+      this.hostReadyHintTimer = window.setTimeout(() => {
+        if (this.state !== "outgoing") return;
+        this.setStatus(
+          `Esperando a ${targetName}. Esta instancia de Jitsi puede requerir que el Administrador inicie sesión una vez para crear salas.`,
+          "warn",
+        );
+      }, 9000);
+    }
+
+    /**
+     * @param {string} stationId
+     * @param {string} callId
+     */
+    deferCallCleanup(stationId, callId) {
+      const targetStationId = normalizeStationId(stationId);
+      const normalizedCallId = String(callId || "").trim();
+      if (!targetStationId || !normalizedCallId || !this.firebaseReady) return;
+
+      window.setTimeout(() => {
+        this.firebase.clearCallIfMatch(targetStationId, normalizedCallId).catch(() => {
+          // no-op
+        });
+      }, CALL_CLEANUP_DELAY_MS);
     }
 
     /**
@@ -1548,6 +1803,361 @@
       this.refs.status.dataset.tone = this.statusTone;
     }
 
+    loadChatAuthorForCurrentStation() {
+      if (!this.currentStation) {
+        this.setChatAuthorName("", { persist: false });
+        return;
+      }
+      const storageKey = getChatAuthorStorageKey(this.currentStation.id);
+      const saved = safeLocalGet(storageKey).trim();
+      this.setChatAuthorName(saved || this.currentStation.name, { persist: false });
+    }
+
+    /**
+     * @param {string} nextName
+     * @param {{persist?: boolean}} [options]
+     */
+    setChatAuthorName(nextName, options = {}) {
+      const { persist = true } = options;
+      const normalized = String(nextName || "").trim().slice(0, 40);
+      this.chatAuthorName = normalized;
+      this.refs.chatAuthorInput.value = normalized;
+      if (persist && this.currentStation) {
+        safeLocalSet(getChatAuthorStorageKey(this.currentStation.id), normalized);
+      }
+    }
+
+    persistChatAuthorInput() {
+      this.setChatAuthorName(this.refs.chatAuthorInput.value, { persist: true });
+    }
+
+    /**
+     * @returns {string}
+     */
+    getValidChatAuthorName() {
+      const currentValue = String(this.refs.chatAuthorInput.value || "").trim().slice(0, 40);
+      if (!currentValue) return "";
+      if (currentValue !== this.chatAuthorName) {
+        this.setChatAuthorName(currentValue, { persist: true });
+      }
+      return currentValue;
+    }
+
+    /**
+     * @param {unknown} snapshotValue
+     */
+    handleChatSnapshot(snapshotValue) {
+      this.chatMessageMap.clear();
+      const parsed = [];
+
+      if (snapshotValue && typeof snapshotValue === "object") {
+        Object.entries(snapshotValue).forEach(([messageId, value]) => {
+          if (!value || typeof value !== "object") return;
+          const payload = /** @type {any} */ (value);
+          const type = String(payload.type || "").trim().toLowerCase();
+          if (!["text", "call_request", "call_queue", "system"].includes(type)) return;
+
+          const ts = Number(payload.ts || 0);
+          const message = {
+            messageId: String(messageId || ""),
+            ts: Number.isFinite(ts) ? ts : 0,
+            stationId: normalizeStationId(payload.stationId),
+            stationName: String(payload.stationName || "").trim(),
+            authorName: String(payload.authorName || "").trim(),
+            type,
+            text: String(payload.text || "").trim(),
+            request:
+              payload.request && typeof payload.request === "object"
+                ? {
+                    fromStationId: normalizeStationId(payload.request.fromStationId),
+                    fromStationName: String(payload.request.fromStationName || "").trim(),
+                    toStationId: normalizeStationId(payload.request.toStationId),
+                    toStationName: String(payload.request.toStationName || "").trim(),
+                    status: String(payload.request.status || "pending")
+                      .trim()
+                      .toLowerCase(),
+                    calledByStationId: normalizeStationId(payload.request.calledByStationId),
+                    calledAt: Number(payload.request.calledAt || 0),
+                    callId: String(payload.request.callId || "").trim(),
+                  }
+                : null,
+          };
+          this.chatMessageMap.set(message.messageId, message);
+          parsed.push(message);
+        });
+      }
+
+      parsed.sort((a, b) => a.ts - b.ts);
+      this.chatMessages = parsed.slice(-CHAT_MAX_MESSAGES);
+      this.renderChatMessages();
+    }
+
+    /**
+     * @param {number} ts
+     * @returns {string}
+     */
+    formatChatTime(ts) {
+      if (!Number.isFinite(ts) || ts <= 0) return "--:--";
+      try {
+        return new Date(ts).toLocaleTimeString("es-AR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      } catch (error) {
+        return "--:--";
+      }
+    }
+
+    renderChatMessages() {
+      const container = this.refs.chatMessages;
+      if (!(container instanceof HTMLElement)) return;
+      const wasNearBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight < 36;
+      container.innerHTML = "";
+
+      if (!this.chatMessages.length) {
+        const empty = document.createElement("p");
+        empty.className = "telew__chatEmpty";
+        empty.textContent = "Sin mensajes todavía.";
+        container.appendChild(empty);
+        return;
+      }
+
+      this.chatMessages.forEach((message) => {
+        const item = document.createElement("article");
+        item.className = "telew__chatItem";
+        item.dataset.type = message.type;
+
+        const meta = document.createElement("div");
+        meta.className = "telew__chatMeta";
+        const author = document.createElement("span");
+        author.className = "telew__chatAuthor";
+        const stationLabel =
+          message.stationName || getStationById(message.stationId)?.name || "Estación";
+        author.textContent = `${stationLabel} — ${message.authorName || "Operador"}`;
+        const time = document.createElement("span");
+        time.className = "telew__chatTime";
+        time.textContent = this.formatChatTime(message.ts);
+        meta.append(author, time);
+        item.appendChild(meta);
+
+        const body = document.createElement("p");
+        body.className = "telew__chatBody";
+        body.textContent =
+          message.text ||
+          (message.type === "call_request"
+            ? "Solicitud de llamada."
+            : message.type === "call_queue"
+              ? "Llamada en cola."
+              : "Mensaje del sistema.");
+        item.appendChild(body);
+
+        if (message.type === "call_request" || message.type === "call_queue") {
+          const actions = document.createElement("div");
+          actions.className = "telew__chatActionsInline";
+          const req = message.request || null;
+
+          if (req && req.status === "called") {
+            const tag = document.createElement("span");
+            tag.className = "telew__chatTag";
+            tag.dataset.state = "called";
+            tag.textContent = "LLAMADO";
+            actions.appendChild(tag);
+          }
+
+          if (req && req.status !== "called") {
+            if (
+              message.type === "call_request" &&
+              this.currentStation &&
+              req.fromStationId &&
+              req.fromStationId !== this.currentStation.id
+            ) {
+              const callBtn = document.createElement("button");
+              callBtn.type = "button";
+              callBtn.className = "telew__chatBtn";
+              callBtn.dataset.chatAction = "call-request";
+              callBtn.dataset.messageId = message.messageId;
+              callBtn.dataset.targetId = req.fromStationId;
+              callBtn.textContent = "Llamar";
+              actions.appendChild(callBtn);
+            }
+
+            if (
+              message.type === "call_queue" &&
+              this.currentStation &&
+              req.callId &&
+              req.toStationId === this.currentStation.id
+            ) {
+              const attendBtn = document.createElement("button");
+              attendBtn.type = "button";
+              attendBtn.className = "telew__chatBtn";
+              attendBtn.dataset.chatAction = "accept-queued";
+              attendBtn.dataset.messageId = message.messageId;
+              attendBtn.dataset.callId = req.callId;
+              attendBtn.textContent = "Atender";
+              actions.appendChild(attendBtn);
+            }
+          }
+
+          if (actions.childElementCount > 0) {
+            item.appendChild(actions);
+          }
+        }
+
+        container.appendChild(item);
+      });
+
+      if (wasNearBottom) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }
+
+    /**
+     * @param {HTMLButtonElement} actionBtn
+     * @returns {Promise<void>}
+     */
+    async handleChatAction(actionBtn) {
+      const action = String(actionBtn.dataset.chatAction || "").trim();
+      const messageId = String(actionBtn.dataset.messageId || "").trim();
+      if (!action || !messageId || !this.currentStation || !this.firebaseReady) return;
+
+      if (action === "call-request") {
+        const targetId = normalizeStationId(actionBtn.dataset.targetId);
+        if (!targetId) return;
+        const callId = await this.startOutgoingCallTo(targetId);
+        if (!callId) return;
+        await this.firebase.patchChatMessage(messageId, {
+          request: {
+            fromStationId: targetId,
+            fromStationName: getStationById(targetId)?.name || targetId,
+            status: "called",
+            calledByStationId: this.currentStation.id,
+            calledAt: Date.now(),
+            callId,
+          },
+        });
+        return;
+      }
+
+      if (action === "accept-queued") {
+        const callId = String(actionBtn.dataset.callId || "").trim();
+        if (!callId) return;
+        await this.acceptQueuedCall(callId, messageId);
+      }
+    }
+
+    /**
+     * @param {string} callId
+     * @param {string} messageId
+     * @returns {Promise<void>}
+     */
+    async acceptQueuedCall(callId, messageId) {
+      if (!this.currentStation || !this.firebaseReady) return;
+      if (this.state !== "idle") {
+        this.setStatus("Terminá la llamada actual para atender la cola.", "warn");
+        return;
+      }
+
+      const myStationId = this.currentStation.id;
+      const queuedCall =
+        this.callInboxCache.find(
+          (call) =>
+            call.callId === callId &&
+            call.toId === myStationId &&
+            (call.status === "queued" || call.status === "ringing"),
+        ) || null;
+
+      if (!queuedCall) {
+        this.setStatus("La llamada en cola ya no está disponible.", "warn");
+        return;
+      }
+
+      this.activeCall = {
+        ...queuedCall,
+        peerId: queuedCall.fromId,
+        peerName: queuedCall.fromName,
+        direction: "incoming",
+        inboxStationId: myStationId,
+      };
+      this.state = "incoming";
+      await this.acceptIncomingCall();
+
+      await this.firebase.patchChatMessage(messageId, {
+        request: {
+          fromStationId: queuedCall.fromId,
+          fromStationName: queuedCall.fromName,
+          toStationId: queuedCall.toId,
+          toStationName: queuedCall.toName,
+          status: "called",
+          calledByStationId: myStationId,
+          calledAt: Date.now(),
+          callId: queuedCall.callId,
+        },
+      });
+    }
+
+    async sendChatTextMessage() {
+      if (!this.currentStation || !this.firebaseReady) return;
+      const now = Date.now();
+      if (now - this.lastChatSendAt < CHAT_SEND_DEBOUNCE_MS) return;
+
+      const authorName = this.getValidChatAuthorName();
+      if (!authorName) {
+        this.setStatus("Completá 'Tu nombre' para usar el chat.", "warn");
+        this.refs.chatAuthorInput.focus();
+        return;
+      }
+
+      const text = String(this.refs.chatTextInput.value || "").trim().slice(0, 300);
+      if (!text) {
+        this.setStatus("Escribí un mensaje para enviar.", "warn");
+        this.refs.chatTextInput.focus();
+        return;
+      }
+
+      this.lastChatSendAt = now;
+      await this.firebase.createChatMessage({
+        stationId: this.currentStation.id,
+        stationName: this.currentStation.name,
+        authorName,
+        type: "text",
+        text,
+      });
+      this.refs.chatTextInput.value = "";
+      this.setStatus("Mensaje enviado.", "ok");
+    }
+
+    async sendChatCallRequest() {
+      if (!this.currentStation || !this.firebaseReady) return;
+      const now = Date.now();
+      if (now - this.lastChatSendAt < CHAT_SEND_DEBOUNCE_MS) return;
+
+      const authorName = this.getValidChatAuthorName();
+      if (!authorName) {
+        this.setStatus("Completá 'Tu nombre' para solicitar llamada.", "warn");
+        this.refs.chatAuthorInput.focus();
+        return;
+      }
+
+      this.lastChatSendAt = now;
+      await this.firebase.createChatMessage({
+        stationId: this.currentStation.id,
+        stationName: this.currentStation.name,
+        authorName,
+        type: "call_request",
+        text: `${this.currentStation.name} solicita una llamada.`,
+        request: {
+          fromStationId: this.currentStation.id,
+          fromStationName: this.currentStation.name,
+          status: "pending",
+          calledByStationId: "",
+          calledAt: 0,
+          callId: "",
+        },
+      });
+      this.setStatus("Solicitud de llamada publicada en chat.", "ok");
+    }
+
     /**
      * @param {string} title
      * @param {string} description
@@ -1593,6 +2203,12 @@
       if (!hasMeeting && this.fullscreenOpen) {
         this.closeFullscreen({ restoreFocus: false });
       }
+
+      const canUseChat = Boolean(this.currentStation && this.firebaseReady);
+      this.refs.chatAuthorInput.disabled = !this.currentStation;
+      this.refs.chatTextInput.disabled = !canUseChat;
+      this.refs.chatSendBtn.disabled = !canUseChat;
+      this.refs.chatRequestBtn.disabled = !canUseChat;
 
       this.syncOwnPresenceBusy();
       this.renderStatus();
@@ -1677,6 +2293,10 @@
      *  toName: string,
      *  status: string,
      *  createdAt: number,
+     *  updatedAt: number,
+     *  acceptedAt: number,
+     *  endedAt: number,
+     *  reason: string,
      * }}
      */
     parseCall(callCandidate) {
@@ -1691,6 +2311,10 @@
        * toName?: unknown,
        * status?: unknown,
        * createdAt?: unknown,
+       * updatedAt?: unknown,
+       * acceptedAt?: unknown,
+       * endedAt?: unknown,
+       * reason?: unknown,
        * }} */ (callCandidate);
 
       const callId = String(call.callId || "").trim();
@@ -1706,6 +2330,12 @@
 
       const createdAtRaw = Number(call.createdAt || 0);
       const createdAt = Number.isFinite(createdAtRaw) ? createdAtRaw : 0;
+      const updatedAtRaw = Number(call.updatedAt || 0);
+      const updatedAt = Number.isFinite(updatedAtRaw) ? updatedAtRaw : 0;
+      const acceptedAtRaw = Number(call.acceptedAt || 0);
+      const acceptedAt = Number.isFinite(acceptedAtRaw) ? acceptedAtRaw : 0;
+      const endedAtRaw = Number(call.endedAt || 0);
+      const endedAt = Number.isFinite(endedAtRaw) ? endedAtRaw : 0;
 
       return {
         callId,
@@ -1716,6 +2346,10 @@
         toName: String(call.toName || "").trim() || toStation.name,
         status: String(call.status || "").trim().toLowerCase(),
         createdAt,
+        updatedAt,
+        acceptedAt,
+        endedAt,
+        reason: String(call.reason || "").trim(),
       };
     }
 
@@ -1730,9 +2364,13 @@
      *  toName: string,
      *  status: string,
      *  createdAt: number,
+     *  updatedAt: number,
+     *  acceptedAt: number,
+     *  endedAt: number,
+     *  reason: string,
      * }>}
      */
-    parseInboxCalls(snapshotValue) {
+    parseStationCalls(snapshotValue) {
       if (!snapshotValue || typeof snapshotValue !== "object") return [];
 
       const directCall = this.parseCall(snapshotValue);
@@ -1781,14 +2419,31 @@
      *  toName: string,
      *  status: string,
      *  createdAt: number,
+     *  updatedAt: number,
+     *  acceptedAt: number,
+     *  endedAt: number,
+     *  reason: string,
      * }}
      */
     getCallFromSnapshot(snapshotValue, callId) {
       const targetCallId = String(callId || "").trim();
       if (!targetCallId) return null;
       return (
-        this.parseInboxCalls(snapshotValue).find((entry) => entry.callId === targetCallId) || null
+        this.parseStationCalls(snapshotValue).find((entry) => entry.callId === targetCallId) || null
       );
+    }
+
+    /**
+     * @param {Array<{callId: string, status: string}>} calls
+     * @param {string} [excludeCallId]
+     * @returns {boolean}
+     */
+    isBusyByCalls(calls, excludeCallId = "") {
+      return calls.some((call) => {
+        if (!call) return false;
+        if (excludeCallId && call.callId === excludeCallId) return false;
+        return BUSY_CALL_STATUSES.has(String(call.status || "").toLowerCase());
+      });
     }
 
     /**
@@ -1803,24 +2458,16 @@
      * @param {unknown} snapshotValue
      * @returns {Promise<void>}
      */
-    async handleOwnInboxSnapshot(snapshotValue) {
+    async handleOwnCallsSnapshot(snapshotValue) {
       if (!this.currentStation) return;
       const myStationId = this.currentStation.id;
 
-      const ownCalls = this.parseInboxCalls(snapshotValue).filter(
+      const ownCalls = this.parseStationCalls(snapshotValue).filter(
         (call) => call.toId === myStationId,
       );
-      this.inboxCache = ownCalls;
+      this.callInboxCache = ownCalls;
 
-      const pendingCalls = ownCalls.filter(
-        (call) =>
-          (call.status === "ringing" || call.status === "queued") &&
-          call.fromId !== myStationId,
-      );
       const activeCallId = this.activeCall ? String(this.activeCall.callId || "") : "";
-      const queuedCount = pendingCalls.filter((call) => call.callId !== activeCallId).length;
-      this.updateQueueVisual(queuedCount);
-
       const activeSnapshot =
         this.activeCall && activeCallId
           ? ownCalls.find((call) => call.callId === activeCallId) || null
@@ -1839,7 +2486,10 @@
         this.syncUI();
       }
 
-      if (activeSnapshot && ["ended", "declined", "missed"].includes(activeSnapshot.status)) {
+      if (
+        activeSnapshot &&
+        ["ended", "declined", "missed", "timeout", "cancelled"].includes(activeSnapshot.status)
+      ) {
         await this.handleRemoteTerminalStatus(activeSnapshot.status, {
           ...activeSnapshot,
           inboxStationId: myStationId,
@@ -1849,13 +2499,42 @@
         return;
       }
 
-      if (this.state !== "idle") {
+      const pendingCalls = ownCalls.filter(
+        (call) => PENDING_CALL_STATUSES.has(call.status) && call.fromId !== myStationId,
+      );
+      const queuedCount = pendingCalls.filter((call) => call.callId !== activeCallId).length;
+      this.updateQueueVisual(queuedCount);
+
+      const busyByState = this.state !== "idle";
+      const busyByCalls = ownCalls.some(
+        (call) =>
+          call.callId !== activeCallId &&
+          (call.status === "accepted" || call.status === "in-call"),
+      );
+      const shouldQueueIncoming = busyByState || busyByCalls;
+
+      if (shouldQueueIncoming) {
         for (const pendingCall of pendingCalls) {
           if (pendingCall.callId === activeCallId) continue;
           if (pendingCall.status !== "ringing") continue;
-          this.firebase.patchCall(myStationId, pendingCall.callId, { status: "queued" }).catch(() => {
-            // no-op
-          });
+          this.firebase
+            .patchCall(myStationId, pendingCall.callId, {
+              status: "queued",
+              reason: "receiver_busy",
+            })
+            .then(() => this.publishQueuedCallToChat(pendingCall))
+            .catch(() => {
+              // no-op
+            });
+
+          const now = Date.now();
+          if (now - this.lastQueuedNotifyAt > 500) {
+            this.lastQueuedNotifyAt = now;
+            this.outgoingTone.stop();
+            this.incomingTone.notifyOnce().catch(() => {
+              // no-op
+            });
+          }
         }
 
         if (queuedCount > 0) {
@@ -1884,13 +2563,41 @@
     }
 
     /**
+     * @param {{callId: string, fromId: string, fromName: string, toId: string, toName: string}} call
+     * @returns {Promise<void>}
+     */
+    async publishQueuedCallToChat(call) {
+      const callId = String(call?.callId || "").trim();
+      if (!callId || this.queuePublishedCallIds.has(callId)) return;
+      this.queuePublishedCallIds.add(callId);
+
+      if (!this.currentStation || !this.firebaseReady) return;
+      const current = this.currentStation;
+      await this.firebase.createChatMessage({
+        stationId: current.id,
+        stationName: current.name,
+        authorName: "Sistema",
+        type: "call_queue",
+        text: `${call.fromName} quedó en cola para ${call.toName}.`,
+        request: {
+          fromStationId: call.fromId,
+          fromStationName: call.fromName,
+          toStationId: call.toId,
+          toStationName: call.toName,
+          status: "pending",
+          callId,
+        },
+      });
+    }
+
+    /**
      * @returns {Promise<void>}
      */
     async promoteNextQueuedIncoming() {
       if (!this.currentStation || this.state !== "idle") return;
       const myStationId = this.currentStation.id;
       const nextQueued =
-        this.inboxCache.find(
+        this.callInboxCache.find(
           (call) =>
             call.toId === myStationId &&
             call.status === "queued" &&
@@ -1946,7 +2653,7 @@
       this.setPlaceholder("Llamada entrante", `Desde ${incomingCall.peerName}.`);
       this.openIncomingModal(incomingCall.peerName);
       this.outgoingTone.stop();
-      await this.incomingTone.start();
+      await this.incomingTone.startIncoming();
 
       this.renderTargets();
       this.syncUI();
@@ -1956,31 +2663,47 @@
      * @returns {Promise<void>}
      */
     async startOutgoingCall() {
+      await this.startOutgoingCallTo(this.selectedTargetId);
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    isCurrentStationHost() {
+      return Boolean(this.currentStation && HOST_STATION_IDS.has(this.currentStation.id));
+    }
+
+    /**
+     * @param {string | null | undefined} targetStationId
+     * @returns {Promise<string|null>}
+     */
+    async startOutgoingCallTo(targetStationId) {
       if (!this.currentStation) {
         this.setStatus("Seleccioná una estación antes de llamar.", "warn");
-        return;
+        return null;
       }
 
       if (!this.hasFirebaseConfig || !this.firebaseReady) {
         this.setStatus("Teleconsulta requiere Firebase activo para llamar.", "warn");
-        return;
+        return null;
       }
 
-      const target = getStationById(this.selectedTargetId);
+      const target = getStationById(targetStationId);
       if (!target) {
         this.setStatus("Seleccioná una estación destino.", "warn");
-        return;
+        return null;
       }
 
       if (target.id === this.currentStation.id) {
         this.setStatus("No podés llamarte a tu propia estación.", "warn");
-        return;
+        return null;
       }
 
+      this.selectedTargetId = target.id;
       const targetStatus = this.getTargetStatus(target.id);
       if (targetStatus.code === "offline") {
         this.setStatus("Estación offline. No se puede encolar la llamada.", "warn");
-        return;
+        return null;
       }
       const targetIsBusy = targetStatus.code === "busy";
 
@@ -1991,7 +2714,7 @@
         op,
       });
 
-      if (!this.isOpCurrent(op)) return;
+      if (!this.isOpCurrent(op)) return null;
 
       const callId = buildCallId();
       const room = buildRoomName({
@@ -2010,6 +2733,9 @@
         status: "ringing",
         createdAt: this.firebase.getServerTimestamp(),
         updatedAt: this.firebase.getServerTimestamp(),
+        acceptedAt: null,
+        endedAt: null,
+        reason: "",
       };
 
       this.activeCall = {
@@ -2030,7 +2756,7 @@
       this.setPlaceholder("Llamada saliente", `Llamando a ${target.name}...`);
       this.closeIncomingModal();
       this.incomingTone.stop();
-      await this.outgoingTone.start();
+      await this.outgoingTone.startOutgoing();
       this.syncUI();
 
       try {
@@ -2047,23 +2773,42 @@
           );
           this.syncUI();
         }
-        return;
+        return null;
       }
 
       if (!this.isOpCurrent(op)) {
         try {
-          await this.firebase.patchCall(target.id, callId, { status: "ended" });
-          await this.firebase.clearCallIfMatch(target.id, callId);
+          await this.firebase.patchCall(target.id, callId, {
+            status: "cancelled",
+            reason: "superseded",
+            endedAt: this.firebase.getServerTimestamp(),
+          });
+          this.deferCallCleanup(target.id, callId);
         } catch (error) {
           // no-op
         }
         this.outgoingTone.stop();
-        return;
+        return null;
       }
 
       this.bindOutgoingWatch(target.id, callId);
       this.armOutgoingTimeout(callId, target.id, target.name);
+
+      if (this.isCurrentStationHost()) {
+        try {
+          await this.mountActiveMeeting(op);
+        } catch (error) {
+          console.warn("[teleconsulta] No se pudo montar Jitsi en modo host.", error);
+        }
+        if (this.isOpCurrent(op) && this.state === "outgoing") {
+          this.setStatus(`Sala creada. Esperando a ${target.name}...`, "info");
+          this.armHostHintTimer(target.name);
+          this.syncUI();
+        }
+      }
+
       this.syncUI();
+      return callId;
     }
 
     /**
@@ -2102,16 +2847,15 @@
         const op = this.beginOp();
 
         try {
-          await this.firebase.patchCall(targetId, callId, { status: "missed" });
+          await this.firebase.patchCall(targetId, callId, {
+            status: "missed",
+            reason: "timeout",
+            endedAt: this.firebase.getServerTimestamp(),
+          });
         } catch (error) {
           // no-op
         }
-
-        try {
-          await this.firebase.clearCallIfMatch(targetId, callId);
-        } catch (error) {
-          // no-op
-        }
+        this.deferCallCleanup(targetId, callId);
 
         this.outgoingTone.stop();
         await this.jitsi.disposeMeeting();
@@ -2156,24 +2900,33 @@
       }
 
       if (parsed.status === "ringing") {
+        if (!this.outgoingTimeoutId) {
+          this.armOutgoingTimeout(callId, activeCall.peerId, activeCall.peerName);
+        }
         this.setStatus(`Llamando a ${activeCall.peerName}...`, "info");
         return;
       }
 
       if (parsed.status === "queued") {
-        this.setStatus("En cola de espera...", "warn");
+        this.clearOutgoingTimeout();
+        this.outgoingTone.stop();
+        await this.incomingTone.notifyOnce();
+        this.setStatus("Destino ocupado, quedaste en cola.", "warn");
         return;
       }
 
       if (parsed.status === "accepted" || parsed.status === "in-call") {
         this.clearOutgoingTimeout();
         this.outgoingTone.stop();
+        this.clearHostHintTimer();
 
         if (this.state !== "outgoing") return;
 
         const op = this.opSeq;
         this.setStatus(`Conectando con ${activeCall.peerName}...`, "info");
-        await this.mountActiveMeeting(op);
+        if (!this.jitsi.hasMeeting()) {
+          await this.mountActiveMeeting(op);
+        }
         if (!this.isOpCurrent(op)) return;
         if (!this.activeCall || this.activeCall.callId !== callId) return;
 
@@ -2184,8 +2937,9 @@
         return;
       }
 
-      if (["declined", "missed", "ended"].includes(parsed.status)) {
+      if (["declined", "missed", "ended", "cancelled", "timeout"].includes(parsed.status)) {
         this.outgoingTone.stop();
+        this.clearHostHintTimer();
         await this.handleRemoteTerminalStatus(parsed.status, {
           ...activeCall,
           fromName: activeCall.fromName || "",
@@ -2213,6 +2967,7 @@
       try {
         await this.firebase.patchCall(this.currentStation.id, call.callId, {
           status: "accepted",
+          acceptedAt: this.firebase.getServerTimestamp(),
         });
       } catch (error) {
         if (this.isOpCurrent(op)) {
@@ -2233,7 +2988,10 @@
       this.refs.fsLabel.textContent = `En llamada con ${call.peerName}`;
       this.setStatus(`En llamada con ${call.peerName}.`, "ok");
       this.firebase
-        .patchCall(this.currentStation.id, call.callId, { status: "in-call" })
+        .patchCall(this.currentStation.id, call.callId, {
+          status: "in-call",
+          acceptedAt: this.firebase.getServerTimestamp(),
+        })
         .catch(() => {
           // no-op
         });
@@ -2259,16 +3017,13 @@
       try {
         await this.firebase.patchCall(this.currentStation.id, call.callId, {
           status: "declined",
+          endedAt: this.firebase.getServerTimestamp(),
+          reason: "receiver_declined",
         });
       } catch (error) {
         // no-op
       }
-
-      try {
-        await this.firebase.clearCallIfMatch(this.currentStation.id, call.callId);
-      } catch (error) {
-        // no-op
-      }
+      this.deferCallCleanup(this.currentStation.id, call.callId);
 
       if (!this.isOpCurrent(op)) return;
 
@@ -2340,6 +3095,23 @@
             this.setStatus("Conectado. Estableciendo video...", "ok");
           }
         },
+        onConferenceJoined: () => {
+          this.clearHostHintTimer();
+          const currentCall = this.activeCall;
+          if (!currentCall || !this.firebaseReady) return;
+          if (currentCall.callId !== call.callId) return;
+          const shouldPatchInCall =
+            this.state === "in-call" || currentCall.direction === "incoming";
+          if (!shouldPatchInCall) return;
+          this.firebase
+            .patchCall(currentCall.inboxStationId, currentCall.callId, {
+              status: "in-call",
+              acceptedAt: this.firebase.getServerTimestamp(),
+            })
+            .catch(() => {
+              // no-op
+            });
+        },
       });
 
       if (!this.isOpCurrent(op)) {
@@ -2373,16 +3145,13 @@
         try {
           await this.firebase.patchCall(call.inboxStationId, call.callId, {
             status: "ended",
+            endedAt: this.firebase.getServerTimestamp(),
+            reason: String(reason || "").trim() || "local_hangup",
           });
         } catch (error) {
           // no-op
         }
-
-        try {
-          await this.firebase.clearCallIfMatch(call.inboxStationId, call.callId);
-        } catch (error) {
-          // no-op
-        }
+        this.deferCallCleanup(call.inboxStationId, call.callId);
       }
 
       await this.releaseActiveCall(call);
@@ -2428,11 +3197,7 @@
       await this.jitsi.disposeMeeting();
 
       if (call && call.inboxStationId && call.callId && this.firebaseReady) {
-        try {
-          await this.firebase.clearCallIfMatch(call.inboxStationId, call.callId);
-        } catch (error) {
-          // no-op
-        }
+        this.deferCallCleanup(call.inboxStationId, call.callId);
       }
 
       await this.releaseActiveCall(call || null);
@@ -2452,6 +3217,10 @@
         message = `Llamada rechazada por ${call?.peerName || "la estación destino"}.`;
       } else if (status === "missed") {
         message = "Llamada perdida por timeout.";
+      } else if (status === "timeout") {
+        message = "La llamada venció por timeout.";
+      } else if (status === "cancelled") {
+        message = "La llamada fue cancelada.";
       } else if (status === "ended") {
         message = "La otra estación finalizó la llamada.";
       }
@@ -2527,6 +3296,7 @@
       this.clearOutgoingWatch();
       this.clearInboxListener();
       this.clearGlobalRealtime();
+      this.clearChatRealtime();
 
       this.incomingTone.stop();
       this.outgoingTone.stop();
@@ -2534,6 +3304,8 @@
       this.closeFullscreen({ restoreFocus: false });
 
       await this.jitsi.disposeMeeting();
+      await this.incomingTone.dispose();
+      await this.outgoingTone.dispose();
 
       if (this.firebaseReady) {
         await this.releaseActiveCall(call);
@@ -2570,6 +3342,11 @@
       toggleMic: document.getElementById("telewToggleMic"),
       toggleCam: document.getElementById("telewToggleCam"),
       fullscreenBtn: document.getElementById("telewFullscreen"),
+      chatMessages: document.getElementById("telewChatMessages"),
+      chatAuthorInput: document.getElementById("telewChatAuthor"),
+      chatTextInput: document.getElementById("telewChatText"),
+      chatSendBtn: document.getElementById("telewChatSend"),
+      chatRequestBtn: document.getElementById("telewChatRequestCall"),
       incomingModal: document.getElementById("telecallIncoming"),
       incomingFrom: document.getElementById("telecallIncomingFrom"),
       incomingAccept: document.getElementById("telecallAccept"),
@@ -2595,6 +3372,11 @@
       refs.toggleMic,
       refs.toggleCam,
       refs.fullscreenBtn,
+      refs.chatMessages,
+      refs.chatAuthorInput,
+      refs.chatTextInput,
+      refs.chatSendBtn,
+      refs.chatRequestBtn,
       refs.incomingModal,
       refs.incomingFrom,
       refs.incomingAccept,

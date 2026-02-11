@@ -51,7 +51,7 @@
           },
           {
             "key": "Permissions-Policy",
-            "value": "geolocation=(), microphone=(self \"https://meet.jit.si\"), camera=(self \"https://meet.jit.si\"), fullscreen=(self \"https://meet.jit.si\")"
+            "value": "geolocation=(), microphone=(self \"https://meet.jit.si\"), camera=(self \"https://meet.jit.si\"), fullscreen=(self \"https://meet.jit.si\"), display-capture=(self \"https://meet.jit.si\")"
           },
           {
             "key": "Content-Security-Policy",

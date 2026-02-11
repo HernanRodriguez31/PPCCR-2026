@@ -513,6 +513,68 @@
                   </button>
                 </div>
               </div>
+
+              <section
+                class="telew__chat"
+                aria-label="Chat operativo entre estaciones"
+              >
+                <header class="telew__chatHead">
+                  <h3 class="telew__chatTitle">Chat operativo</h3>
+                  <p class="telew__chatHint">
+                    Coordinación entre estaciones y solicitudes de llamada.
+                  </p>
+                </header>
+
+                <div
+                  id="telewChatMessages"
+                  class="telew__chatMessages"
+                  role="log"
+                  aria-live="polite"
+                  aria-label="Mensajes del chat"
+                ></div>
+
+                <div class="telew__chatForm">
+                  <label class="telew__chatField telew__chatField--author">
+                    <span>Tu nombre</span>
+                    <input
+                      id="telewChatAuthor"
+                      class="telew__chatInput"
+                      type="text"
+                      maxlength="40"
+                      placeholder="Nombre visible en chat"
+                      autocomplete="name"
+                    />
+                  </label>
+
+                  <label class="telew__chatField telew__chatField--text">
+                    <span>Mensaje</span>
+                    <input
+                      id="telewChatText"
+                      class="telew__chatInput"
+                      type="text"
+                      maxlength="300"
+                      placeholder="Escribí un mensaje operativo"
+                    />
+                  </label>
+
+                  <div class="telew__chatActions">
+                    <button
+                      type="button"
+                      id="telewChatSend"
+                      class="btn btn-secondary telew__btn"
+                    >
+                      Enviar
+                    </button>
+                    <button
+                      type="button"
+                      id="telewChatRequestCall"
+                      class="btn btn-primary telew__btn"
+                    >
+                      Solicitar llamada
+                    </button>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
         </div>
