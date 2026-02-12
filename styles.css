@@ -6485,6 +6485,105 @@ iframe {
   outline-offset: 2px;
 }
 
+.telew__audioPanel {
+  border: 1px solid rgba(11, 87, 208, 0.22);
+  border-radius: 12px;
+  background: rgba(238, 247, 255, 0.96);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.telew__audioHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.telew__audioTitle {
+  font-size: 0.93rem;
+  font-weight: 760;
+  color: #09386f;
+}
+
+.telew__audioClose {
+  border: 1px solid rgba(11, 87, 208, 0.28);
+  border-radius: 999px;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0b3f84;
+  background: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+}
+
+.telew__audioClose:hover {
+  background: rgba(240, 248, 255, 0.98);
+}
+
+.telew__audioField {
+  display: grid;
+  gap: 4px;
+}
+
+.telew__audioLabel {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0a3f7f;
+}
+
+.telew__audioSelect {
+  width: 100%;
+  min-height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(11, 87, 208, 0.25);
+  background: #ffffff;
+  color: #0c2f60;
+  font-size: 0.84rem;
+  padding: 0 10px;
+}
+
+.telew__audioSelect:focus {
+  outline: 2px solid rgba(34, 122, 222, 0.54);
+  outline-offset: 1px;
+}
+
+.telew__audioInfo {
+  font-size: 0.78rem;
+  color: rgba(11, 49, 97, 0.82);
+}
+
+.telew__audioInfo[data-tone="ok"] {
+  color: #0f6a38;
+}
+
+.telew__audioInfo[data-tone="warn"] {
+  color: #8a2d21;
+}
+
+.telew__audioActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.telew__audioBtn {
+  border: 1px solid rgba(11, 87, 208, 0.3);
+  border-radius: 999px;
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0a3f80;
+  background: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+}
+
+.telew__audioBtn:hover {
+  background: rgba(241, 248, 255, 0.98);
+}
+
 .telew__soundUnlock {
   border: 1px solid rgba(11, 87, 208, 0.24);
   border-radius: 999px;
@@ -6888,6 +6987,19 @@ html.telefs-open {
 
   .telew__chatForm {
     flex-direction: column;
+  }
+
+  .telew__audioHead {
+    flex-wrap: wrap;
+  }
+
+  .telew__audioClose,
+  .telew__audioBtn {
+    width: 100%;
+  }
+
+  .telew__audioActions {
+    justify-content: stretch;
   }
 
   .telew__chatAuthor,

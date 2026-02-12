@@ -49,7 +49,7 @@
     ></script>
     <script src="/__/firebase/init.js" defer></script>
     <script src="/firebase-config.js" defer></script>
-    <script src="/teleconsulta-embed.js?v=20260212-5" defer></script>
+    <script src="/teleconsulta-embed.js?v=20260212-6" defer></script>
   </head>
 
   <body class="page-home">
@@ -561,12 +561,62 @@
                   </button>
                   <button
                     type="button"
+                    id="telewAudioConfig"
+                    class="telew__ctl"
+                    aria-label="Configurar audio"
+                    aria-pressed="false"
+                    aria-expanded="false"
+                    aria-controls="telewAudioPanel"
+                  >
+                    Audio
+                  </button>
+                  <button
+                    type="button"
                     id="telewFullscreen"
                     class="telew__ctl"
                     aria-label="Abrir en pantalla completa"
                   >
                     Pantalla completa
                   </button>
+                </div>
+                <div
+                  id="telewAudioPanel"
+                  class="telew__audioPanel"
+                  role="region"
+                  aria-label="Configuración de audio"
+                  hidden
+                >
+                  <div class="telew__audioHead">
+                    <div class="telew__audioTitle">Configuración de audio</div>
+                    <button
+                      id="telewAudioClose"
+                      type="button"
+                      class="telew__audioClose"
+                      aria-label="Cerrar configuración de audio"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                  <label class="telew__audioField" for="telewAudioInput">
+                    <span class="telew__audioLabel">Micrófono</span>
+                    <select id="telewAudioInput" class="telew__audioSelect">
+                      <option value="">Detectando micrófonos...</option>
+                    </select>
+                  </label>
+                  <label class="telew__audioField" for="telewAudioOutput">
+                    <span class="telew__audioLabel">Salida de audio</span>
+                    <select id="telewAudioOutput" class="telew__audioSelect">
+                      <option value="">Salida del sistema</option>
+                    </select>
+                  </label>
+                  <div id="telewAudioInfo" class="telew__audioInfo" aria-live="polite">
+                    Elegí micrófono y salida para escuchar mejor.
+                  </div>
+                  <div class="telew__audioActions">
+                    <button id="telewAudioRefresh" type="button" class="telew__audioBtn">
+                      Actualizar dispositivos
+                    </button>
+                  </div>
                 </div>
               </div>
 

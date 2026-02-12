@@ -1201,6 +1201,87 @@
     }
 
     /**
+     * @param {string} methodName
+     * @param {Array<Array<any>>} argsVariants
+     * @returns {Promise<any>}
+     */
+    async callApiMethod(methodName, argsVariants = [[]]) {
+      if (!this.api) throw new Error("Sin reunión activa.");
+      const method = this.api[methodName];
+      if (typeof method !== "function") {
+        throw new Error(`Método ${methodName} no disponible en Jitsi.`);
+      }
+
+      let lastError = null;
+      const variants = Array.isArray(argsVariants) && argsVariants.length ? argsVariants : [[]];
+      for (const args of variants) {
+        try {
+          const result = method.apply(this.api, Array.isArray(args) ? args : []);
+          if (result && typeof result.then === "function") {
+            return await result;
+          }
+          return result;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      throw lastError || new Error(`No se pudo ejecutar ${methodName}.`);
+    }
+
+    /**
+     * @returns {Promise<any>}
+     */
+    async getAvailableDevices() {
+      try {
+        return await this.callApiMethod("getAvailableDevices");
+      } catch (error) {
+        return null;
+      }
+    }
+
+    /**
+     * @returns {Promise<any>}
+     */
+    async getCurrentDevices() {
+      try {
+        return await this.callApiMethod("getCurrentDevices");
+      } catch (error) {
+        return null;
+      }
+    }
+
+    /**
+     * @param {string} deviceId
+     * @param {string} [label]
+     * @returns {Promise<void>}
+     */
+    async setAudioInputDevice(deviceId, label = "") {
+      const id = String(deviceId || "").trim();
+      if (!id) return;
+      await this.callApiMethod("setAudioInputDevice", [
+        [id],
+        [id, label],
+        [label, id],
+      ]);
+    }
+
+    /**
+     * @param {string} deviceId
+     * @param {string} [label]
+     * @returns {Promise<void>}
+     */
+    async setAudioOutputDevice(deviceId, label = "") {
+      const id = String(deviceId || "").trim();
+      if (!id) return;
+      await this.callApiMethod("setAudioOutputDevice", [
+        [id],
+        [id, label],
+        [label, id],
+      ]);
+    }
+
+    /**
      * @returns {boolean}
      */
     hasMeeting() {
@@ -1404,7 +1485,14 @@
      *  controls: HTMLElement,
      *  toggleMic: HTMLButtonElement,
      *  toggleCam: HTMLButtonElement,
+     *  audioConfigBtn: HTMLButtonElement,
      *  fullscreenBtn: HTMLButtonElement,
+     *  audioPanel: HTMLElement,
+     *  audioInputSelect: HTMLSelectElement,
+     *  audioOutputSelect: HTMLSelectElement,
+     *  audioInfo: HTMLElement,
+     *  audioRefreshBtn: HTMLButtonElement,
+     *  audioCloseBtn: HTMLButtonElement,
      *  soundUnlockBtn: HTMLButtonElement,
      *  roleStationBtn: HTMLButtonElement,
      *  roleMedicBtn: HTMLButtonElement,
@@ -1461,6 +1549,7 @@
       this.opSeq = 0;
       this.firebaseReady = false;
       this.fullscreenOpen = false;
+      this.audioPanelOpen = false;
       this.destroyed = false;
       this.stationRollbackInProgress = false;
 
@@ -1598,6 +1687,34 @@
 
       this.on(this.refs.toggleCam, "click", () => {
         this.jitsi.executeCommand("toggleVideo");
+      });
+
+      this.on(this.refs.audioConfigBtn, "click", () => {
+        this.toggleAudioPanel().catch((error) => {
+          console.error("[teleconsulta] Error al abrir configuración de audio", error);
+        });
+      });
+
+      this.on(this.refs.audioRefreshBtn, "click", () => {
+        this.refreshAudioDevices().catch((error) => {
+          console.error("[teleconsulta] Error al refrescar dispositivos de audio", error);
+        });
+      });
+
+      this.on(this.refs.audioCloseBtn, "click", () => {
+        this.closeAudioPanel({ silent: true });
+      });
+
+      this.on(this.refs.audioInputSelect, "change", () => {
+        this.applyAudioInputSelection().catch((error) => {
+          console.error("[teleconsulta] Error al cambiar micrófono", error);
+        });
+      });
+
+      this.on(this.refs.audioOutputSelect, "change", () => {
+        this.applyAudioOutputSelection().catch((error) => {
+          console.error("[teleconsulta] Error al cambiar salida de audio", error);
+        });
       });
 
       this.on(this.refs.fullscreenBtn, "click", () => {
@@ -2518,6 +2635,311 @@
     syncMuteButtons(state) {
       this.refs.toggleMic.setAttribute("aria-pressed", String(!state.audioMuted));
       this.refs.toggleCam.setAttribute("aria-pressed", String(!state.videoMuted));
+      this.refs.audioConfigBtn.setAttribute("aria-pressed", String(this.audioPanelOpen));
+      this.refs.audioConfigBtn.setAttribute("aria-expanded", String(this.audioPanelOpen));
+    }
+
+    /**
+     * @param {string} message
+     * @param {'info'|'ok'|'warn'} [tone]
+     */
+    setAudioInfo(message, tone = "info") {
+      this.refs.audioInfo.textContent = String(message || "").trim() || "Sin cambios de audio.";
+      this.refs.audioInfo.dataset.tone = tone;
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    isLikelyIOS() {
+      const ua = String(navigator.userAgent || "").toLowerCase();
+      if (/iphone|ipad|ipod/.test(ua)) return true;
+      const isMacTouch =
+        /macintosh/.test(ua) &&
+        typeof navigator.maxTouchPoints === "number" &&
+        navigator.maxTouchPoints > 1;
+      return isMacTouch;
+    }
+
+    /**
+     * @param {any} device
+     * @param {'audioinput'|'audiooutput'} fallbackKind
+     * @returns {{deviceId: string, label: string, kind: 'audioinput'|'audiooutput'} | null}
+     */
+    normalizeAudioDevice(device, fallbackKind) {
+      if (!device || typeof device !== "object") return null;
+      const rawKind = String(device.kind || fallbackKind || "")
+        .trim()
+        .toLowerCase();
+      const kind = rawKind.includes("output") ? "audiooutput" : "audioinput";
+      const deviceId = String(device.deviceId || device.id || "").trim();
+      if (!deviceId) return null;
+      const fallbackLabel = kind === "audiooutput" ? "Salida de sistema" : "Micrófono del sistema";
+      const label = String(device.label || device.name || device.deviceLabel || "").trim() || fallbackLabel;
+      return {
+        deviceId,
+        label,
+        kind,
+      };
+    }
+
+    /**
+     * @param {any} source
+     * @returns {{inputs: Array<{deviceId: string, label: string}>, outputs: Array<{deviceId: string, label: string}>}}
+     */
+    extractAudioDevices(source) {
+      const inputMap = new Map();
+      const outputMap = new Map();
+      const addMany = (list, fallbackKind) => {
+        if (!Array.isArray(list)) return;
+        list.forEach((entry) => {
+          const normalized = this.normalizeAudioDevice(entry, fallbackKind);
+          if (!normalized) return;
+          if (normalized.kind === "audiooutput") {
+            if (!outputMap.has(normalized.deviceId)) {
+              outputMap.set(normalized.deviceId, {
+                deviceId: normalized.deviceId,
+                label: normalized.label,
+              });
+            }
+            return;
+          }
+          if (!inputMap.has(normalized.deviceId)) {
+            inputMap.set(normalized.deviceId, {
+              deviceId: normalized.deviceId,
+              label: normalized.label,
+            });
+          }
+        });
+      };
+
+      if (Array.isArray(source)) {
+        addMany(source, "audioinput");
+      } else if (source && typeof source === "object") {
+        const payload = source.devices && typeof source.devices === "object" ? source.devices : source;
+        addMany(payload.audioInput, "audioinput");
+        addMany(payload.audioInputs, "audioinput");
+        addMany(payload.audioinput, "audioinput");
+        addMany(payload.microphones, "audioinput");
+        addMany(payload.audioOutput, "audiooutput");
+        addMany(payload.audioOutputs, "audiooutput");
+        addMany(payload.audiooutput, "audiooutput");
+        addMany(payload.speakers, "audiooutput");
+      }
+
+      return {
+        inputs: Array.from(inputMap.values()),
+        outputs: Array.from(outputMap.values()),
+      };
+    }
+
+    /**
+     * @param {any} value
+     * @returns {string}
+     */
+    resolveSelectedDeviceId(value) {
+      if (!value) return "";
+      if (typeof value === "string") return value.trim();
+      if (typeof value === "object") {
+        return String(value.deviceId || value.id || "").trim();
+      }
+      return "";
+    }
+
+    /**
+     * @param {any} current
+     * @returns {{inputId: string, outputId: string}}
+     */
+    getCurrentAudioDeviceIds(current) {
+      if (!current || typeof current !== "object") {
+        return {
+          inputId: "",
+          outputId: "",
+        };
+      }
+      return {
+        inputId: this.resolveSelectedDeviceId(
+          current.audioInput ||
+            current.audioinput ||
+            current.microphone ||
+            current.mic ||
+            current.input,
+        ),
+        outputId: this.resolveSelectedDeviceId(
+          current.audioOutput ||
+            current.audiooutput ||
+            current.speaker ||
+            current.output,
+        ),
+      };
+    }
+
+    /**
+     * @param {HTMLSelectElement} selectEl
+     * @param {Array<{deviceId: string, label: string}>} devices
+     * @param {string} selectedId
+     * @param {string} fallbackLabel
+     * @returns {void}
+     */
+    renderAudioSelect(selectEl, devices, selectedId, fallbackLabel) {
+      const normalizedSelected = String(selectedId || "").trim();
+      const fragment = document.createDocumentFragment();
+      const list = Array.isArray(devices) ? devices : [];
+
+      if (!list.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = fallbackLabel;
+        fragment.appendChild(option);
+      } else {
+        list.forEach((device) => {
+          const option = document.createElement("option");
+          option.value = String(device.deviceId || "").trim();
+          option.textContent = String(device.label || "").trim() || fallbackLabel;
+          if (normalizedSelected && option.value === normalizedSelected) {
+            option.selected = true;
+          }
+          fragment.appendChild(option);
+        });
+      }
+
+      selectEl.innerHTML = "";
+      selectEl.appendChild(fragment);
+      if (!normalizedSelected && selectEl.options.length > 0) {
+        selectEl.selectedIndex = 0;
+      }
+      selectEl.disabled = !list.length;
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    async refreshAudioDevices() {
+      if (!this.jitsi.hasMeeting()) {
+        this.setAudioInfo("Abrí una llamada para configurar dispositivos de audio.", "warn");
+        return;
+      }
+
+      this.refs.audioRefreshBtn.disabled = true;
+      this.setAudioInfo("Detectando micrófonos y salida de audio...", "info");
+      try {
+        const [available, current] = await Promise.all([
+          this.jitsi.getAvailableDevices(),
+          this.jitsi.getCurrentDevices(),
+        ]);
+        const { inputs, outputs } = this.extractAudioDevices(available);
+        const { inputId, outputId } = this.getCurrentAudioDeviceIds(current);
+
+        this.renderAudioSelect(
+          this.refs.audioInputSelect,
+          inputs,
+          inputId,
+          "Micrófono del sistema",
+        );
+        this.renderAudioSelect(
+          this.refs.audioOutputSelect,
+          outputs,
+          outputId,
+          this.isLikelyIOS()
+            ? "iPhone/iPad usa la salida del sistema"
+            : "Salida del sistema",
+        );
+
+        if (!inputs.length && !outputs.length) {
+          this.setAudioInfo("El navegador no expone selección de dispositivos en esta sesión.", "warn");
+        } else if (this.isLikelyIOS()) {
+          this.setAudioInfo(
+            "En iPhone/iPad la salida depende del sistema (altavoz/audífonos). El micrófono sí es configurable.",
+            "info",
+          );
+        } else {
+          this.setAudioInfo("Dispositivos listos. Elegí micrófono y salida.", "ok");
+        }
+      } catch (error) {
+        this.setAudioInfo("No se pudo leer la configuración de audio de la llamada.", "warn");
+      } finally {
+        this.refs.audioRefreshBtn.disabled = false;
+      }
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    async applyAudioInputSelection() {
+      const deviceId = String(this.refs.audioInputSelect.value || "").trim();
+      if (!deviceId) return;
+      const label = String(
+        this.refs.audioInputSelect.selectedOptions?.[0]?.textContent || "Micrófono",
+      ).trim();
+      try {
+        await this.jitsi.setAudioInputDevice(deviceId, label);
+        this.setAudioInfo(`Micrófono activo: ${label}.`, "ok");
+        this.setStatus(`Micrófono actualizado: ${label}.`, "ok");
+      } catch (error) {
+        this.setAudioInfo("No se pudo cambiar el micrófono en esta sesión.", "warn");
+      }
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    async applyAudioOutputSelection() {
+      const deviceId = String(this.refs.audioOutputSelect.value || "").trim();
+      if (!deviceId) return;
+      const label = String(
+        this.refs.audioOutputSelect.selectedOptions?.[0]?.textContent || "Salida de audio",
+      ).trim();
+      try {
+        await this.jitsi.setAudioOutputDevice(deviceId, label);
+        this.setAudioInfo(`Salida activa: ${label}.`, "ok");
+        this.setStatus(`Salida de audio actualizada: ${label}.`, "ok");
+      } catch (error) {
+        const warning = this.isLikelyIOS()
+          ? "iPhone/iPad no permite cambiar salida desde web. Usá el selector de audio del sistema."
+          : "No se pudo cambiar la salida de audio en esta sesión.";
+        this.setAudioInfo(warning, "warn");
+      }
+    }
+
+    /**
+     * @param {{silent?: boolean}} [options]
+     */
+    closeAudioPanel(options = {}) {
+      const { silent = false } = options;
+      this.audioPanelOpen = false;
+      this.refs.audioPanel.hidden = true;
+      this.refs.audioConfigBtn.setAttribute("aria-pressed", "false");
+      this.refs.audioConfigBtn.setAttribute("aria-expanded", "false");
+      if (!silent) {
+        this.setStatus("Panel de audio cerrado.", "info");
+      }
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    async openAudioPanel() {
+      if (!this.jitsi.hasMeeting()) {
+        this.setStatus("La llamada debe estar activa para configurar audio.", "warn");
+        return;
+      }
+      this.audioPanelOpen = true;
+      this.refs.audioPanel.hidden = false;
+      this.refs.audioConfigBtn.setAttribute("aria-pressed", "true");
+      this.refs.audioConfigBtn.setAttribute("aria-expanded", "true");
+      this.setStatus("Configurá micrófono y salida de audio.", "info");
+      await this.refreshAudioDevices();
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    async toggleAudioPanel() {
+      if (this.audioPanelOpen) {
+        this.closeAudioPanel({ silent: true });
+        return;
+      }
+      await this.openAudioPanel();
     }
 
     /**
@@ -2627,16 +3049,16 @@
         this.state === "ending"
       );
 
-      this.refs.controls.hidden = !(
+      const canControlMeeting =
         this.state === "in-call" &&
         this.jitsi.hasMeeting() &&
-        !this.openInNewTab
-      );
-      this.refs.fullscreenBtn.disabled = !(
-        this.state === "in-call" &&
-        this.jitsi.hasMeeting() &&
-        !this.openInNewTab
-      );
+        !this.openInNewTab;
+      this.refs.controls.hidden = !canControlMeeting;
+      this.refs.fullscreenBtn.disabled = !canControlMeeting;
+      this.refs.audioConfigBtn.disabled = !canControlMeeting;
+      if (!canControlMeeting && this.audioPanelOpen) {
+        this.closeAudioPanel({ silent: true });
+      }
 
       const hasMeeting = this.jitsi.hasMeeting();
       this.refs.placeholder.hidden = hasMeeting;
@@ -4206,6 +4628,9 @@
     openFullscreen() {
       if (!this.jitsi.hasMeeting()) return;
       if (this.fullscreenOpen) return;
+      if (this.audioPanelOpen) {
+        this.closeAudioPanel({ silent: true });
+      }
 
       this.fullscreenOpen = true;
       this.refs.fullscreenModal.classList.add("is-open");
@@ -4258,6 +4683,7 @@
       this.audioService.stop();
       this.closeIncomingModal();
       this.closeFullscreen({ restoreFocus: false });
+      this.closeAudioPanel({ silent: true });
 
       await this.jitsi.disposeMeeting();
       await this.audioService.dispose();
@@ -4321,7 +4747,14 @@
       controls: document.getElementById("telewControls"),
       toggleMic: document.getElementById("telewToggleMic"),
       toggleCam: document.getElementById("telewToggleCam"),
+      audioConfigBtn: document.getElementById("telewAudioConfig"),
       fullscreenBtn: document.getElementById("telewFullscreen"),
+      audioPanel: document.getElementById("telewAudioPanel"),
+      audioInputSelect: document.getElementById("telewAudioInput"),
+      audioOutputSelect: document.getElementById("telewAudioOutput"),
+      audioInfo: document.getElementById("telewAudioInfo"),
+      audioRefreshBtn: document.getElementById("telewAudioRefresh"),
+      audioCloseBtn: document.getElementById("telewAudioClose"),
       soundUnlockBtn: document.getElementById("telewSoundUnlock"),
       roleStationBtn: document.getElementById("telewRoleStation"),
       roleMedicBtn: document.getElementById("telewRoleMedic"),
@@ -4362,7 +4795,14 @@
       refs.controls,
       refs.toggleMic,
       refs.toggleCam,
+      refs.audioConfigBtn,
       refs.fullscreenBtn,
+      refs.audioPanel,
+      refs.audioInputSelect,
+      refs.audioOutputSelect,
+      refs.audioInfo,
+      refs.audioRefreshBtn,
+      refs.audioCloseBtn,
       refs.soundUnlockBtn,
       refs.roleStationBtn,
       refs.roleMedicBtn,
