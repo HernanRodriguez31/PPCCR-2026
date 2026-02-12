@@ -26,7 +26,11 @@ function parseModeratorFlag(value) {
   return false;
 }
 
-exports.generateJitsiToken = functions.https.onRequest(async (req, res) => {
+exports.generateJitsiToken = functions
+  .runWith({
+    secrets: ["JAAS_APP_ID", "JAAS_KID", "JAAS_PRIVATE_KEY", "DOCTOR_PIN"],
+  })
+  .https.onRequest(async (req, res) => {
   res.set("Cache-Control", "no-store");
 
   if (req.method !== "POST") {
@@ -89,6 +93,13 @@ exports.generateJitsiToken = functions.https.onRequest(async (req, res) => {
     res.status(200).json({ token, roomName, isModerator });
   } catch (error) {
     console.error("[generateJitsiToken]", error);
+    if (req.query.debug === "1") {
+      res.status(500).json({
+        error: "Token generation failed",
+        detail: String(error && error.message ? error.message : error),
+      });
+      return;
+    }
     res.status(500).json({ error: "Token generation failed" });
   }
 });
