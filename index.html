@@ -147,7 +147,7 @@
       <section
         class="section section-anchor hero"
         id="inicio"
-        aria-labelledby="hero-title"
+        aria-labelledby="hero-subtitle"
       >
         <div class="container">
           <div class="hero-card">
@@ -155,9 +155,6 @@
               <p class="hero-badge" id="hero-badge">
                 Home operativa del programa
               </p>
-              <h2 class="hero-title" id="hero-title">
-                Centro operativo del PPCCR
-              </h2>
               <p class="hero-subtitle" id="hero-subtitle">
                 Accesos rápidos, formularios y reportes
               </p>
@@ -248,6 +245,355 @@
             aria-label="Listado de guías y protocolos"
           >
             <!-- Render desde CONFIG -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ALGORITMO -->
+      <section
+        class="section section-anchor"
+        id="algoritmo"
+        aria-labelledby="algoritmo-title"
+      >
+        <div class="container">
+          <header class="section-header">
+            <h2 class="section-title" id="algoritmo-title">
+              Algoritmo de toma de decisión
+            </h2>
+            <p class="section-subtitle">
+              Carga operativa en 4 etapas. Etapa 1 activa: criterio de inclusión
+              por edad (45 años o más).
+            </p>
+          </header>
+
+          <article class="home-algo" id="home-algo" aria-label="Algoritmo operativo">
+            <nav aria-label="Etapas del algoritmo">
+              <ol class="home-algo__stepper" id="home-algo-stepper">
+                <li class="home-algo__stepper-item">
+                  <button
+                    type="button"
+                    class="home-algo__stepper-button is-current"
+                    data-home-algo-step-target="1"
+                    aria-controls="home-algo-step-1"
+                  >
+                    <span class="home-algo__stepper-index" aria-hidden="true"
+                      >1</span
+                    >
+                    <span class="home-algo__stepper-label">Criterio por edad</span>
+                  </button>
+                </li>
+                <li class="home-algo__stepper-item">
+                  <button
+                    type="button"
+                    class="home-algo__stepper-button"
+                    data-home-algo-step-target="2"
+                    aria-controls="home-algo-step-2"
+                  >
+                    <span class="home-algo__stepper-index" aria-hidden="true"
+                      >2</span
+                    >
+                    <span class="home-algo__stepper-label">Vigilancia</span>
+                  </button>
+                </li>
+                <li class="home-algo__stepper-item">
+                  <button
+                    type="button"
+                    class="home-algo__stepper-button"
+                    data-home-algo-step-target="3"
+                    aria-controls="home-algo-step-3"
+                  >
+                    <span class="home-algo__stepper-index" aria-hidden="true"
+                      >3</span
+                    >
+                    <span class="home-algo__stepper-label"
+                      >Riesgo elevado</span
+                    >
+                  </button>
+                </li>
+                <li class="home-algo__stepper-item">
+                  <button
+                    type="button"
+                    class="home-algo__stepper-button"
+                    data-home-algo-step-target="4"
+                    aria-controls="home-algo-step-4"
+                  >
+                    <span class="home-algo__stepper-index" aria-hidden="true"
+                      >4</span
+                    >
+                    <span class="home-algo__stepper-label">Decisión final</span>
+                  </button>
+                </li>
+              </ol>
+            </nav>
+
+            <section
+              class="home-algo__panel"
+              id="home-algo-step-1"
+              data-home-algo-step-panel="1"
+              aria-labelledby="home-algo-step1-title"
+            >
+              <h3 class="home-algo__panel-title" id="home-algo-step1-title">
+                Etapa 1: Criterio por edad
+              </h3>
+              <p class="home-algo__panel-copy">
+                Criterio de inclusión fijo: 45 años o más.
+              </p>
+
+              <div class="home-algo__grid">
+                <div class="home-algo__field">
+                  <label class="home-algo__label" for="home-algo-participant"
+                    >Número de participante</label
+                  >
+                  <input
+                    class="home-algo__input"
+                    id="home-algo-participant"
+                    name="home-algo-participant"
+                    type="text"
+                    maxlength="24"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="Ej: 10245"
+                  />
+                </div>
+
+                <div class="home-algo__field">
+                  <label class="home-algo__label" for="home-algo-station"
+                    >Estación saludable</label
+                  >
+                  <select
+                    class="home-algo__input"
+                    id="home-algo-station"
+                    name="home-algo-station"
+                  >
+                    <option value="">Seleccionar estación</option>
+                    <option value="Parque Saavedra">Parque Saavedra</option>
+                    <option value="Parque Rivadavia">Parque Rivadavia</option>
+                    <option value="Parque Chacabuco">Parque Chacabuco</option>
+                    <option value="Aristóbulo del Valle">
+                      Aristóbulo del Valle
+                    </option>
+                  </select>
+                </div>
+
+                <div class="home-algo__field">
+                  <label class="home-algo__label" for="home-algo-age">Edad</label>
+                  <input
+                    class="home-algo__input"
+                    id="home-algo-age"
+                    name="home-algo-age"
+                    type="number"
+                    min="0"
+                    max="120"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="45"
+                  />
+                </div>
+
+                <fieldset class="home-algo__field home-algo__field--full">
+                  <legend class="home-algo__label">Sexo</legend>
+                  <div
+                    class="home-algo__sex-switch"
+                    role="radiogroup"
+                    aria-label="Sexo del participante"
+                  >
+                    <button
+                      type="button"
+                      class="home-algo__sex-button"
+                      data-home-algo-sex="M"
+                      role="radio"
+                      aria-checked="false"
+                    >
+                      M
+                    </button>
+                    <button
+                      type="button"
+                      class="home-algo__sex-button"
+                      data-home-algo-sex="OTROS"
+                      role="radio"
+                      aria-checked="false"
+                    >
+                      Otros
+                    </button>
+                    <button
+                      type="button"
+                      class="home-algo__sex-button"
+                      data-home-algo-sex="F"
+                      role="radio"
+                      aria-checked="false"
+                    >
+                      F
+                    </button>
+                  </div>
+                </fieldset>
+              </div>
+
+              <p
+                class="home-algo__feedback"
+                id="home-algo-step1-feedback"
+                aria-live="polite"
+              >
+                Completá los datos para evaluar la inclusión en el programa.
+              </p>
+
+              <article
+                class="home-algo__alert home-algo__alert--danger"
+                id="home-algo-step1-stop"
+                role="alert"
+                hidden
+              >
+                <h4 class="home-algo__alert-title">
+                  Sin criterios de inclusion al programa
+                </h4>
+                <p class="home-algo__alert-text">
+                  La evaluación finaliza en Etapa 1 por no cumplir edad mínima
+                  de 45 años.
+                </p>
+              </article>
+
+              <article
+                class="home-algo__alert home-algo__alert--success"
+                id="home-algo-step1-ok"
+                role="status"
+                hidden
+              >
+                <h4 class="home-algo__alert-title">Criterio cumplido</h4>
+                <p class="home-algo__alert-text">
+                  Cumple criterio de inclusión por edad. Se habilita Etapa 2.
+                </p>
+              </article>
+
+              <div class="home-algo__actions">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  id="home-algo-step1-evaluate"
+                >
+                  Evaluar etapa 1
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-danger"
+                  id="home-algo-step1-finish"
+                  hidden
+                >
+                  Finalizar etapa
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  id="home-algo-step1-continue"
+                  hidden
+                >
+                  Continuar a etapa 2
+                </button>
+              </div>
+
+              <p
+                class="home-algo__save-status"
+                id="home-algo-step1-save-status"
+                aria-live="polite"
+              ></p>
+            </section>
+
+            <section
+              class="home-algo__panel"
+              id="home-algo-step-2"
+              data-home-algo-step-panel="2"
+              aria-labelledby="home-algo-step2-title"
+              hidden
+            >
+              <h3 class="home-algo__panel-title" id="home-algo-step2-title">
+                Etapa 2: Vigilancia
+              </h3>
+              <p class="home-algo__panel-copy">
+                Etapa habilitada. Continuar con la carga de criterios clínicos
+                de vigilancia.
+              </p>
+            </section>
+
+            <section
+              class="home-algo__panel"
+              id="home-algo-step-3"
+              data-home-algo-step-panel="3"
+              aria-labelledby="home-algo-step3-title"
+              hidden
+            >
+              <h3 class="home-algo__panel-title" id="home-algo-step3-title">
+                Etapa 3: Riesgo elevado
+              </h3>
+              <p class="home-algo__panel-copy">
+                Espacio reservado para la carga de criterios de riesgo elevado.
+              </p>
+            </section>
+
+            <section
+              class="home-algo__panel"
+              id="home-algo-step-4"
+              data-home-algo-step-panel="4"
+              aria-labelledby="home-algo-step4-title"
+              hidden
+            >
+              <h3 class="home-algo__panel-title" id="home-algo-step4-title">
+                Etapa 4: Decisión final
+              </h3>
+              <p class="home-algo__panel-copy">
+                Espacio reservado para la clasificación y cierre operativo final.
+              </p>
+            </section>
+          </article>
+
+          <div
+            class="home-algo__modal"
+            id="home-algo-finish-modal"
+            hidden
+            aria-hidden="true"
+          >
+            <div
+              class="home-algo__modal-backdrop"
+              data-home-algo-close-modal="true"
+            ></div>
+            <div
+              class="home-algo__modal-card"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="home-algo-modal-title"
+              tabindex="-1"
+            >
+              <h3 class="home-algo__modal-title" id="home-algo-modal-title">
+                Etapa 1 finalizada
+              </h3>
+              <p class="home-algo__modal-text" id="home-algo-modal-text">
+                Sin criterios de inclusion al programa.
+              </p>
+              <dl class="home-algo__modal-data">
+                <div class="home-algo__modal-row">
+                  <dt>Participante</dt>
+                  <dd id="home-algo-modal-participant">-</dd>
+                </div>
+                <div class="home-algo__modal-row">
+                  <dt>Estación</dt>
+                  <dd id="home-algo-modal-station">-</dd>
+                </div>
+                <div class="home-algo__modal-row">
+                  <dt>Sexo</dt>
+                  <dd id="home-algo-modal-sex">-</dd>
+                </div>
+                <div class="home-algo__modal-row">
+                  <dt>Edad</dt>
+                  <dd id="home-algo-modal-age">-</dd>
+                </div>
+              </dl>
+              <div class="home-algo__modal-actions">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  data-home-algo-close-modal="true"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>

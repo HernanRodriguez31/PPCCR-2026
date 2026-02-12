@@ -12,7 +12,12 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "rewrites": [],
+    "rewrites": [
+      {
+        "source": "/api/algorithm/stage1",
+        "function": "submitAlgorithmStage1"
+      }
+    ],
     "headers": [
       {
         "source": "assets/**",

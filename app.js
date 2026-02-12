@@ -45,8 +45,8 @@ const CONFIG = {
       {
         key: "algoritmoRiesgo",
         title: "Algoritmo / Criterios de riesgo",
-        meta: "Herramienta clínica",
-        url: "/algoritmo.html",
+        meta: "Ir a sección",
+        url: "#algoritmo",
       },
       {
         key: "rolesResponsabilidades",
@@ -168,6 +168,12 @@ const CONFIG = {
     embedReadyClass: "is-embed-ready",
   },
 
+  integrations: {
+    algorithmStage1Endpoint: "/api/algorithm/stage1",
+    algorithmStage1FallbackEndpoint:
+      "https://us-central1-ppccr-2026.cloudfunctions.net/submitAlgorithmStage1",
+  },
+
   timeline: {
     title: "Línea de tiempo operativa",
     subtitle:
@@ -257,6 +263,24 @@ const STATION_NAME_BY_ID = Object.freeze({
 
 let stationBridgeBound = false;
 let stationBridgeLastSignature = "";
+
+const ALGORITHM_HOME = Object.freeze({
+  minAge: 45,
+  steps: Object.freeze({
+    AGE: 1,
+    VIGILANCE: 2,
+    RISK: 3,
+    DECISION: 4,
+  }),
+  stations: Object.freeze([
+    "Parque Saavedra",
+    "Parque Rivadavia",
+    "Parque Chacabuco",
+    "Aristóbulo del Valle",
+  ]),
+});
+
+let homeAlgorithmState = null;
 
 /* ----------------------------- Helpers ----------------------------- */
 
@@ -1050,7 +1074,10 @@ function renderEmbeds() {
 function setMetaText() {
   const brandKickerEl = $("#brand-kicker");
   if (brandKickerEl) {
-    const unitLabel = String(CONFIG.meta.unitLabel || "").trim();
+    const unitLabelRaw = String(CONFIG.meta.unitLabel || "").trim();
+    const unitLabel = /reporte\s+semanal\s+de\s+salud/i.test(unitLabelRaw)
+      ? ""
+      : unitLabelRaw;
     brandKickerEl.textContent = unitLabel;
     brandKickerEl.hidden = unitLabel.length === 0;
   }
@@ -1059,11 +1086,6 @@ function setMetaText() {
   const programSuffix = yearLabel ? ` – ${yearLabel}` : "";
 
   $("#brand-title").textContent = `${CONFIG.meta.programName}${programSuffix}`;
-
-  const heroTitleEl = $("#hero-title");
-  if (heroTitleEl) {
-    heroTitleEl.textContent = "Centro operativo del PPCCR";
-  }
 
   const heroSubtitleEl = $("#hero-subtitle");
   if (heroSubtitleEl) {
@@ -1081,6 +1103,520 @@ function setMetaText() {
       supportEmailEl.setAttribute("tabindex", "-1");
     }
   }
+}
+
+/* -------------------------- Home: Algoritmo -------------------------- */
+
+function foldAlgorithmText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function normalizeAlgorithmStationName(value) {
+  const normalized = foldAlgorithmText(value);
+  const stationByKey = {
+    "parque saavedra": "Parque Saavedra",
+    saavedra: "Parque Saavedra",
+    "parque rivadavia": "Parque Rivadavia",
+    rivadavia: "Parque Rivadavia",
+    "parque chacabuco": "Parque Chacabuco",
+    chacabuco: "Parque Chacabuco",
+    "aristobulo del valle": "Aristóbulo del Valle",
+    aristobulo: "Aristóbulo del Valle",
+  };
+  return stationByKey[normalized] || "";
+}
+
+function setHomeAlgorithmFeedback(message, tone = "neutral") {
+  if (!homeAlgorithmState?.step1Feedback) return;
+  homeAlgorithmState.step1Feedback.textContent = message;
+  homeAlgorithmState.step1Feedback.dataset.tone = tone;
+}
+
+function getHomeAlgorithmMaxStep() {
+  if (!homeAlgorithmState) return ALGORITHM_HOME.steps.AGE;
+  return homeAlgorithmState.currentStep >= ALGORITHM_HOME.steps.VIGILANCE
+    ? ALGORITHM_HOME.steps.VIGILANCE
+    : ALGORITHM_HOME.steps.AGE;
+}
+
+function renderHomeAlgorithmStepper() {
+  if (!homeAlgorithmState) return;
+  const maxStep = getHomeAlgorithmMaxStep();
+
+  homeAlgorithmState.stepButtons.forEach((button) => {
+    const step = Number(button.dataset.homeAlgoStepTarget || "");
+    if (!Number.isFinite(step)) return;
+    const isCurrent = step === homeAlgorithmState.currentStep;
+    const isComplete = step < homeAlgorithmState.currentStep;
+    const isLocked = step > maxStep;
+
+    button.classList.toggle("is-current", isCurrent);
+    button.classList.toggle("is-complete", isComplete);
+    button.classList.toggle("is-locked", isLocked);
+    button.disabled = isLocked;
+    button.setAttribute("aria-disabled", String(isLocked));
+    if (isCurrent) {
+      button.setAttribute("aria-current", "step");
+    } else {
+      button.removeAttribute("aria-current");
+    }
+  });
+}
+
+function renderHomeAlgorithmPanels() {
+  if (!homeAlgorithmState) return;
+  homeAlgorithmState.stepPanels.forEach((panel) => {
+    const step = Number(panel.dataset.homeAlgoStepPanel || "");
+    panel.hidden = step !== homeAlgorithmState.currentStep;
+  });
+}
+
+function renderHomeAlgorithmSexButtons() {
+  if (!homeAlgorithmState) return;
+  const selected = homeAlgorithmState.selectedSex;
+
+  homeAlgorithmState.sexButtons.forEach((button) => {
+    const value = String(button.dataset.homeAlgoSex || "");
+    const isSelected = selected !== "" && value === selected;
+    button.classList.toggle("is-selected", isSelected);
+    button.setAttribute("aria-checked", String(isSelected));
+  });
+}
+
+function resetHomeAlgorithmStep1Evaluation() {
+  if (!homeAlgorithmState) return;
+  homeAlgorithmState.evaluated = false;
+  homeAlgorithmState.eligible = false;
+  homeAlgorithmState.savedOutcome = "";
+
+  homeAlgorithmState.step1Stop.hidden = true;
+  homeAlgorithmState.step1Ok.hidden = true;
+  homeAlgorithmState.step1Finish.hidden = true;
+  homeAlgorithmState.step1Continue.hidden = true;
+  homeAlgorithmState.saveStatus.textContent = "";
+
+  if (homeAlgorithmState.currentStep > ALGORITHM_HOME.steps.AGE) {
+    homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.AGE;
+    renderHomeAlgorithmPanels();
+  }
+  renderHomeAlgorithmStepper();
+}
+
+function sanitizeHomeAlgorithmInputs() {
+  if (!homeAlgorithmState) return;
+
+  const participantRaw = String(homeAlgorithmState.participantInput.value || "");
+  const participantNormalized = participantRaw.replace(/\D+/g, "").slice(0, 24);
+  if (participantNormalized !== participantRaw) {
+    homeAlgorithmState.participantInput.value = participantNormalized;
+  }
+
+  const ageRaw = String(homeAlgorithmState.ageInput.value || "").trim();
+  if (ageRaw === "") return;
+  const age = Number.parseInt(ageRaw, 10);
+  if (!Number.isFinite(age)) {
+    homeAlgorithmState.ageInput.value = "";
+    return;
+  }
+  if (age < 0) {
+    homeAlgorithmState.ageInput.value = "0";
+    return;
+  }
+  if (age > 120) {
+    homeAlgorithmState.ageInput.value = "120";
+  }
+}
+
+function getHomeAlgorithmStep1Values() {
+  if (!homeAlgorithmState) {
+    return { ok: false, message: "No se pudo iniciar la Etapa 1 del algoritmo." };
+  }
+
+  const participantNumber = String(homeAlgorithmState.participantInput.value || "").trim();
+  if (!/^\d{1,24}$/.test(participantNumber)) {
+    return { ok: false, message: "Ingresá un número de participante válido." };
+  }
+
+  const ageRaw = String(homeAlgorithmState.ageInput.value || "").trim();
+  if (ageRaw === "") {
+    return { ok: false, message: "Ingresá la edad para evaluar inclusión." };
+  }
+
+  const age = Number.parseInt(ageRaw, 10);
+  if (!Number.isFinite(age) || age < 0 || age > 120) {
+    return { ok: false, message: "La edad debe estar entre 0 y 120 años." };
+  }
+
+  const stationName = normalizeAlgorithmStationName(homeAlgorithmState.stationSelect.value);
+  if (!stationName) {
+    return { ok: false, message: "Seleccioná una estación saludable válida." };
+  }
+
+  const sex = String(homeAlgorithmState.selectedSex || "").trim();
+  if (!sex) {
+    return { ok: false, message: "Seleccioná el sexo (M, Otros o F)." };
+  }
+
+  return {
+    ok: true,
+    values: {
+      participantNumber,
+      stationName,
+      sex,
+      age,
+    },
+  };
+}
+
+function setHomeAlgorithmBusyState(isBusy) {
+  if (!homeAlgorithmState) return;
+
+  homeAlgorithmState.step1Evaluate.disabled = isBusy;
+  homeAlgorithmState.step1Finish.disabled = isBusy;
+  homeAlgorithmState.step1Continue.disabled = isBusy;
+}
+
+async function postHomeAlgorithmStage1(endpoint, payload) {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  let json = null;
+  try {
+    json = await response.json();
+  } catch (_error) {
+    // respuesta no JSON
+  }
+
+  if (!response.ok) {
+    const message = json?.message || "No se pudo guardar la Etapa 1.";
+    throw new Error(message);
+  }
+  if (!json || json.ok !== true) {
+    throw new Error("Respuesta inválida del guardado de Etapa 1.");
+  }
+
+  return json;
+}
+
+async function submitHomeAlgorithmStage1(payload) {
+  const primaryEndpoint = String(CONFIG.integrations?.algorithmStage1Endpoint || "").trim();
+  const fallbackEndpoint = String(
+    CONFIG.integrations?.algorithmStage1FallbackEndpoint || "",
+  ).trim();
+
+  if (!primaryEndpoint && !fallbackEndpoint) {
+    throw new Error("No hay endpoint configurado para guardar Etapa 1.");
+  }
+
+  if (primaryEndpoint) {
+    try {
+      return await postHomeAlgorithmStage1(primaryEndpoint, payload);
+    } catch (primaryError) {
+      if (!fallbackEndpoint || fallbackEndpoint === primaryEndpoint) {
+        throw primaryError;
+      }
+    }
+  }
+
+  return postHomeAlgorithmStage1(fallbackEndpoint, payload);
+}
+
+function buildHomeAlgorithmSaveStatusMessage(responsePayload) {
+  const sheetsStatus = String(responsePayload?.sheets?.status || "").toLowerCase();
+  const backupStatus = String(responsePayload?.backup?.status || "").toLowerCase();
+
+  if (sheetsStatus === "saved" && backupStatus === "saved") {
+    return "Etapa 1 guardada en Google Sheets y respaldo Firebase.";
+  }
+  if (sheetsStatus === "saved") {
+    return "Etapa 1 guardada en Google Sheets.";
+  }
+  if (backupStatus === "saved" && sheetsStatus === "not_configured") {
+    return "Etapa 1 guardada en Firebase. Falta configurar integración con Google Sheets.";
+  }
+  if (backupStatus === "saved") {
+    return "Etapa 1 guardada en Firebase (Google Sheets pendiente).";
+  }
+  return "Etapa 1 procesada.";
+}
+
+function fillHomeAlgorithmModal(values) {
+  if (!homeAlgorithmState) return;
+
+  homeAlgorithmState.modalParticipant.textContent = values.participantNumber || "-";
+  homeAlgorithmState.modalStation.textContent = values.stationName || "-";
+  homeAlgorithmState.modalSex.textContent = values.sex || "-";
+  homeAlgorithmState.modalAge.textContent = Number.isFinite(values.age)
+    ? `${values.age} años`
+    : "-";
+}
+
+function openHomeAlgorithmModal(message, values) {
+  if (!homeAlgorithmState) return;
+
+  homeAlgorithmState.modalText.textContent = message;
+  fillHomeAlgorithmModal(values);
+  homeAlgorithmState.modal.hidden = false;
+  homeAlgorithmState.modal.setAttribute("aria-hidden", "false");
+  homeAlgorithmState.modalDialog.focus();
+}
+
+function closeHomeAlgorithmModal() {
+  if (!homeAlgorithmState) return;
+  if (homeAlgorithmState.modal.hidden) return;
+
+  homeAlgorithmState.modal.hidden = true;
+  homeAlgorithmState.modal.setAttribute("aria-hidden", "true");
+}
+
+async function persistHomeAlgorithmStage1(values, outcome) {
+  if (!homeAlgorithmState) {
+    throw new Error("No se pudo preparar el guardado de Etapa 1.");
+  }
+
+  const payload = {
+    participantNumber: values.participantNumber,
+    stationName: values.stationName,
+    sex: values.sex,
+    age: values.age,
+    outcome,
+    criterionAge: ALGORITHM_HOME.minAge,
+    source: "home",
+    submittedAt: new Date().toISOString(),
+  };
+
+  setHomeAlgorithmBusyState(true);
+  homeAlgorithmState.saveStatus.textContent = "Guardando Etapa 1...";
+
+  try {
+    const responsePayload = await submitHomeAlgorithmStage1(payload);
+    homeAlgorithmState.savedOutcome = outcome;
+    homeAlgorithmState.saveStatus.textContent = buildHomeAlgorithmSaveStatusMessage(
+      responsePayload,
+    );
+    return responsePayload;
+  } catch (error) {
+    homeAlgorithmState.saveStatus.textContent =
+      error instanceof Error ? error.message : "Error inesperado al guardar la Etapa 1.";
+    throw error;
+  } finally {
+    setHomeAlgorithmBusyState(false);
+  }
+}
+
+function syncHomeAlgorithmStationFromBridge({ force = false } = {}) {
+  if (!homeAlgorithmState?.stationSelect) return;
+  if (homeAlgorithmState.stationEditedByUser && !force) return;
+
+  const stationFromBridge =
+    window.PPCCR?.getActiveStation && typeof window.PPCCR.getActiveStation === "function"
+      ? window.PPCCR.getActiveStation()
+      : null;
+  const stationName = normalizeAlgorithmStationName(
+    stationFromBridge?.stationName || stationFromBridge?.name || "",
+  );
+  if (!stationName) return;
+
+  homeAlgorithmState.stationSelect.value = stationName;
+}
+
+function goToHomeAlgorithmStep(step) {
+  if (!homeAlgorithmState) return;
+  const target = Number(step);
+  if (!Number.isFinite(target)) return;
+
+  const bounded = Math.min(
+    Math.max(target, ALGORITHM_HOME.steps.AGE),
+    ALGORITHM_HOME.steps.DECISION,
+  );
+  const maxStep = getHomeAlgorithmMaxStep();
+  homeAlgorithmState.currentStep = Math.min(bounded, maxStep);
+  renderHomeAlgorithmPanels();
+  renderHomeAlgorithmStepper();
+}
+
+function evaluateHomeAlgorithmStep1() {
+  if (!homeAlgorithmState) return;
+  sanitizeHomeAlgorithmInputs();
+
+  const result = getHomeAlgorithmStep1Values();
+  if (!result.ok) {
+    setHomeAlgorithmFeedback(result.message, "danger");
+    homeAlgorithmState.step1Stop.hidden = true;
+    homeAlgorithmState.step1Ok.hidden = true;
+    homeAlgorithmState.step1Finish.hidden = true;
+    homeAlgorithmState.step1Continue.hidden = true;
+    return;
+  }
+
+  const { values } = result;
+  homeAlgorithmState.lastStep1Values = values;
+  homeAlgorithmState.evaluated = true;
+  homeAlgorithmState.eligible = values.age >= ALGORITHM_HOME.minAge;
+  homeAlgorithmState.savedOutcome = "";
+  homeAlgorithmState.saveStatus.textContent = "";
+
+  if (homeAlgorithmState.eligible) {
+    homeAlgorithmState.step1Stop.hidden = true;
+    homeAlgorithmState.step1Ok.hidden = false;
+    homeAlgorithmState.step1Finish.hidden = true;
+    homeAlgorithmState.step1Continue.hidden = false;
+    setHomeAlgorithmFeedback("Criterio de edad cumplido. Podés avanzar a Etapa 2.", "success");
+    return;
+  }
+
+  homeAlgorithmState.step1Stop.hidden = false;
+  homeAlgorithmState.step1Ok.hidden = true;
+  homeAlgorithmState.step1Finish.hidden = false;
+  homeAlgorithmState.step1Continue.hidden = true;
+  setHomeAlgorithmFeedback(
+    "No cumple criterio por edad. Finalizá la Etapa 1 para registrar el caso.",
+    "danger",
+  );
+}
+
+async function onHomeAlgorithmFinishStep1() {
+  if (!homeAlgorithmState?.evaluated || homeAlgorithmState.eligible) return;
+  const values = homeAlgorithmState.lastStep1Values;
+  if (!values) return;
+
+  try {
+    await persistHomeAlgorithmStage1(values, "sin_criterio_inclusion_edad");
+    openHomeAlgorithmModal("Sin criterios de inclusion al programa.", values);
+  } catch (_error) {
+    // feedback visible en save status
+  }
+}
+
+async function onHomeAlgorithmContinueStep1() {
+  if (!homeAlgorithmState?.evaluated || !homeAlgorithmState.eligible) return;
+  const values = homeAlgorithmState.lastStep1Values;
+  if (!values) return;
+
+  try {
+    await persistHomeAlgorithmStage1(values, "cumple_criterio_edad");
+    homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.VIGILANCE;
+    renderHomeAlgorithmPanels();
+    renderHomeAlgorithmStepper();
+    setHomeAlgorithmFeedback("Etapa 1 registrada. Continúa en Etapa 2.", "success");
+  } catch (_error) {
+    // feedback visible en save status
+  }
+}
+
+function initHomeAlgorithm() {
+  const root = $("#home-algo");
+  if (!root) return;
+
+  homeAlgorithmState = {
+    root,
+    currentStep: ALGORITHM_HOME.steps.AGE,
+    evaluated: false,
+    eligible: false,
+    selectedSex: "",
+    savedOutcome: "",
+    stationEditedByUser: false,
+    lastStep1Values: null,
+    stepButtons: Array.from(root.querySelectorAll("[data-home-algo-step-target]")),
+    stepPanels: Array.from(root.querySelectorAll("[data-home-algo-step-panel]")),
+    participantInput: $("#home-algo-participant"),
+    stationSelect: $("#home-algo-station"),
+    ageInput: $("#home-algo-age"),
+    sexButtons: Array.from(root.querySelectorAll("[data-home-algo-sex]")),
+    step1Feedback: $("#home-algo-step1-feedback"),
+    step1Stop: $("#home-algo-step1-stop"),
+    step1Ok: $("#home-algo-step1-ok"),
+    step1Evaluate: $("#home-algo-step1-evaluate"),
+    step1Finish: $("#home-algo-step1-finish"),
+    step1Continue: $("#home-algo-step1-continue"),
+    saveStatus: $("#home-algo-step1-save-status"),
+    modal: $("#home-algo-finish-modal"),
+    modalDialog: $(".home-algo__modal-card"),
+    modalText: $("#home-algo-modal-text"),
+    modalParticipant: $("#home-algo-modal-participant"),
+    modalStation: $("#home-algo-modal-station"),
+    modalSex: $("#home-algo-modal-sex"),
+    modalAge: $("#home-algo-modal-age"),
+  };
+
+  if (
+    !homeAlgorithmState.participantInput ||
+    !homeAlgorithmState.stationSelect ||
+    !homeAlgorithmState.ageInput ||
+    !homeAlgorithmState.step1Evaluate ||
+    !homeAlgorithmState.step1Finish ||
+    !homeAlgorithmState.step1Continue ||
+    !homeAlgorithmState.modal ||
+    !homeAlgorithmState.modalDialog
+  ) {
+    homeAlgorithmState = null;
+    return;
+  }
+
+  syncHomeAlgorithmStationFromBridge({ force: true });
+  renderHomeAlgorithmStepper();
+  renderHomeAlgorithmPanels();
+  renderHomeAlgorithmSexButtons();
+
+  homeAlgorithmState.stepButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const step = Number(button.dataset.homeAlgoStepTarget || "");
+      goToHomeAlgorithmStep(step);
+    });
+  });
+
+  homeAlgorithmState.sexButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      homeAlgorithmState.selectedSex = String(button.dataset.homeAlgoSex || "");
+      renderHomeAlgorithmSexButtons();
+      resetHomeAlgorithmStep1Evaluation();
+      setHomeAlgorithmFeedback("Sexo seleccionado. Completá o revisá el resto de los datos.");
+    });
+  });
+
+  homeAlgorithmState.participantInput.addEventListener("input", () => {
+    sanitizeHomeAlgorithmInputs();
+    resetHomeAlgorithmStep1Evaluation();
+  });
+
+  homeAlgorithmState.ageInput.addEventListener("input", () => {
+    sanitizeHomeAlgorithmInputs();
+    resetHomeAlgorithmStep1Evaluation();
+  });
+
+  homeAlgorithmState.stationSelect.addEventListener("change", () => {
+    homeAlgorithmState.stationEditedByUser = true;
+    resetHomeAlgorithmStep1Evaluation();
+  });
+
+  homeAlgorithmState.step1Evaluate.addEventListener("click", evaluateHomeAlgorithmStep1);
+  homeAlgorithmState.step1Finish.addEventListener("click", onHomeAlgorithmFinishStep1);
+  homeAlgorithmState.step1Continue.addEventListener("click", onHomeAlgorithmContinueStep1);
+
+  homeAlgorithmState.modal.addEventListener("click", (event) => {
+    const shouldClose = event.target.closest("[data-home-algo-close-modal='true']");
+    if (shouldClose) closeHomeAlgorithmModal();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (!homeAlgorithmState || homeAlgorithmState.modal.hidden) return;
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    closeHomeAlgorithmModal();
+  });
+
+  window.addEventListener("ppccr:station-changed", () => {
+    syncHomeAlgorithmStationFromBridge();
+  });
 }
 
 /* ----------------------------- Nav / UX ----------------------------- */
@@ -1724,6 +2260,7 @@ function init() {
   initEmbeds();
   renderGuides();
   renderRoles();
+  initHomeAlgorithm();
   renderTimelinePlaceholder();
   renderEmbeds();
 
