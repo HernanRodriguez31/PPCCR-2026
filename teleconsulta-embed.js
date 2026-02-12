@@ -15,9 +15,28 @@
 
   const STATION_MAP = new Map(STATIONS.map((station) => [station.id, station]));
 
+  /**
+   * @param {unknown} value
+   * @param {boolean} defaultValue
+   * @returns {boolean}
+   */
+  function parseBooleanFlag(value, defaultValue) {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    const normalized = String(value ?? "")
+      .trim()
+      .toLowerCase();
+    if (!normalized) return defaultValue;
+    if (["1", "true", "yes", "on"].includes(normalized)) return true;
+    if (["0", "false", "no", "off"].includes(normalized)) return false;
+    return defaultValue;
+  }
+
   const JITSI_DOMAIN =
     String(window.PPCCR_JITSI_DOMAIN || "").trim() || "8x8.vc";
   const JITSI_SCRIPT_SRC = `https://${JITSI_DOMAIN}/external_api.js`;
+  const ENABLE_JAAS_JWT = parseBooleanFlag(window.PPCCR_ENABLE_JAAS_JWT, false);
+  const ENABLE_GUEST_FALLBACK = parseBooleanFlag(window.PPCCR_ENABLE_GUEST_FALLBACK, true);
   const CHAT_ENABLED = Boolean(window.PPCCR_CHAT_ENABLED !== false);
 
   function getFirebaseConfigNow() {
@@ -1046,7 +1065,8 @@
      *   onAudioMuteStatus?: (muted: boolean) => void,
      *   onVideoMuteStatus?: (muted: boolean) => void,
      *   onParticipantJoined?: () => void,
-     *   onConferenceJoined?: () => void
+     *   onConferenceJoined?: () => void,
+     *   onErrorOccurred?: (payload?: any) => void
      * }} options
      * @returns {Promise<void>}
      */
@@ -1061,6 +1081,7 @@
         onVideoMuteStatus,
         onParticipantJoined,
         onConferenceJoined,
+        onErrorOccurred,
       } = options;
 
       if (!roomName) throw new Error("Room inválida");
@@ -1141,6 +1162,10 @@
 
       this.bind(api, "videoConferenceJoined", () => {
         if (typeof onConferenceJoined === "function") onConferenceJoined();
+      });
+
+      this.bind(api, "errorOccurred", (event) => {
+        if (typeof onErrorOccurred === "function") onErrorOccurred(event);
       });
     }
 
@@ -2858,8 +2883,11 @@
         hasJoinedConference: sameCall ? Boolean(previousCall?.hasJoinedConference) : false,
         wasQueued: sameCall ? Boolean(previousCall?.wasQueued) : false,
         jaasJwt: sameCall && sameRoom ? String(previousCall?.jaasJwt || "") : "",
-        jaasJwtRoom: sameCall ? nextRoom : "",
+        jaasJwtRoom: sameCall ? String(previousCall?.jaasJwtRoom || "") : "",
         jaasJwtCallId: sameCall ? nextCallId : "",
+        jaasJwtSourceRoom: sameCall ? String(previousCall?.jaasJwtSourceRoom || "") : "",
+        jaasRoom: sameCall ? String(previousCall?.jaasRoom || "") : "",
+        forceGuestJoin: sameCall ? Boolean(previousCall?.forceGuestJoin) : false,
       };
       return this.activeCall;
     }
@@ -3515,6 +3543,12 @@
         targetRole,
         hasJoinedConference: false,
         wasQueued: false,
+        jaasJwt: "",
+        jaasJwtRoom: "",
+        jaasJwtCallId: "",
+        jaasJwtSourceRoom: "",
+        jaasRoom: "",
+        forceGuestJoin: false,
       };
       this.stationSignalKey = this.getSignalKey(this.activeCall);
 
@@ -3731,18 +3765,43 @@
     }
 
     /**
+     * @param {any} payload
+     * @returns {boolean}
+     */
+    isAuthDeniedPayload(payload) {
+      const raw = String(
+        payload && typeof payload === "object" ? JSON.stringify(payload) : payload || "",
+      ).toLowerCase();
+      if (!raw) return false;
+      return (
+        raw.includes("notallowed") ||
+        raw.includes("not allowed") ||
+        raw.includes("authentication") ||
+        raw.includes("jwt") ||
+        raw.includes("token") ||
+        raw.includes("forbidden")
+      );
+    }
+
+    /**
      * @param {string} roomName
      * @param {string} [jwt]
      * @returns {string}
      */
     buildJitsiOpenUrl(roomName, jwt = "") {
-      const safeRoom = encodeURIComponent(String(roomName || "").trim());
+      const safeRoom = String(roomName || "")
+        .trim()
+        .replace(/^\/+|\/+$/g, "")
+        .split("/")
+        .filter(Boolean)
+        .map((segment) => encodeURIComponent(segment))
+        .join("/");
       const tokenQuery = jwt ? `?jwt=${encodeURIComponent(jwt)}` : "";
       return `https://${JITSI_DOMAIN}/${safeRoom}${tokenQuery}#config.prejoinPageEnabled=false&config.requireDisplayName=false`;
     }
 
     /**
-     * @param {{room?: string, callId?: string, jaasJwt?: string, jaasJwtRoom?: string, jaasJwtCallId?: string}} [call]
+     * @param {{room?: string, callId?: string, jaasJwt?: string, jaasJwtRoom?: string, jaasJwtCallId?: string, jaasJwtSourceRoom?: string, jaasRoom?: string, forceGuestJoin?: boolean}} [call]
      * @returns {Promise<string>}
      */
     async requestJaasJwtForCall(call = this.activeCall) {
@@ -3750,16 +3809,20 @@
         throw new Error("No hay llamada activa para solicitar JWT.");
       }
 
+      if (!ENABLE_JAAS_JWT || call.forceGuestJoin) {
+        return "";
+      }
+
       const callId = String(call.callId || "").trim();
-      const roomName = String(call.room || "").trim();
-      const cachedRoom = String(call.jaasJwtRoom || "").trim();
+      const sourceRoom = String(call.room || "").trim();
+      const cachedSourceRoom = String(call.jaasJwtSourceRoom || "").trim();
       const cachedCallId = String(call.jaasJwtCallId || "").trim();
 
       if (
         call.jaasJwt &&
-        cachedRoom &&
+        cachedSourceRoom &&
         cachedCallId &&
-        cachedRoom === roomName &&
+        cachedSourceRoom === sourceRoom &&
         cachedCallId === callId
       ) {
         return String(call.jaasJwt);
@@ -3774,14 +3837,17 @@
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          roomName,
+          roomName: sourceRoom,
           isModerator: false,
         }),
       });
 
       const responsePayload = await response
         .json()
-        .catch(() => /** @type {{token?: string, error?: string}} */ ({}));
+        .catch(
+          () =>
+            /** @type {{token?: string, error?: string, roomName?: string, appId?: string, jitsiDomain?: string}} */ ({}),
+        );
 
       if (!response.ok) {
         throw new Error(
@@ -3794,9 +3860,12 @@
         throw new Error("Respuesta JWT inválida.");
       }
 
+      const jaasRoom = String(responsePayload?.roomName || sourceRoom).trim() || sourceRoom;
       call.jaasJwt = token;
-      call.jaasJwtRoom = roomName;
+      call.jaasJwtRoom = jaasRoom;
       call.jaasJwtCallId = callId;
+      call.jaasJwtSourceRoom = sourceRoom;
+      call.jaasRoom = jaasRoom;
       return token;
     }
 
@@ -3838,18 +3907,43 @@
         room: call.room,
         openInNewTab: this.openInNewTab,
       });
+
+      const sourceRoom = String(call.room || "").trim();
+      let meetingRoom = String(call.jaasRoom || sourceRoom).trim() || sourceRoom;
       let jaasJwt = "";
-      try {
-        jaasJwt = await this.requestJaasJwtForCall(call);
-      } catch (error) {
-        const message = String(error?.message || "No se pudo obtener token JWT.");
-        this.setStatus(message, "error");
-        throw error;
+
+      if (!call.forceGuestJoin) {
+        try {
+          jaasJwt = await this.requestJaasJwtForCall(call);
+          meetingRoom = String(call.jaasRoom || sourceRoom).trim() || sourceRoom;
+        } catch (error) {
+          if (!ENABLE_GUEST_FALLBACK) {
+            const message = String(error?.message || "No se pudo obtener token JWT.");
+            this.setStatus(message, "error");
+            throw error;
+          }
+          call.forceGuestJoin = true;
+          call.jaasJwt = "";
+          call.jaasJwtRoom = "";
+          call.jaasJwtCallId = "";
+          call.jaasJwtSourceRoom = "";
+          call.jaasRoom = sourceRoom;
+          meetingRoom = sourceRoom;
+          this.logJitsi("jwt-fallback-guest", {
+            callId: call.callId,
+            message: String(error?.message || error || "Token rejected"),
+          });
+          this.setStatus("Reintentando acceso directo a videollamada...", "warn");
+        }
+      }
+
+      if (!meetingRoom) {
+        throw new Error("Room inválida para videollamada.");
       }
 
       if (this.openInNewTab) {
         const opened = window.open(
-          this.buildJitsiOpenUrl(call.room, jaasJwt),
+          this.buildJitsiOpenUrl(meetingRoom, jaasJwt),
           "_blank",
           "noopener,noreferrer",
         );
@@ -3860,7 +3954,7 @@
         this.joinedCallId = call.callId;
         this.logJitsi("opened-new-tab", {
           callId: call.callId,
-          room: call.room,
+          room: meetingRoom,
         });
         this.refs.externalHint.hidden = false;
         this.setPlaceholder(
@@ -3879,9 +3973,11 @@
 
       const parentNode = this.fullscreenOpen ? this.refs.fullscreenStage : this.refs.stage;
       this.jitsi.moveHost(parentNode);
+      const attemptedWithJwt = Boolean(jaasJwt);
+      let authFallbackTriggered = false;
 
       await this.jitsi.mountMeeting({
-        roomName: call.room,
+        roomName: meetingRoom,
         displayName: this.getDisplayNameForMeeting(),
         jwt: jaasJwt,
         parentNode,
@@ -3920,6 +4016,32 @@
             // no-op
           });
         },
+        onErrorOccurred: (payload) => {
+          if (!attemptedWithJwt || !ENABLE_GUEST_FALLBACK || authFallbackTriggered) return;
+          if (!this.isAuthDeniedPayload(payload)) return;
+          authFallbackTriggered = true;
+
+          const currentCall = this.activeCall;
+          if (!currentCall || currentCall.callId !== call.callId) return;
+
+          currentCall.forceGuestJoin = true;
+          currentCall.jaasJwt = "";
+          currentCall.jaasJwtRoom = "";
+          currentCall.jaasJwtCallId = "";
+          currentCall.jaasJwtSourceRoom = "";
+          currentCall.jaasRoom = String(currentCall.room || "").trim();
+          this.logJitsi("auth-fallback-guest", {
+            callId: currentCall.callId,
+            payload,
+          });
+          this.setStatus("8x8 rechazó autenticación. Reintentando acceso directo...", "warn");
+          void this.jitsi
+            .disposeMeeting()
+            .then(() => this.mountActiveMeeting(this.opSeq, { signalInCallOnJoin }))
+            .catch(() => {
+              // no-op
+            });
+        },
       });
       if (this.activeCall && this.activeCall.callId === call.callId) {
         this.activeCall.hasJoinedConference = true;
@@ -3927,7 +4049,7 @@
       this.joinedCallId = call.callId;
       this.logJitsi("mounted", {
         callId: call.callId,
-        room: call.room,
+        room: meetingRoom,
       });
 
       if (!this.isOpCurrent(op)) {

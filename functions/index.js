@@ -46,88 +46,118 @@ function normalizeJaasSub(appId, kid) {
   return `vpaas-magic-cookie-${appValue}`;
 }
 
+function normalizeJaasRoom(sub, roomName) {
+  const tenant = String(sub || "").trim();
+  const rawRoom = String(roomName || "")
+    .trim()
+    .replace(/^\/+|\/+$/g, "");
+
+  if (!rawRoom) return "";
+  if (!tenant) return rawRoom;
+  if (rawRoom.startsWith(`${tenant}/`)) return rawRoom;
+  if (/^vpaas-magic-cookie-[a-z0-9-]+\/.+$/i.test(rawRoom)) return rawRoom;
+
+  return `${tenant}/${rawRoom}`;
+}
+
 exports.generateJitsiToken = onRequest(
   {
     secrets: ["JAAS_APP_ID", "JAAS_KID", "JAAS_PRIVATE_KEY", "DOCTOR_PIN"],
   },
   async (req, res) => {
-  res.set("Cache-Control", "no-store");
+    res.set("Cache-Control", "no-store");
 
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "Method Not Allowed" });
-    return;
-  }
-
-  try {
-    const body = req.body && typeof req.body === "object" ? req.body : {};
-    const roomName = String(body.roomName || "").trim();
-    const isModerator = parseModeratorFlag(body.isModerator);
-    const doctorPin = String(body.doctorPin || "").trim();
-
-    if (!roomName) {
-      res.status(400).json({ error: "roomName is required" });
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method Not Allowed" });
       return;
     }
 
-    if (isModerator) {
-      const expectedPin = getEnvOrThrow("DOCTOR_PIN");
-      if (doctorPin !== expectedPin) {
-        res.status(403).json({ error: "Invalid doctor PIN" });
+    try {
+      const body = req.body && typeof req.body === "object" ? req.body : {};
+      const roomName = String(body.roomName || "").trim();
+      const isModerator = parseModeratorFlag(body.isModerator);
+      const doctorPin = String(body.doctorPin || "").trim();
+
+      if (!roomName) {
+        res.status(400).json({ error: "roomName is required" });
         return;
       }
-    }
 
-    const appId = getEnvOrThrow("JAAS_APP_ID");
-    const kid = getEnvOrThrow("JAAS_KID");
-    const privateKey = getPrivateKeyFromEnv();
-    const sub = normalizeJaasSub(appId, kid);
+      if (isModerator) {
+        const expectedPin = getEnvOrThrow("DOCTOR_PIN");
+        if (doctorPin !== expectedPin) {
+          res.status(403).json({ error: "Invalid doctor PIN" });
+          return;
+        }
+      }
 
-    const userContext = {
-      id: `ppccr-${Date.now()}`,
-      name: "PPCCR",
-    };
-    if (isModerator) {
-      userContext.moderator = true;
-    }
+      const appId = getEnvOrThrow("JAAS_APP_ID");
+      const kid = getEnvOrThrow("JAAS_KID");
+      const privateKey = getPrivateKeyFromEnv();
+      const sub = normalizeJaasSub(appId, kid);
+      const jaasRoomName = normalizeJaasRoom(sub, roomName);
+      if (!jaasRoomName) {
+        res.status(400).json({ error: "roomName is invalid" });
+        return;
+      }
 
-    const token = jwt.sign(
-      {
-        aud: "jitsi",
-        iss: "chat",
-        sub,
-        room: roomName,
-        context: {
-          user: userContext,
-          features: {
-            recording: "false",
-            livestreaming: "false",
-            transcription: "false",
-            "outbound-call": "false",
+      const now = Math.floor(Date.now() / 1000);
+      const userContext = {
+        id: `ppccr-${Date.now()}`,
+        name: "PPCCR",
+      };
+      if (isModerator) {
+        userContext.moderator = true;
+      }
+
+      const token = jwt.sign(
+        {
+          aud: "jitsi",
+          iss: "chat",
+          sub,
+          room: jaasRoomName,
+          nbf: now - 10,
+          exp: now + 60 * 60,
+          context: {
+            user: userContext,
+            features: {
+              recording: false,
+              livestreaming: false,
+              transcription: false,
+              "outbound-call": false,
+            },
+            room: {
+              regex: false,
+            },
           },
         },
-      },
-      privateKey,
-      {
-        algorithm: "RS256",
-        expiresIn: "1h",
-        header: {
-          kid,
-          typ: "JWT",
+        privateKey,
+        {
+          algorithm: "RS256",
+          header: {
+            kid,
+            typ: "JWT",
+          },
         },
-      },
-    );
+      );
 
-    res.status(200).json({ token, roomName, isModerator });
-  } catch (error) {
-    console.error("[generateJitsiToken]", error);
-    if (req.query.debug === "1") {
-      res.status(500).json({
-        error: "Token generation failed",
-        detail: String(error && error.message ? error.message : error),
+      res.status(200).json({
+        token,
+        roomName: jaasRoomName,
+        isModerator,
+        appId: sub,
+        jitsiDomain: "8x8.vc",
       });
-      return;
+    } catch (error) {
+      console.error("[generateJitsiToken]", error);
+      if (req.query.debug === "1") {
+        res.status(500).json({
+          error: "Token generation failed",
+          detail: String(error && error.message ? error.message : error),
+        });
+        return;
+      }
+      res.status(500).json({ error: "Token generation failed" });
     }
-    res.status(500).json({ error: "Token generation failed" });
-  }
   },
 );
