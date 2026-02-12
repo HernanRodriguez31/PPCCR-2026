@@ -26,6 +26,26 @@ function parseModeratorFlag(value) {
   return false;
 }
 
+function normalizeJaasSub(appId, kid) {
+  const appValue = String(appId || "").trim();
+  const kidPrefix = String(kid || "").trim().split("/")[0].trim();
+
+  if (kidPrefix.startsWith("vpaas-magic-cookie-")) {
+    return kidPrefix;
+  }
+
+  const match = appValue.match(/vpaas-magic-cookie-[a-z0-9-]+/i);
+  if (match && match[0]) {
+    return match[0];
+  }
+
+  if (appValue.startsWith("vpaas-magic-cookie-")) {
+    return appValue;
+  }
+
+  return `vpaas-magic-cookie-${appValue}`;
+}
+
 exports.generateJitsiToken = onRequest(
   {
     secrets: ["JAAS_APP_ID", "JAAS_KID", "JAAS_PRIVATE_KEY", "DOCTOR_PIN"],
@@ -60,6 +80,7 @@ exports.generateJitsiToken = onRequest(
     const appId = getEnvOrThrow("JAAS_APP_ID");
     const kid = getEnvOrThrow("JAAS_KID");
     const privateKey = getPrivateKeyFromEnv();
+    const sub = normalizeJaasSub(appId, kid);
 
     const userContext = {
       id: `ppccr-${Date.now()}`,
@@ -73,10 +94,16 @@ exports.generateJitsiToken = onRequest(
       {
         aud: "jitsi",
         iss: "chat",
-        sub: appId,
-        room: "*",
+        sub,
+        room: roomName,
         context: {
           user: userContext,
+          features: {
+            recording: "false",
+            livestreaming: "false",
+            transcription: "false",
+            "outbound-call": "false",
+          },
         },
       },
       privateKey,

@@ -207,7 +207,7 @@
   function getStoredOpenNewTab() {
     const raw = safeLocalGet(STORAGE_KEYS.openNewTab);
     if (!raw) {
-      const defaultValue = isIosLikeDevice();
+      const defaultValue = false;
       safeLocalSet(STORAGE_KEYS.openNewTab, defaultValue ? "1" : "0");
       return defaultValue;
     }
@@ -1419,8 +1419,10 @@
       this.state = "idle";
       this.activeCall = null;
       this.currentStation = null;
-      this.currentRole = getStoredRole();
-      this.openInNewTab = getStoredOpenNewTab();
+      this.currentRole = ROLE_STATION;
+      this.openInNewTab = false;
+      safeLocalSet(STORAGE_KEYS.role, ROLE_STATION);
+      safeLocalSet(STORAGE_KEYS.openNewTab, "0");
       this.teleDebugEnabled =
         parseBooleanLike(new URLSearchParams(window.location.search).get("teleDebug")) ||
         false;
@@ -1606,8 +1608,9 @@
       });
 
       this.on(this.refs.openNewTabToggle, "change", () => {
-        this.openInNewTab = Boolean(this.refs.openNewTabToggle.checked);
-        safeLocalSet(STORAGE_KEYS.openNewTab, this.openInNewTab ? "1" : "0");
+        this.openInNewTab = false;
+        this.refs.openNewTabToggle.checked = false;
+        safeLocalSet(STORAGE_KEYS.openNewTab, "0");
         this.renderRoleAndPrefs();
       });
 
@@ -2496,34 +2499,36 @@
      * @returns {boolean}
      */
     canUseMedicRole() {
-      return this.currentStation?.id === "admin";
+      return false;
     }
 
     /**
-     * Fuerza rol de estación para usuarios no admin.
+     * Modo simplificado: siempre estación y llamada embebida.
      */
     enforceRolePolicy() {
-      if (this.canUseMedicRole()) return;
       this.currentRole = ROLE_STATION;
+      this.openInNewTab = false;
       safeLocalSet(STORAGE_KEYS.role, ROLE_STATION);
+      safeLocalSet(STORAGE_KEYS.openNewTab, "0");
     }
 
     renderRoleAndPrefs() {
       this.enforceRolePolicy();
-      const medicEnabled = this.canUseMedicRole();
-      const isStation = this.currentRole === ROLE_STATION;
-      this.refs.roleStationBtn.setAttribute("aria-pressed", String(isStation));
-      this.refs.roleMedicBtn.setAttribute(
-        "aria-pressed",
-        String(medicEnabled && !isStation),
-      );
-      this.refs.roleMedicBtn.disabled = !medicEnabled;
-      this.refs.roleMedicBtn.hidden = !medicEnabled;
-      this.refs.openNewTabToggle.checked = Boolean(this.openInNewTab);
-      this.refs.externalHint.hidden = !(
-        this.openInNewTab &&
-        (this.state === "outgoing" || this.state === "in-call")
-      );
+      this.refs.roleStationBtn.setAttribute("aria-pressed", "true");
+      this.refs.roleMedicBtn.setAttribute("aria-pressed", "false");
+      this.refs.roleMedicBtn.disabled = true;
+      this.refs.roleMedicBtn.hidden = true;
+      const roleGroup = this.refs.roleStationBtn.closest(".telew__roleGroup");
+      if (roleGroup instanceof HTMLElement) {
+        roleGroup.hidden = true;
+      }
+      this.refs.openNewTabToggle.checked = false;
+      this.refs.openNewTabToggle.disabled = true;
+      const openTabLabel = this.refs.openNewTabToggle.closest(".telew__toggle");
+      if (openTabLabel instanceof HTMLElement) {
+        openTabLabel.hidden = true;
+      }
+      this.refs.externalHint.hidden = true;
     }
 
     renderDebugTools() {
@@ -2535,51 +2540,17 @@
      * @returns {'station'|'medic'}
      */
     getLocalRole() {
-      if (!this.canUseMedicRole()) return ROLE_STATION;
-      const stationPressed =
-        this.refs?.roleStationBtn?.getAttribute("aria-pressed") === "true";
-      const medicPressed =
-        this.refs?.roleMedicBtn?.getAttribute("aria-pressed") === "true";
-      if (stationPressed && !medicPressed) return ROLE_STATION;
-      if (medicPressed && !stationPressed) return ROLE_MEDIC;
-      return normalizeRole(this.currentRole || getStoredRole());
+      return ROLE_STATION;
     }
 
     /**
      * @param {'station'|'medic'} role
      */
     setRole(role) {
-      const requestedRole = normalizeRole(role);
-      const medicEnabled = this.canUseMedicRole();
-      if (!medicEnabled && requestedRole === ROLE_MEDIC) {
-        this.renderRoleAndPrefs();
-        this.setStatus("Modo medico disponible solo para Administrador.", "warn");
-        return;
-      }
-      const nextRole = medicEnabled ? requestedRole : ROLE_STATION;
-      if (nextRole === this.currentRole) {
-        this.renderRoleAndPrefs();
-        return;
-      }
-      this.currentRole = nextRole;
-      safeLocalSet(STORAGE_KEYS.role, this.currentRole);
+      void role;
+      this.currentRole = ROLE_STATION;
+      safeLocalSet(STORAGE_KEYS.role, ROLE_STATION);
       this.renderRoleAndPrefs();
-      if (this.firebaseReady && this.currentStation) {
-        this.firebase
-          .patchPresence(this.currentStation.id, {
-            role: this.currentRole,
-            name: this.currentStation.name,
-          })
-          .catch(() => {
-            // no-op
-          });
-      }
-      this.setStatus(
-        this.currentRole === ROLE_MEDIC
-          ? "Rol actual: Médico."
-          : "Rol actual: Estación.",
-        "info",
-      );
       this.renderChatMessages();
       this.renderTargets();
       this.syncUI();
@@ -2590,13 +2561,8 @@
      * @returns {'station'|'medic'}
      */
     getRoleForStation(stationId) {
-      const normalizedStationId = normalizeStationId(stationId);
-      if (!normalizedStationId) return ROLE_STATION;
-      if (this.currentStation && normalizedStationId === this.currentStation.id) {
-        return this.currentRole;
-      }
-      const roleFromPresence = this.presenceById[normalizedStationId]?.role;
-      return normalizeRole(roleFromPresence);
+      void stationId;
+      return ROLE_STATION;
     }
 
     /**
@@ -2607,8 +2573,9 @@
      * @returns {string}
      */
     computeHostId(fromId, toId, callerRole, targetRole) {
-      if (callerRole === ROLE_MEDIC) return fromId;
-      if (targetRole === ROLE_MEDIC) return toId;
+      void toId;
+      void callerRole;
+      void targetRole;
       return fromId;
     }
 
@@ -3447,6 +3414,13 @@
         this.setStatus("Estación offline. No se puede iniciar la llamada.", "warn");
         return null;
       }
+      if (targetStatus.code === "busy") {
+        this.setStatus(
+          `Destino ocupado (${target.name}). Reintentá en unos segundos.`,
+          "warn",
+        );
+        return null;
+      }
       await this.unlockAudioTones();
 
       const op = this.beginOp();
@@ -3499,27 +3473,12 @@
       this.syncUI();
 
       try {
-        if (targetStatus.code === "busy") {
-          await this.queueCallForBusyTarget(callPayload);
-          await this.publishQueuedCallToChat(callPayload).catch(() => {
-            // no-op
-          });
-          await this.audioService.notifyOnce();
-          this.setStatus("Destino ocupado, quedaste en cola.", "warn");
-          this.setPlaceholder(
-            "En cola",
-            "Tu llamada sigue pendiente hasta que el médico pueda atender.",
-          );
-        } else {
-          await this.writeDualActiveState(callPayload, {
-            callerStatus: "calling",
-            calleeStatus: "ringing",
-            auditStatus: "ringing",
-          });
-          if (callerRole === ROLE_STATION) {
-            await this.audioService.startRingback();
-          }
-        }
+        await this.writeDualActiveState(callPayload, {
+          callerStatus: "calling",
+          calleeStatus: "ringing",
+          auditStatus: "ringing",
+        });
+        await this.audioService.startRingback();
       } catch (error) {
         if (!this.isOpCurrent(op)) return null;
         this.audioService.stop();
@@ -3545,7 +3504,7 @@
         callerRole,
         targetRole,
         hasJoinedConference: false,
-        wasQueued: targetStatus.code === "busy",
+        wasQueued: false,
       };
       this.stationSignalKey = this.getSignalKey(this.activeCall);
 
@@ -3577,13 +3536,7 @@
         return null;
       }
 
-      if (targetStatus.code !== "busy" && callerRole === ROLE_STATION) {
-        this.armOutgoingTimeout(callId, target.id, target.name);
-      }
-      if (targetStatus.code !== "busy" && callerRole === ROLE_MEDIC) {
-        this.clearOutgoingTimeout();
-        await this.joinCallFromSignal(this.activeCall);
-      }
+      this.armOutgoingTimeout(callId, target.id, target.name);
       this.syncUI();
       return callId;
     }
@@ -3791,141 +3744,37 @@
         return String(call.jaasJwt);
       }
 
-      const TOKEN_PIN_TTL_MS = 12 * 60 * 60 * 1000;
       const tokenEndpoint =
         String(window.PPCCR_TOKEN_ENDPOINT || window.PPCCR_JAAS_TOKEN_ENDPOINT || "").trim() ||
         "/api/generateJitsiToken";
-
-      /**
-       * @returns {string}
-       */
-      const askDoctorPin = () => {
-        const input = window.prompt("Ingresá PIN médico:", "");
-        if (input === null) {
-          throw new Error("PIN médico cancelado.");
-        }
-        const typedPin = String(input).trim();
-        if (!typedPin) {
-          throw new Error("PIN médico requerido.");
-        }
-        return typedPin;
-      };
-
-      /**
-       * @returns {string}
-       */
-      const readCachedDoctorPin = () => {
-        const savedPin = safeLocalGet(STORAGE_KEYS.savedDoctorPin).trim();
-        const savedAt = Number(safeLocalGet(STORAGE_KEYS.savedDoctorPinAt) || 0);
-        if (!savedPin || !Number.isFinite(savedAt) || savedAt <= 0) {
-          if (savedPin) {
-            safeLocalRemove(STORAGE_KEYS.savedDoctorPin);
-            safeLocalRemove(STORAGE_KEYS.savedDoctorPinAt);
-          }
-          return "";
-        }
-        if (Date.now() - savedAt > TOKEN_PIN_TTL_MS) {
-          safeLocalRemove(STORAGE_KEYS.savedDoctorPin);
-          safeLocalRemove(STORAGE_KEYS.savedDoctorPinAt);
-          return "";
-        }
-        return savedPin;
-      };
-
-      /**
-       * @param {{roomName: string, isModerator: boolean, doctorPin?: string}} payload
-       * @returns {Promise<{response: Response, payload: {token?: string, error?: string}}>}
-       */
-      const requestToken = async (payload) => {
-        const response = await fetch(tokenEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-
-        const responsePayload = await response
-          .json()
-          .catch(() => /** @type {{token?: string, error?: string}} */ ({}));
-
-        return { response, payload: responsePayload };
-      };
-
-      /**
-       * @param {string} tokenValue
-       * @returns {string}
-       */
-      const finalizeToken = (tokenValue) => {
-        const token = String(tokenValue || "").trim();
-        if (!token) {
-          throw new Error("Respuesta JWT inválida.");
-        }
-        call.jaasJwt = token;
-        return token;
-      };
-
-      // Backend inspeccionado: functions/index.js espera { roomName, isModerator, doctorPin }.
-      const effectiveRole = this.getLocalRole();
-      const isModerator = effectiveRole === ROLE_MEDIC;
-
-      if (!isModerator) {
-        const result = await requestToken({
+      const response = await fetch(tokenEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           roomName: call.room,
           isModerator: false,
-        });
-        if (!result.response.ok) {
-          throw new Error(
-            String(result.payload?.error || "No se pudo generar token JWT."),
-          );
-        }
-        return finalizeToken(result.payload?.token || "");
-      }
-
-      let doctorPin = readCachedDoctorPin();
-      let attemptedWithSavedPin = Boolean(doctorPin);
-      if (!doctorPin) {
-        doctorPin = askDoctorPin();
-      }
-
-      const firstAttempt = await requestToken({
-        roomName: call.room,
-        isModerator: true,
-        doctorPin,
+        }),
       });
 
-      if (firstAttempt.response.ok) {
-        safeLocalSet(STORAGE_KEYS.savedDoctorPin, doctorPin);
-        safeLocalSet(STORAGE_KEYS.savedDoctorPinAt, String(Date.now()));
-        return finalizeToken(firstAttempt.payload?.token || "");
+      const responsePayload = await response
+        .json()
+        .catch(() => /** @type {{token?: string, error?: string}} */ ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          String(responsePayload?.error || "No se pudo generar token JWT."),
+        );
       }
 
-      if (firstAttempt.response.status === 403 && attemptedWithSavedPin) {
-        safeLocalRemove(STORAGE_KEYS.savedDoctorPin);
-        safeLocalRemove(STORAGE_KEYS.savedDoctorPinAt);
-        attemptedWithSavedPin = false;
-
-        const promptedPin = askDoctorPin();
-        const retryAttempt = await requestToken({
-          roomName: call.room,
-          isModerator: true,
-          doctorPin: promptedPin,
-        });
-
-        if (!retryAttempt.response.ok) {
-          throw new Error(
-            String(retryAttempt.payload?.error || "No se pudo generar token JWT."),
-          );
-        }
-
-        safeLocalSet(STORAGE_KEYS.savedDoctorPin, promptedPin);
-        safeLocalSet(STORAGE_KEYS.savedDoctorPinAt, String(Date.now()));
-        return finalizeToken(retryAttempt.payload?.token || "");
+      const token = String(responsePayload?.token || "").trim();
+      if (!token) {
+        throw new Error("Respuesta JWT inválida.");
       }
 
-      throw new Error(
-        String(firstAttempt.payload?.error || "No se pudo generar token JWT."),
-      );
+      call.jaasJwt = token;
+      return token;
     }
 
     /**
