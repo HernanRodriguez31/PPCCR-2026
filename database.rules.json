@@ -4,6 +4,10 @@
       "teleconsulta": {
         ".read": "auth != null",
         ".write": "auth != null",
+        "roomLocks": {
+          ".read": false,
+          ".write": false
+        },
         "estaciones": {
           "$stationId": {
             ".validate": "$stationId.matches(/^(saavedra|rivadavia|aristobulo|chacabuco|admin)$/)",

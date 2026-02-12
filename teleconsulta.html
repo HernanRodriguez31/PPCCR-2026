@@ -16,6 +16,16 @@
       href="https://programadeprevencion.com/teleconsulta.html"
     />
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <script>
+      (() => {
+        const target = new URL("/index.html", window.location.origin);
+        if (window.location.search) {
+          target.search = window.location.search;
+        }
+        target.hash = "teleconsulta";
+        window.location.replace(target.toString());
+      })();
+    </script>
     <script src="host-guard.js"></script>
     <link rel="icon" href="assets/favicon.png" />
     <link rel="stylesheet" href="styles.css" />

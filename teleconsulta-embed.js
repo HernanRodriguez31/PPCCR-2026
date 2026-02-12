@@ -77,6 +77,7 @@
     openNewTab: "ppccr_tele_open_newtab",
     savedDoctorPin: "savedDoctorPin",
     savedDoctorPinAt: "savedDoctorPinAt",
+    teleParticipantId: "ppccr_tele_participant_id",
   });
 
   const DB_BASE = "ppccr/teleconsulta";
@@ -395,6 +396,33 @@
       output += value.toString(16).padStart(2, "0");
     }
     return output;
+  }
+
+  /**
+   * @param {unknown} value
+   * @returns {string}
+   */
+  function normalizeParticipantId(value) {
+    const normalized = String(value || "")
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]/g, "");
+    return normalized.slice(0, 80);
+  }
+
+  /**
+   * @returns {string}
+   */
+  function getOrCreateTeleParticipantId() {
+    const existing = normalizeParticipantId(safeSessionGet(STORAGE_KEYS.teleParticipantId));
+    if (existing) return existing;
+
+    const created = normalizeParticipantId(`p_${Date.now().toString(36)}_${randomHex(8)}`);
+    if (created) {
+      safeSessionSet(STORAGE_KEYS.teleParticipantId, created);
+      return created;
+    }
+
+    return normalizeParticipantId(`p_${randomHex(12)}`) || "p_fallback";
   }
 
   /**
@@ -1562,6 +1590,9 @@
       this.chatMessageMap = new Map();
       this.debugBusyTimeoutId = 0;
       this.debugForceBusyUntil = 0;
+      this.roomParticipantId = getOrCreateTeleParticipantId();
+      this.roomHeartbeatTimerId = 0;
+      this.roomHeartbeatCallId = "";
 
       this.outgoingTimeoutId = 0;
       this.unsubscribePresence = null;
@@ -1613,6 +1644,13 @@
      */
     logJitsi(...args) {
       console.log("[PPCCR][JITSI]", ...args);
+    }
+
+    /**
+     * @param {...unknown} args
+     */
+    logRoom(...args) {
+      console.log("[PPCCR][ROOM]", ...args);
     }
 
     /**
@@ -1857,6 +1895,7 @@
       this.on(window, "ppccr:stationChanged", stationChangeHandler);
 
       const cleanup = () => {
+        this.releaseRoomLockSync(this.activeCall);
         this.destroy().catch(() => {
           // no-op
         });
@@ -2208,6 +2247,258 @@
 
     clearOutgoingWatch() {
       this.clearOutgoingTimeout();
+    }
+
+    /**
+     * @returns {string}
+     */
+    getTokenEndpoint() {
+      return (
+        String(window.PPCCR_TOKEN_ENDPOINT || window.PPCCR_JAAS_TOKEN_ENDPOINT || "").trim() ||
+        "/api/generateJitsiToken"
+      );
+    }
+
+    /**
+     * @param {"join"|"heartbeat"|"leave"} action
+     * @param {any} [call]
+     * @returns {{action: string, roomName: string, participantId: string, stationId: string, role: string, callId: string} | null}
+     */
+    buildRoomLockPayload(action, call = this.activeCall) {
+      const roomName = String(call?.room || "").trim();
+      const callId = String(call?.callId || "").trim();
+      const participantId = normalizeParticipantId(
+        call?.roomLockParticipantId || this.roomParticipantId,
+      );
+      const stationId = normalizeStationId(this.currentStation?.id || call?.inboxStationId || "");
+      const role = this.getLocalRole();
+      if (!roomName || !participantId) return null;
+      return {
+        action,
+        roomName,
+        participantId,
+        stationId,
+        role,
+        callId,
+      };
+    }
+
+    /**
+     * @param {any} [call]
+     * @returns {void}
+     */
+    clearCallRoomLock(call = this.activeCall) {
+      if (!call || typeof call !== "object") return;
+      call.roomLockRoomId = "";
+      call.roomLockParticipants = 0;
+      call.roomLockLeaseTtlMs = 0;
+      call.roomLockHeartbeatIntervalMs = 0;
+      call.roomLockParticipantId = "";
+    }
+
+    /**
+     * @param {any} [call]
+     * @param {any} [responsePayload]
+     */
+    applyRoomLockFromResponse(call = this.activeCall, responsePayload = {}) {
+      if (!call || typeof call !== "object") return;
+      const payload =
+        responsePayload && typeof responsePayload === "object"
+          ? /** @type {{participantId?: unknown, roomLock?: unknown}} */ (responsePayload)
+          : {};
+      const roomLock =
+        payload.roomLock && typeof payload.roomLock === "object"
+          ? /** @type {{roomId?: unknown, participants?: unknown, leaseTtlMs?: unknown, heartbeatIntervalMs?: unknown}} */ (
+              payload.roomLock
+            )
+          : {};
+
+      const participantId = normalizeParticipantId(payload.participantId || this.roomParticipantId);
+      if (participantId) {
+        this.roomParticipantId = participantId;
+        safeSessionSet(STORAGE_KEYS.teleParticipantId, participantId);
+      }
+
+      call.roomLockParticipantId = participantId || this.roomParticipantId;
+      call.roomLockRoomId = String(roomLock.roomId || "").trim();
+      call.roomLockParticipants = Number(roomLock.participants || 0);
+      call.roomLockLeaseTtlMs = Number(roomLock.leaseTtlMs || 0);
+      call.roomLockHeartbeatIntervalMs = Number(roomLock.heartbeatIntervalMs || 0);
+    }
+
+    clearRoomHeartbeat() {
+      if (this.roomHeartbeatTimerId) {
+        window.clearInterval(this.roomHeartbeatTimerId);
+        this.roomHeartbeatTimerId = 0;
+      }
+      this.roomHeartbeatCallId = "";
+    }
+
+    /**
+     * @param {any} [call]
+     * @returns {Promise<void>}
+     */
+    async sendRoomHeartbeat(call = this.activeCall) {
+      const payload = this.buildRoomLockPayload("heartbeat", call);
+      if (!payload) return;
+
+      const response = await fetch(this.getTokenEndpoint(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        keepalive: true,
+        body: JSON.stringify(payload),
+      });
+
+      const responsePayload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        this.logRoom("heartbeat-failed", {
+          room: payload.roomName,
+          callId: payload.callId,
+          participantId: payload.participantId,
+          status: response.status,
+          code: String(responsePayload?.code || ""),
+          error: String(responsePayload?.error || "heartbeat failed"),
+        });
+        return;
+      }
+
+      this.logRoom("heartbeat-ok", {
+        room: payload.roomName,
+        callId: payload.callId,
+        participantId: payload.participantId,
+        participants: Number(responsePayload?.participants || 0),
+      });
+    }
+
+    /**
+     * @param {any} [call]
+     */
+    ensureRoomHeartbeat(call = this.activeCall) {
+      const callId = String(call?.callId || "").trim();
+      if (!callId) {
+        this.clearRoomHeartbeat();
+        return;
+      }
+
+      const payload = this.buildRoomLockPayload("heartbeat", call);
+      if (!payload) {
+        this.clearRoomHeartbeat();
+        return;
+      }
+
+      const intervalMs = Math.max(5_000, Number(call?.roomLockHeartbeatIntervalMs || 15_000));
+      this.clearRoomHeartbeat();
+      this.roomHeartbeatCallId = callId;
+
+      this.roomHeartbeatTimerId = window.setInterval(() => {
+        const activeCallId = String(this.activeCall?.callId || "").trim();
+        const targetCall = activeCallId === callId ? this.activeCall : call;
+        this.sendRoomHeartbeat(targetCall).catch((error) => {
+          this.logRoom("heartbeat-error", {
+            callId,
+            message: String(error?.message || error || "heartbeat exception"),
+          });
+        });
+      }, intervalMs);
+    }
+
+    /**
+     * @param {any} [call]
+     * @param {{reason?: string}} [options]
+     * @returns {Promise<void>}
+     */
+    async releaseRoomLock(call = this.activeCall, options = {}) {
+      const { reason = "" } = options;
+      this.clearRoomHeartbeat();
+      const payload = this.buildRoomLockPayload("leave", call);
+      if (!payload) {
+        this.clearCallRoomLock(call);
+        return;
+      }
+
+      try {
+        const response = await fetch(this.getTokenEndpoint(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          keepalive: true,
+          body: JSON.stringify(payload),
+        });
+        const responsePayload = await response.json().catch(() => ({}));
+        this.logRoom("leave", {
+          room: payload.roomName,
+          callId: payload.callId,
+          participantId: payload.participantId,
+          reason,
+          status: response.status,
+          ok: response.ok,
+          participants: Number(responsePayload?.participants || 0),
+        });
+      } catch (error) {
+        this.logRoom("leave-failed", {
+          room: payload.roomName,
+          callId: payload.callId,
+          participantId: payload.participantId,
+          reason,
+          message: String(error?.message || error || "leave failed"),
+        });
+      }
+
+      this.clearCallRoomLock(call);
+      if (this.activeCall && call && this.activeCall.callId === call.callId) {
+        this.clearCallRoomLock(this.activeCall);
+      }
+    }
+
+    /**
+     * @param {any} [call]
+     */
+    releaseRoomLockSync(call = this.activeCall) {
+      this.clearRoomHeartbeat();
+      const payload = this.buildRoomLockPayload("leave", call);
+      if (!payload) {
+        this.clearCallRoomLock(call);
+        return;
+      }
+
+      const endpoint = this.getTokenEndpoint();
+      const body = JSON.stringify(payload);
+      let sent = false;
+      if (typeof navigator.sendBeacon === "function") {
+        try {
+          sent = navigator.sendBeacon(
+            endpoint,
+            new Blob([body], { type: "application/json" }),
+          );
+        } catch (error) {
+          sent = false;
+        }
+      }
+
+      if (!sent) {
+        try {
+          void fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            keepalive: true,
+            body,
+          });
+        } catch (error) {
+          // no-op
+        }
+      }
+
+      this.logRoom(sent ? "leave-beacon" : "leave-keepalive", {
+        room: payload.roomName,
+        callId: payload.callId,
+        participantId: payload.participantId,
+      });
+      this.clearCallRoomLock(call);
     }
 
     /**
@@ -3594,6 +3885,9 @@
           status: currentCall.status,
           message,
         });
+        await this.releaseRoomLock(currentCall, { reason: "join_failed" }).catch(() => {
+          // no-op
+        });
         if (!this.isOpCurrent(op)) return;
         this.activeCall = null;
         this.state = "idle";
@@ -4049,6 +4343,9 @@
         this.deferCallCleanup(this.activeCall.toId, callId);
 
         this.audioService.stop();
+        await this.releaseRoomLock(this.activeCall, { reason: "timeout" }).catch(() => {
+          // no-op
+        });
         await this.jitsi.disposeMeeting();
 
         if (!this.isOpCurrent(op)) return;
@@ -4252,19 +4549,26 @@
         cachedSourceRoom === sourceRoom &&
         cachedCallId === callId
       ) {
+        this.ensureRoomHeartbeat(call);
         return String(call.jaasJwt);
       }
 
-      const tokenEndpoint =
-        String(window.PPCCR_TOKEN_ENDPOINT || window.PPCCR_JAAS_TOKEN_ENDPOINT || "").trim() ||
-        "/api/generateJitsiToken";
+      const tokenEndpoint = this.getTokenEndpoint();
+      const participantId = normalizeParticipantId(call.roomLockParticipantId || this.roomParticipantId);
+      const stationId = normalizeStationId(this.currentStation?.id || call.inboxStationId || "");
+      const role = this.getLocalRole();
       const response = await fetch(tokenEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          action: "join",
           roomName: sourceRoom,
+          callId,
+          stationId,
+          role,
+          participantId,
           isModerator: true,
         }),
       });
@@ -4273,17 +4577,21 @@
         .json()
         .catch(
           () =>
-            /** @type {{token?: string, error?: string, roomName?: string, appId?: string, jitsiDomain?: string}} */ ({}),
+            /** @type {{token?: string, error?: string, code?: string, roomName?: string, appId?: string, jitsiDomain?: string, participantId?: string, roomLock?: unknown}} */ ({}),
         );
 
       if (!response.ok) {
-        throw new Error(
-          String(responsePayload?.error || "No se pudo generar token JWT."),
-        );
+        const error = new Error(String(responsePayload?.error || "No se pudo generar token JWT."));
+        if (responsePayload?.code) {
+          error.code = String(responsePayload.code || "").trim();
+        }
+        throw error;
       }
 
+      this.applyRoomLockFromResponse(call, responsePayload);
       const token = String(responsePayload?.token || "").trim();
       if (!token) {
+        await this.releaseRoomLock(call, { reason: "invalid_jwt_response" });
         throw new Error("Respuesta JWT inválida.");
       }
 
@@ -4293,6 +4601,14 @@
       call.jaasJwtCallId = callId;
       call.jaasJwtSourceRoom = sourceRoom;
       call.jaasRoom = jaasRoom;
+      this.ensureRoomHeartbeat(call);
+      this.logRoom("join-granted", {
+        callId,
+        room: sourceRoom,
+        participantId: call.roomLockParticipantId || this.roomParticipantId,
+        roomId: String(call.roomLockRoomId || ""),
+        participants: Number(call.roomLockParticipants || 0),
+      });
       return token;
     }
 
@@ -4346,6 +4662,23 @@
           });
           meetingRoom = String(call.jaasRoom || sourceRoom).trim() || sourceRoom;
         } catch (error) {
+          const errorCode = String(error?.code || "")
+            .trim()
+            .toUpperCase();
+          if (errorCode === "ROOM_FULL") {
+            const message = "Sala ocupada / Teleconsulta en curso";
+            this.setStatus(message, "warn");
+            this.logRoom("join-blocked", {
+              callId: call.callId,
+              room: sourceRoom,
+              participantId: call.roomLockParticipantId || this.roomParticipantId,
+              reason: "room_full",
+            });
+            const roomFullError = new Error(message);
+            roomFullError.code = "ROOM_FULL";
+            throw roomFullError;
+          }
+
           if (!ENABLE_GUEST_FALLBACK) {
             const message = String(error?.message || "No se pudo obtener token JWT.");
             this.setStatus(message, "error");
@@ -4568,6 +4901,9 @@
         this.deferCallCleanup(call.toId, call.callId);
       }
 
+      await this.releaseRoomLock(call, { reason: "hangup" }).catch(() => {
+        // no-op
+      });
       await this.jitsi.disposeMeeting();
 
       if (!this.isOpCurrent(op)) return;
@@ -4607,6 +4943,9 @@
       this.clearOutgoingWatch();
       this.audioService.stop();
       this.closeIncomingModal();
+      await this.releaseRoomLock(call, { reason: `remote_${status}` }).catch(() => {
+        // no-op
+      });
       await this.jitsi.disposeMeeting();
 
       if (call && call.callId && this.firebaseReady) {
@@ -4724,6 +5063,9 @@
       this.closeFullscreen({ restoreFocus: false });
       this.closeAudioPanel({ silent: true });
 
+      await this.releaseRoomLock(this.activeCall, { reason: "destroy" }).catch(() => {
+        // no-op
+      });
       await this.jitsi.disposeMeeting();
       await this.audioService.dispose();
 
