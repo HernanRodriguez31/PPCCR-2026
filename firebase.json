@@ -14,6 +14,14 @@
     ],
     "rewrites": [
       {
+        "source": "/api/jitsiToken",
+        "function": "generateJitsiToken"
+      },
+      {
+        "source": "/api/jitsiToken/**",
+        "function": "generateJitsiToken"
+      },
+      {
         "source": "/api/generateJitsiToken",
         "function": "generateJitsiToken"
       }
