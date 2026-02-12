@@ -2836,20 +2836,30 @@
      */
     hydrateActiveCall(call) {
       if (!this.currentStation || !call) return null;
+      const previousCall = this.activeCall;
+      const previousCallId = String(previousCall?.callId || "").trim();
+      const nextCallId = String(call.callId || "").trim();
+      const previousRoom = String(previousCall?.room || "").trim();
+      const nextRoom = String(call.room || "").trim();
+      const sameCall = previousCallId && nextCallId && previousCallId === nextCallId;
+      const sameRoom = previousRoom && nextRoom && previousRoom === nextRoom;
       const direction =
         String(call.direction || "").trim().toLowerCase() === "out" ? "out" : "in";
       const peerId = direction === "out" ? call.toId : call.fromId;
       const peerName = direction === "out" ? call.toName : call.fromName;
       this.activeCall = {
-        ...(this.activeCall || {}),
+        ...(previousCall || {}),
         ...call,
         status: this.normalizeSignalStatus(call.status),
         direction,
         peerId,
         peerName,
         inboxStationId: this.currentStation.id,
-        hasJoinedConference: Boolean(this.activeCall?.hasJoinedConference),
-        wasQueued: Boolean(this.activeCall?.wasQueued),
+        hasJoinedConference: sameCall ? Boolean(previousCall?.hasJoinedConference) : false,
+        wasQueued: sameCall ? Boolean(previousCall?.wasQueued) : false,
+        jaasJwt: sameCall && sameRoom ? String(previousCall?.jaasJwt || "") : "",
+        jaasJwtRoom: sameCall ? nextRoom : "",
+        jaasJwtCallId: sameCall ? nextCallId : "",
       };
       return this.activeCall;
     }
@@ -3732,7 +3742,7 @@
     }
 
     /**
-     * @param {{room?: string, jaasJwt?: string}} [call]
+     * @param {{room?: string, callId?: string, jaasJwt?: string, jaasJwtRoom?: string, jaasJwtCallId?: string}} [call]
      * @returns {Promise<string>}
      */
     async requestJaasJwtForCall(call = this.activeCall) {
@@ -3740,7 +3750,18 @@
         throw new Error("No hay llamada activa para solicitar JWT.");
       }
 
-      if (call.jaasJwt) {
+      const callId = String(call.callId || "").trim();
+      const roomName = String(call.room || "").trim();
+      const cachedRoom = String(call.jaasJwtRoom || "").trim();
+      const cachedCallId = String(call.jaasJwtCallId || "").trim();
+
+      if (
+        call.jaasJwt &&
+        cachedRoom &&
+        cachedCallId &&
+        cachedRoom === roomName &&
+        cachedCallId === callId
+      ) {
         return String(call.jaasJwt);
       }
 
@@ -3753,7 +3774,7 @@
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          roomName: call.room,
+          roomName,
           isModerator: false,
         }),
       });
@@ -3774,6 +3795,8 @@
       }
 
       call.jaasJwt = token;
+      call.jaasJwtRoom = roomName;
+      call.jaasJwtCallId = callId;
       return token;
     }
 
