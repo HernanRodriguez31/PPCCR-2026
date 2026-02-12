@@ -1057,10 +1057,18 @@ function setMetaText() {
 
   const yearLabel = String(CONFIG.meta.yearLabel || "").trim();
   const programSuffix = yearLabel ? ` – ${yearLabel}` : "";
-  const heroSuffix = yearLabel ? ` (${yearLabel})` : "";
 
   $("#brand-title").textContent = `${CONFIG.meta.programName}${programSuffix}`;
-  $("#hero-title").textContent = `Accesos rápidos del programa${heroSuffix}`;
+
+  const heroTitleEl = $("#hero-title");
+  if (heroTitleEl) {
+    heroTitleEl.textContent = "Centro operativo del PPCCR";
+  }
+
+  const heroSubtitleEl = $("#hero-subtitle");
+  if (heroSubtitleEl) {
+    heroSubtitleEl.textContent = "Accesos rápidos, formularios y reportes";
+  }
 
   const supportEmailEl = $("#support-email");
   if (supportEmailEl) {
