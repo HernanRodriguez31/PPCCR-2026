@@ -88,6 +88,7 @@ exports.generateJitsiToken = onRequest(
       const privateKey = getPrivateKeyFromEnv();
       const sub = normalizeJaasSub(appId, kid);
       const jaasRoomName = normalizeJaasRoom(sub, roomName);
+      const roomClaim = "*";
       if (!jaasRoomName) {
         res.status(400).json({ error: "roomName is invalid" });
         return;
@@ -107,16 +108,16 @@ exports.generateJitsiToken = onRequest(
           aud: "jitsi",
           iss: "chat",
           sub,
-          room: jaasRoomName,
+          room: roomClaim,
           nbf: now - 10,
           exp: now + 60 * 60,
           context: {
             user: userContext,
             features: {
-              recording: false,
-              livestreaming: false,
-              transcription: false,
-              "outbound-call": false,
+              recording: "false",
+              livestreaming: "false",
+              transcription: "false",
+              "outbound-call": "false",
             },
             room: {
               regex: false,
@@ -136,6 +137,7 @@ exports.generateJitsiToken = onRequest(
       res.status(200).json({
         token,
         roomName: jaasRoomName,
+        roomClaim,
         isModerator,
         requestedModerator,
         appId: sub,

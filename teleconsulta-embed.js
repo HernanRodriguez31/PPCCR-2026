@@ -3310,6 +3310,7 @@
         jaasJwtSourceRoom: sameCall ? String(previousCall?.jaasJwtSourceRoom || "") : "",
         jaasRoom: sameCall ? String(previousCall?.jaasRoom || "") : "",
         forceGuestJoin: sameCall ? Boolean(previousCall?.forceGuestJoin) : false,
+        jwtAuthRetryUsed: sameCall ? Boolean(previousCall?.jwtAuthRetryUsed) : false,
       };
       return this.activeCall;
     }
@@ -3971,6 +3972,7 @@
         jaasJwtSourceRoom: "",
         jaasRoom: "",
         forceGuestJoin: false,
+        jwtAuthRetryUsed: false,
       };
       this.stationSignalKey = this.getSignalKey(this.activeCall);
 
@@ -4224,9 +4226,11 @@
 
     /**
      * @param {{room?: string, callId?: string, jaasJwt?: string, jaasJwtRoom?: string, jaasJwtCallId?: string, jaasJwtSourceRoom?: string, jaasRoom?: string, forceGuestJoin?: boolean}} [call]
+     * @param {{forceRefresh?: boolean}} [options]
      * @returns {Promise<string>}
      */
-    async requestJaasJwtForCall(call = this.activeCall) {
+    async requestJaasJwtForCall(call = this.activeCall, options = {}) {
+      const { forceRefresh = false } = options;
       if (!call || !call.room) {
         throw new Error("No hay llamada activa para solicitar JWT.");
       }
@@ -4241,6 +4245,7 @@
       const cachedCallId = String(call.jaasJwtCallId || "").trim();
 
       if (
+        !forceRefresh &&
         call.jaasJwt &&
         cachedSourceRoom &&
         cachedCallId &&
@@ -4315,11 +4320,11 @@
 
     /**
      * @param {number} op
-     * @param {{signalInCallOnJoin?: boolean}} [options]
+     * @param {{signalInCallOnJoin?: boolean, forceTokenRefresh?: boolean}} [options]
      * @returns {Promise<void>}
      */
     async mountActiveMeeting(op, options = {}) {
-      const { signalInCallOnJoin = false } = options;
+      const { signalInCallOnJoin = false, forceTokenRefresh = false } = options;
       const call = this.activeCall;
       const station = this.currentStation;
 
@@ -4336,7 +4341,9 @@
 
       if (!call.forceGuestJoin) {
         try {
-          jaasJwt = await this.requestJaasJwtForCall(call);
+          jaasJwt = await this.requestJaasJwtForCall(call, {
+            forceRefresh: forceTokenRefresh,
+          });
           meetingRoom = String(call.jaasRoom || sourceRoom).trim() || sourceRoom;
         } catch (error) {
           if (!ENABLE_GUEST_FALLBACK) {
@@ -4439,12 +4446,44 @@
           });
         },
         onErrorOccurred: (payload) => {
-          if (!attemptedWithJwt || !ENABLE_GUEST_FALLBACK || authFallbackTriggered) return;
+          if (!attemptedWithJwt || authFallbackTriggered) return;
           if (!this.isAuthDeniedPayload(payload)) return;
           authFallbackTriggered = true;
 
           const currentCall = this.activeCall;
           if (!currentCall || currentCall.callId !== call.callId) return;
+
+          if (!currentCall.jwtAuthRetryUsed) {
+            currentCall.jwtAuthRetryUsed = true;
+            currentCall.forceGuestJoin = false;
+            currentCall.jaasJwt = "";
+            currentCall.jaasJwtRoom = "";
+            currentCall.jaasJwtCallId = "";
+            currentCall.jaasJwtSourceRoom = "";
+            currentCall.jaasRoom = "";
+            this.logJitsi("auth-retry-jwt", {
+              callId: currentCall.callId,
+              payload,
+            });
+            this.setStatus("8x8 rechazó autenticación. Reintentando con token nuevo...", "warn");
+            void this.jitsi
+              .disposeMeeting()
+              .then(() =>
+                this.mountActiveMeeting(this.opSeq, {
+                  signalInCallOnJoin,
+                  forceTokenRefresh: true,
+                }),
+              )
+              .catch(() => {
+                // no-op
+              });
+            return;
+          }
+
+          if (!ENABLE_GUEST_FALLBACK) {
+            this.setStatus("Error de autenticación en videollamada.", "error");
+            return;
+          }
 
           currentCall.forceGuestJoin = true;
           currentCall.jaasJwt = "";
