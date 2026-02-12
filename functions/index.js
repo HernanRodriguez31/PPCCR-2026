@@ -1,6 +1,6 @@
 "use strict";
 
-const functions = require("firebase-functions/v1");
+const { onRequest } = require("firebase-functions/v2/https");
 const jwt = require("jsonwebtoken");
 
 function getEnvOrThrow(name) {
@@ -26,11 +26,11 @@ function parseModeratorFlag(value) {
   return false;
 }
 
-exports.generateJitsiToken = functions
-  .runWith({
+exports.generateJitsiToken = onRequest(
+  {
     secrets: ["JAAS_APP_ID", "JAAS_KID", "JAAS_PRIVATE_KEY", "DOCTOR_PIN"],
-  })
-  .https.onRequest(async (req, res) => {
+  },
+  async (req, res) => {
   res.set("Cache-Control", "no-store");
 
   if (req.method !== "POST") {
@@ -102,4 +102,5 @@ exports.generateJitsiToken = functions
     }
     res.status(500).json({ error: "Token generation failed" });
   }
-});
+  },
+);
