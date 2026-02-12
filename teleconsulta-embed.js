@@ -94,6 +94,8 @@
 
   const CALL_TIMEOUT_MS = 35_000;
   const CALL_CLEANUP_DELAY_MS = 6_000;
+  const PRESENCE_WATCHDOG_MIN_MS = 20_000;
+  const PRESENCE_WATCHDOG_MAX_MS = 30_000;
   const CHAT_MAX_MESSAGES = 150;
   const CHAT_SEND_DEBOUNCE_MS = 1_000;
   const PENDING_CALL_STATUSES = new Set(["ringing", "queued", "calling"]);
@@ -1594,6 +1596,7 @@
       this.roomHeartbeatTimerId = 0;
       this.roomHeartbeatCallId = "";
       this.mountInProgressCallId = "";
+      this.presenceWatchdogTimerId = 0;
 
       this.outgoingTimeoutId = 0;
       this.unsubscribePresence = null;
@@ -2021,6 +2024,7 @@
         this.refs.stationName.textContent = "Sin estación";
         this.setChatAuthorName("", { persist: false });
 
+        this.clearPresenceWatchdog();
         this.clearInboxListener();
         this.clearOutgoingWatch();
         if (this.firebaseReady) {
@@ -2202,6 +2206,7 @@
       this.ownPresenceBusy = false;
       this.stationSignalKey = "";
       this.joinedCallId = "";
+      this.startPresenceWatchdog("bind_station");
 
       this.unsubscribeInbox = this.firebase.listenStationNode(
         station.id,
@@ -3386,6 +3391,78 @@
     }
 
     /**
+     * Reafirma presencia online local para evitar quedar "offline"
+     * por cortes/reconexiones al cerrar videollamada.
+     * @param {string} [reason]
+     * @returns {Promise<void>}
+     */
+    async ensureOwnPresenceOnline(reason = "") {
+      if (!this.firebaseReady || !this.currentStation || this.destroyed) return;
+      try {
+        await this.firebase.setPresence(this.currentStation, this.getLocalRole());
+        this.logSignal("presence-online", {
+          stationId: this.currentStation.id,
+          reason: String(reason || ""),
+        });
+      } catch (error) {
+        this.logSignal("presence-online-failed", {
+          stationId: this.currentStation.id,
+          reason: String(reason || ""),
+          message: String(error?.message || error || "setPresence failed"),
+        });
+      }
+    }
+
+    /**
+     * @returns {number}
+     */
+    getPresenceWatchdogDelayMs() {
+      const min = Math.max(1_000, PRESENCE_WATCHDOG_MIN_MS);
+      const max = Math.max(min, PRESENCE_WATCHDOG_MAX_MS);
+      return min + Math.floor(Math.random() * (max - min + 1));
+    }
+
+    clearPresenceWatchdog() {
+      if (this.presenceWatchdogTimerId) {
+        window.clearTimeout(this.presenceWatchdogTimerId);
+        this.presenceWatchdogTimerId = 0;
+      }
+    }
+
+    /**
+     * @param {string} [reason]
+     */
+    schedulePresenceWatchdog(reason = "") {
+      this.clearPresenceWatchdog();
+      if (!this.firebaseReady || !this.currentStation || this.destroyed) return;
+      const delay = this.getPresenceWatchdogDelayMs();
+      this.logSignal("presence-watchdog-scheduled", {
+        stationId: this.currentStation.id,
+        delayMs: delay,
+        reason: String(reason || ""),
+      });
+
+      this.presenceWatchdogTimerId = window.setTimeout(() => {
+        this.ensureOwnPresenceOnline("watchdog")
+          .catch(() => {
+            // no-op
+          })
+          .finally(() => {
+            if (!this.destroyed) {
+              this.schedulePresenceWatchdog("loop");
+            }
+          });
+      }, delay);
+    }
+
+    /**
+     * @param {string} [reason]
+     */
+    startPresenceWatchdog(reason = "") {
+      this.schedulePresenceWatchdog(reason);
+    }
+
+    /**
      * @returns {boolean}
      */
     canCallSelectedTarget() {
@@ -3911,6 +3988,7 @@
           "Iniciá una llamada o esperá una entrante.",
         );
         this.syncUI();
+        await this.ensureOwnPresenceOnline("join_failed");
         return;
       } finally {
         if (this.mountInProgressCallId === currentCall.callId) {
@@ -4377,6 +4455,7 @@
           "Iniciá una llamada o esperá una entrante.",
         );
         this.syncUI();
+        await this.ensureOwnPresenceOnline("outgoing_timeout");
       }, CALL_TIMEOUT_MS);
     }
 
@@ -4949,6 +5028,7 @@
 
       this.syncMuteButtons({ audioMuted: false, videoMuted: true });
       this.syncUI();
+      await this.ensureOwnPresenceOnline("hangup_idle");
       await this.promoteNextQueuedIncoming();
     }
 
@@ -5005,6 +5085,7 @@
       );
       this.syncMuteButtons({ audioMuted: false, videoMuted: true });
       this.syncUI();
+      await this.ensureOwnPresenceOnline(`remote_terminal_${status}`);
       await this.promoteNextQueuedIncoming();
     }
 
@@ -5069,6 +5150,7 @@
       this.destroyed = true;
 
       this.clearOutgoingWatch();
+      this.clearPresenceWatchdog();
       this.clearInboxListener();
       this.clearGlobalRealtime();
       this.clearChatRealtime();
