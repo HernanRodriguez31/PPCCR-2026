@@ -22,6 +22,14 @@
     <script>
       window.PPCCR_JITSI_DOMAIN =
         window.PPCCR_JITSI_DOMAIN || "8x8.vc";
+      window.PPCCR_ENABLE_JAAS_JWT =
+        typeof window.PPCCR_ENABLE_JAAS_JWT === "boolean"
+          ? window.PPCCR_ENABLE_JAAS_JWT
+          : true;
+      window.PPCCR_ENABLE_GUEST_FALLBACK =
+        typeof window.PPCCR_ENABLE_GUEST_FALLBACK === "boolean"
+          ? window.PPCCR_ENABLE_GUEST_FALLBACK
+          : false;
       window.PPCCR_CHAT_ENABLED =
         typeof window.PPCCR_CHAT_ENABLED === "boolean"
           ? window.PPCCR_CHAT_ENABLED
@@ -41,7 +49,7 @@
     ></script>
     <script src="/__/firebase/init.js" defer></script>
     <script src="/firebase-config.js" defer></script>
-    <script src="/teleconsulta-embed.js?v=20260212-4" defer></script>
+    <script src="/teleconsulta-embed.js?v=20260212-5" defer></script>
   </head>
 
   <body class="page-home">

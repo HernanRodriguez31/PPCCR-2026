@@ -35,8 +35,8 @@
   const JITSI_DOMAIN =
     String(window.PPCCR_JITSI_DOMAIN || "").trim() || "8x8.vc";
   const JITSI_SCRIPT_SRC = `https://${JITSI_DOMAIN}/external_api.js`;
-  const ENABLE_JAAS_JWT = parseBooleanFlag(window.PPCCR_ENABLE_JAAS_JWT, false);
-  const ENABLE_GUEST_FALLBACK = parseBooleanFlag(window.PPCCR_ENABLE_GUEST_FALLBACK, true);
+  const ENABLE_JAAS_JWT = parseBooleanFlag(window.PPCCR_ENABLE_JAAS_JWT, true);
+  const ENABLE_GUEST_FALLBACK = parseBooleanFlag(window.PPCCR_ENABLE_GUEST_FALLBACK, false);
   const CHAT_ENABLED = Boolean(window.PPCCR_CHAT_ENABLED !== false);
 
   function getFirebaseConfigNow() {
@@ -3838,7 +3838,7 @@
         },
         body: JSON.stringify({
           roomName: sourceRoom,
-          isModerator: false,
+          isModerator: true,
         }),
       });
 
