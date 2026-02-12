@@ -783,6 +783,7 @@ function renderGuides() {
 function renderRoles() {
   const grid = $("#roles-grid");
   if (!grid) return;
+  grid.innerHTML = "";
 
   const roleFormIcons = {
     entregaKitFIT:
@@ -811,30 +812,64 @@ function renderRoles() {
     evaluacionInicialSalud: "Evaluación inicial",
   };
 
-  const roles = [{ key: "enfermeria" }, { key: "medicos" }, { key: "pacientes" }];
+  const enfermeriaItems = Array.isArray(CONFIG.links.formularios?.enfermeria?.items)
+    ? [...CONFIG.links.formularios.enfermeria.items]
+    : [];
+  const medicosItems = Array.isArray(CONFIG.links.formularios?.medicos?.items)
+    ? CONFIG.links.formularios.medicos.items
+    : [];
+  const informeResultadoFIT = medicosItems.find(
+    (item) => item?.key === "informePacienteResultadoFIT",
+  );
 
-  roles.forEach((r, roleIndex) => {
-    const roleCfg = CONFIG.links.formularios[r.key];
-    if (!roleCfg) return;
+  const consolidatedItems = [...enfermeriaItems];
+  if (
+    informeResultadoFIT &&
+    !consolidatedItems.some((item) => item.key === informeResultadoFIT.key)
+  ) {
+    consolidatedItems.push(informeResultadoFIT);
+  }
+
+  const roles = consolidatedItems.length
+    ? [{ key: "registroOperativo", title: "", desc: "", items: consolidatedItems }]
+    : [];
+
+  grid.classList.toggle("role-grid--single", roles.length === 1);
+
+  roles.forEach((roleCfg, roleIndex) => {
+    if (!roleCfg || !Array.isArray(roleCfg.items) || roleCfg.items.length === 0) return;
 
     const card = document.createElement("article");
     card.className = "role-card";
     card.dataset.animate = "";
     card.style.setProperty("--delay", `${120 + roleIndex * 70}ms`);
 
-    const header = document.createElement("header");
-    header.className = "role-card__header";
+    const titleText = String(roleCfg.title || "").trim();
+    const descText = String(roleCfg.desc || "").trim();
+    const hasHeader = titleText.length > 0 || descText.length > 0;
 
-    const h = document.createElement("h3");
-    h.className = "role-card__title";
-    h.textContent = roleCfg.title;
+    if (hasHeader) {
+      const header = document.createElement("header");
+      header.className = "role-card__header";
 
-    const desc = document.createElement("p");
-    desc.className = "role-card__desc";
-    desc.textContent = roleCfg.desc;
+      if (titleText) {
+        const h = document.createElement("h3");
+        h.className = "role-card__title";
+        h.textContent = titleText;
+        header.appendChild(h);
+      }
 
-    header.appendChild(h);
-    header.appendChild(desc);
+      if (descText) {
+        const desc = document.createElement("p");
+        desc.className = "role-card__desc";
+        desc.textContent = descText;
+        header.appendChild(desc);
+      }
+
+      card.appendChild(header);
+    } else {
+      card.classList.add("role-card--single-nohead");
+    }
 
     const actions = document.createElement("div");
     actions.className = "role-card__actions role-actions";
@@ -879,7 +914,6 @@ function renderRoles() {
       actions.appendChild(a);
     });
 
-    card.appendChild(header);
     card.appendChild(actions);
     grid.appendChild(card);
   });

@@ -3279,6 +3279,10 @@ code {
   align-items: stretch;
 }
 
+.page-home .role-grid.role-grid--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .page-home .role-card {
   display: flex;
   flex-direction: column;
@@ -3326,6 +3330,11 @@ code {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.page-home .role-card--single-nohead .role-card__actions,
+.page-home .role-card--single-nohead .role-actions {
+  margin-top: 0;
 }
 
 .page-home .action-pill,
