@@ -1882,6 +1882,7 @@
       }
 
       this.currentStation = nextStation;
+      this.enforceRolePolicy();
       persistStationState(nextStation);
       this.refs.stationName.textContent = nextStation.name;
       this.loadChatAuthorForCurrentStation();
@@ -2491,10 +2492,33 @@
       this.refs.toggleCam.setAttribute("aria-pressed", String(!state.videoMuted));
     }
 
+    /**
+     * @returns {boolean}
+     */
+    canUseMedicRole() {
+      return this.currentStation?.id === "admin";
+    }
+
+    /**
+     * Fuerza rol de estación para usuarios no admin.
+     */
+    enforceRolePolicy() {
+      if (this.canUseMedicRole()) return;
+      this.currentRole = ROLE_STATION;
+      safeLocalSet(STORAGE_KEYS.role, ROLE_STATION);
+    }
+
     renderRoleAndPrefs() {
+      this.enforceRolePolicy();
+      const medicEnabled = this.canUseMedicRole();
       const isStation = this.currentRole === ROLE_STATION;
       this.refs.roleStationBtn.setAttribute("aria-pressed", String(isStation));
-      this.refs.roleMedicBtn.setAttribute("aria-pressed", String(!isStation));
+      this.refs.roleMedicBtn.setAttribute(
+        "aria-pressed",
+        String(medicEnabled && !isStation),
+      );
+      this.refs.roleMedicBtn.disabled = !medicEnabled;
+      this.refs.roleMedicBtn.hidden = !medicEnabled;
       this.refs.openNewTabToggle.checked = Boolean(this.openInNewTab);
       this.refs.externalHint.hidden = !(
         this.openInNewTab &&
@@ -2511,6 +2535,7 @@
      * @returns {'station'|'medic'}
      */
     getLocalRole() {
+      if (!this.canUseMedicRole()) return ROLE_STATION;
       const stationPressed =
         this.refs?.roleStationBtn?.getAttribute("aria-pressed") === "true";
       const medicPressed =
@@ -2524,7 +2549,14 @@
      * @param {'station'|'medic'} role
      */
     setRole(role) {
-      const nextRole = normalizeRole(role);
+      const requestedRole = normalizeRole(role);
+      const medicEnabled = this.canUseMedicRole();
+      if (!medicEnabled && requestedRole === ROLE_MEDIC) {
+        this.renderRoleAndPrefs();
+        this.setStatus("Modo medico disponible solo para Administrador.", "warn");
+        return;
+      }
+      const nextRole = medicEnabled ? requestedRole : ROLE_STATION;
       if (nextRole === this.currentRole) {
         this.renderRoleAndPrefs();
         return;
