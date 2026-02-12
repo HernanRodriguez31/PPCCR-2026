@@ -1593,6 +1593,7 @@
       this.roomParticipantId = getOrCreateTeleParticipantId();
       this.roomHeartbeatTimerId = 0;
       this.roomHeartbeatCallId = "";
+      this.mountInProgressCallId = "";
 
       this.outgoingTimeoutId = 0;
       this.unsubscribePresence = null;
@@ -3874,6 +3875,17 @@
         return;
       }
 
+      if (this.mountInProgressCallId && this.mountInProgressCallId === currentCall.callId) {
+        this.logJitsi("mount-skipped-duplicate", {
+          callId: currentCall.callId,
+          status: currentCall.status,
+        });
+        this.setStatus(`Conectando con ${currentCall.peerName}...`, "info");
+        this.syncUI();
+        return;
+      }
+
+      this.mountInProgressCallId = currentCall.callId;
       try {
         await this.mountActiveMeeting(op, {
           signalInCallOnJoin: shouldSignalInCall,
@@ -3900,6 +3912,10 @@
         );
         this.syncUI();
         return;
+      } finally {
+        if (this.mountInProgressCallId === currentCall.callId) {
+          this.mountInProgressCallId = "";
+        }
       }
 
       if (!this.isOpCurrent(op)) return;
@@ -4540,17 +4556,21 @@
       const sourceRoom = String(call.room || "").trim();
       const cachedSourceRoom = String(call.jaasJwtSourceRoom || "").trim();
       const cachedCallId = String(call.jaasJwtCallId || "").trim();
-
-      if (
+      const canReuseJwtCache = Boolean(
         !forceRefresh &&
-        call.jaasJwt &&
-        cachedSourceRoom &&
-        cachedCallId &&
-        cachedSourceRoom === sourceRoom &&
-        cachedCallId === callId
-      ) {
-        this.ensureRoomHeartbeat(call);
-        return String(call.jaasJwt);
+          call.jaasJwt &&
+          cachedSourceRoom &&
+          cachedCallId &&
+          cachedSourceRoom === sourceRoom &&
+          cachedCallId === callId,
+      );
+      if (canReuseJwtCache) {
+        this.logRoom("jwt-cache-present", {
+          callId,
+          room: sourceRoom,
+          participantId: call.roomLockParticipantId || this.roomParticipantId,
+          note: "Se revalida cupo en backend antes de reutilizar token",
+        });
       }
 
       const tokenEndpoint = this.getTokenEndpoint();
