@@ -1633,6 +1633,14 @@ code {
   cursor: default;
 }
 
+#home-algo-device-time {
+  font-weight: 400;
+}
+
+#home-algo-device-time::placeholder {
+  font-weight: 400;
+}
+
 .home-algo__input:disabled {
   cursor: not-allowed;
   opacity: 0.86;

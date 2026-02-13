@@ -1460,11 +1460,7 @@ function formatHomeAlgorithmDeviceTimestamp(timestamp, fallback = "-") {
   if (Number.isNaN(parsed.getTime())) return fallback;
 
   try {
-    return new Intl.DateTimeFormat("es-AR", {
-      dateStyle: "medium",
-      timeStyle: "medium",
-      hour12: false,
-    }).format(parsed);
+    return parsed.toLocaleString("es-AR");
   } catch (_error) {
     return parsed.toISOString();
   }
@@ -2252,17 +2248,22 @@ function onHomeAlgorithmConfirmStep1() {
     return;
   }
 
-  const now = new Date();
-  const timestamp = now.toISOString();
+  const confirmedAt = new Date();
+  const confirmedAtIso = confirmedAt.toISOString();
+  const confirmedAtDisplay = confirmedAt.toLocaleString("es-AR");
 
   homeAlgorithmState.interview.stationId = result.values.stationId;
   homeAlgorithmState.interview.stationName = result.values.stationName;
-  homeAlgorithmState.interview.deviceTimestamp = timestamp;
+  homeAlgorithmState.interview.deviceTimestamp = confirmedAtIso;
   homeAlgorithmState.interview.step1.age = result.values.age;
   homeAlgorithmState.interview.step1.sex = result.values.sex;
   homeAlgorithmState.interview.step1.sexOtherDetail =
     result.values.sex === HOME_ALGO_SEX.OTHER ? result.values.sexOtherDetail : "";
   homeAlgorithmState.interview.step1.includedByAge = result.values.age >= ALGORITHM_HOME.minAge;
+
+  if (homeAlgorithmState.deviceTimeInput) {
+    homeAlgorithmState.deviceTimeInput.value = confirmedAtDisplay;
+  }
 
   homeAlgorithmState.step1Confirmed = true;
   homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.AGE;
