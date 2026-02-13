@@ -312,23 +312,15 @@ async function reserveParticipantNumberTx(station: NormalizedStation): Promise<P
   await db.runTransaction(async (transaction) => {
     const counterSnap = await transaction.get(countersRef);
     const rawLastSequence = counterSnap.exists ? Number(counterSnap.get("lastSequence")) : 0;
-    const lastSequence =
-      Number.isFinite(rawLastSequence) && rawLastSequence > 0 ? Math.floor(rawLastSequence) : 0;
+    const lastSequence = Number.isFinite(rawLastSequence) && rawLastSequence > 0 ? Math.floor(rawLastSequence) : 0;
 
     const participantSequence = lastSequence + 1;
     const participantNumber = formatParticipantNumber(station.stationCode, participantSequence);
 
-    transaction.set(
-      countersRef,
-      {
-        stationId: station.stationId,
-        stationName: station.stationName,
-        stationCode: station.stationCode,
-        lastSequence: participantSequence,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
+    transaction.set(countersRef, {
+      lastSequence: participantSequence,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
 
     allocation = {
       participantNumber,
@@ -339,7 +331,7 @@ async function reserveParticipantNumberTx(station: NormalizedStation): Promise<P
   });
 
   if (!allocation) {
-    throw new Error("No se pudo reservar numero de participante.");
+    throw new Error("No se pudo asignar numero de participante en Firestore.");
   }
 
   return allocation;
