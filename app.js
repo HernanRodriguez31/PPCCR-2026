@@ -282,6 +282,8 @@ const ALGORITHM_HOME = Object.freeze({
 
 const HOME_ALGO_STORAGE_KEY = "ppccr_home_algorithm_interview_v1";
 const HOME_ALGO_PARTICIPANT_COUNTER_KEY = "ppccr_home_algorithm_counter_v1";
+const HOME_ALGO_STAGE1_SUBMIT_URL =
+  "https://us-central1-ppccr-2026.cloudfunctions.net/submitAlgorithmStage1";
 
 const HOME_ALGO_OUTCOME = Object.freeze({
   AGE_EXCLUDED: "AGE_EXCLUDED",
@@ -1969,9 +1971,18 @@ function renderHomeAlgorithmStatusChip() {
   if (!homeAlgorithmState?.statusChip) return;
 
   if (homeAlgorithmState.finalized && homeAlgorithmState.interview.outcome) {
-    homeAlgorithmState.statusChip.textContent = `Resultado final: ${getHomeAlgorithmOutcomeText(
-      homeAlgorithmState.interview.outcome,
-    )}`;
+    const outcomeText = getHomeAlgorithmOutcomeText(homeAlgorithmState.interview.outcome);
+    homeAlgorithmState.statusChip.textContent = "";
+
+    const label = document.createElement("span");
+    label.className = "home-algo__status-label";
+    label.textContent = "Resultado final";
+
+    const value = document.createElement("span");
+    value.className = "home-algo__status-value";
+    value.textContent = outcomeText;
+
+    homeAlgorithmState.statusChip.append(label, value);
     homeAlgorithmState.statusChip.dataset.state = "final";
     return;
   }
@@ -2249,7 +2260,46 @@ function getHomeAlgorithmStep1Values() {
   };
 }
 
+async function submitHomeAlgorithmStage1(values = {}) {
+  const payload = {
+    age: values.age,
+    sex: values.sex,
+    stationId: values.stationId,
+  };
+
+  console.log("🟡 Enviando Paso 1 al backend:", payload);
+
+  try {
+    const response = await fetch(HOME_ALGO_STAGE1_SUBMIT_URL, {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const rawBody = await response.text();
+    let parsedBody = rawBody;
+    try {
+      parsedBody = rawBody ? JSON.parse(rawBody) : {};
+    } catch (_error) {
+      parsedBody = rawBody;
+    }
+
+    console.log("🟢 Respuesta submitAlgorithmStage1:", {
+      ok: response.ok,
+      status: response.status,
+      body: parsedBody,
+    });
+  } catch (error) {
+    console.error("❌ Error enviando Paso 1 a submitAlgorithmStage1:", error);
+  }
+}
+
 function onHomeAlgorithmConfirmStep1() {
+  console.log("🔴 CLIC DETECTADO EN PASO 1");
   if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
 
   sanitizeHomeAlgorithmAgeInput();
@@ -2274,6 +2324,11 @@ function onHomeAlgorithmConfirmStep1() {
   homeAlgorithmState.interview.step1.sexOtherDetail =
     result.values.sex === HOME_ALGO_SEX.OTHER ? result.values.sexOtherDetail : "";
   homeAlgorithmState.interview.step1.includedByAge = result.values.age >= ALGORITHM_HOME.minAge;
+  void submitHomeAlgorithmStage1({
+    age: result.values.age,
+    sex: result.values.sex,
+    stationId: result.values.stationId,
+  });
 
   if (homeAlgorithmState.deviceTimeInput) {
     homeAlgorithmState.deviceTimeInput.value = confirmedAtDisplay;
@@ -2704,7 +2759,7 @@ function initHomeAlgorithm() {
   const step1Feedback = $("#home-algo-step1-feedback");
   const step1Stop = $("#home-algo-step1-stop");
   const step1Ok = $("#home-algo-step1-ok");
-  const step1Confirm = $("#home-algo-step1-confirm");
+  const step1Confirm = $("#btn-confirm-step1");
   const step1Finish = $("#home-algo-step1-finish");
   const step1Continue = $("#home-algo-step1-continue");
 

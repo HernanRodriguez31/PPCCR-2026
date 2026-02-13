@@ -1460,20 +1460,44 @@ code {
 
 .home-algo__status-chip {
   margin: 0;
-  padding: 8px 12px;
-  border-radius: 999px;
+  padding: 9px 13px;
+  border-radius: 10px;
   border: 1px solid rgba(15, 95, 166, 0.26);
   background: rgba(15, 95, 166, 0.09);
   color: var(--blue-900);
-  font-size: 0.87rem;
-  font-weight: 760;
-  line-height: 1;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  max-width: 100%;
 }
 
 .home-algo__status-chip[data-state="final"] {
-  border-color: rgba(17, 146, 92, 0.35);
-  background: rgba(222, 247, 233, 0.88);
+  border-color: rgba(17, 146, 92, 0.46);
+  border-radius: 9px;
+  background: linear-gradient(165deg, rgba(231, 251, 240, 0.98), rgba(216, 244, 228, 0.95));
   color: #0d5f3b;
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+  box-shadow:
+    0 8px 18px rgba(10, 76, 48, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.home-algo__status-label {
+  font-size: 0.74rem;
+  font-weight: 820;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #0d6a42;
+}
+
+.home-algo__status-value {
+  font-size: 0.98rem;
+  line-height: 1.45;
+  font-weight: 700;
+  color: #0b5b39;
 }
 
 .home-algo__stepper {
