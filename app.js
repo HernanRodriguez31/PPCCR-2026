@@ -1972,17 +1972,6 @@ function renderHomeAlgorithmStatusChip() {
   homeAlgorithmState.statusChip.dataset.state = "active";
 }
 
-function renderHomeAlgorithmSummary() {
-  if (!homeAlgorithmState?.summaryPre) return;
-  homeAlgorithmState.summaryPre.textContent = buildHomeAlgorithmSummaryText(
-    homeAlgorithmState.interview,
-    {
-      step2: homeAlgorithmState.step2Labels,
-      step3: homeAlgorithmState.step3Labels,
-    },
-  );
-}
-
 function renderHomeAlgorithmStep1State() {
   if (!homeAlgorithmState) return;
 
@@ -2143,7 +2132,6 @@ function renderHomeAlgorithm() {
   renderHomeAlgorithmStep1State();
   renderHomeAlgorithmStep2State();
   renderHomeAlgorithmStep3State();
-  renderHomeAlgorithmSummary();
   renderHomeAlgorithmStepLocks();
 }
 
@@ -2186,7 +2174,6 @@ function syncHomeAlgorithmStationFromBridge({ force = false } = {}) {
   }
 
   setHomeAlgorithmStationInputs();
-  renderHomeAlgorithmSummary();
   persistHomeAlgorithmDraft();
 }
 
@@ -2337,7 +2324,6 @@ function onHomeAlgorithmStep2Changed() {
     "neutral",
   );
   renderHomeAlgorithmStep2State();
-  renderHomeAlgorithmSummary();
   persistHomeAlgorithmDraft();
 }
 
@@ -2400,7 +2386,6 @@ function onHomeAlgorithmStep3Changed() {
     "neutral",
   );
   renderHomeAlgorithmStep3State();
-  renderHomeAlgorithmSummary();
   persistHomeAlgorithmDraft();
 }
 
@@ -2511,7 +2496,6 @@ function onHomeAlgorithmStep4InputChanged() {
     "neutral",
   );
 
-  renderHomeAlgorithmSummary();
   persistHomeAlgorithmDraft();
 }
 
@@ -2721,8 +2705,6 @@ function initHomeAlgorithm() {
   const step4Feedback = $("#home-algo-step4-feedback");
   const step4Finish = $("#home-algo-step4-finish");
 
-  const summaryPre = $("#home-algo-summary-pre");
-  const saveStatus = $("#home-algo-save-status");
   const statusChip = $("#home-algo-status-chip");
   const restartBtn = $("#home-algo-restart");
 
@@ -2770,8 +2752,6 @@ function initHomeAlgorithm() {
     !phoneInput ||
     !step4Feedback ||
     !step4Finish ||
-    !summaryPre ||
-    !saveStatus ||
     !statusChip ||
     !restartBtn ||
     !modal ||
@@ -2842,8 +2822,6 @@ function initHomeAlgorithm() {
     step4Feedback,
     step4Finish,
 
-    summaryPre,
-    saveStatus,
     statusChip,
     restartBtn,
 
@@ -2886,9 +2864,7 @@ function initHomeAlgorithm() {
   hydrateHomeAlgorithmFormFromInterview();
   renderHomeAlgorithm();
 
-  if (draft) {
-    homeAlgorithmState.saveStatus.textContent = "Borrador local restaurado correctamente.";
-  } else {
+  if (!draft) {
     persistHomeAlgorithmDraft({ message: "Borrador local inicializado." });
   }
 
@@ -2918,7 +2894,6 @@ function initHomeAlgorithm() {
     homeAlgorithmState.step1Confirmed = false;
     setHomeAlgorithmStationInputs();
     renderHomeAlgorithmStep1State();
-    renderHomeAlgorithmSummary();
     persistHomeAlgorithmDraft();
   });
 
@@ -2938,7 +2913,6 @@ function initHomeAlgorithm() {
       });
       setHomeAlgorithmStationInputs();
       renderHomeAlgorithmStep1State();
-      renderHomeAlgorithmSummary();
       persistHomeAlgorithmDraft();
     });
   });
@@ -2955,7 +2929,6 @@ function initHomeAlgorithm() {
     homeAlgorithmState.interview.deviceTimestamp = "";
     setHomeAlgorithmStationInputs();
     renderHomeAlgorithmStep1State();
-    renderHomeAlgorithmSummary();
     persistHomeAlgorithmDraft();
   });
 
