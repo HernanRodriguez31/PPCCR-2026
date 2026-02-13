@@ -295,7 +295,7 @@ const HOME_ALGO_OUTCOME_TEXT = Object.freeze({
   [HOME_ALGO_OUTCOME.ACTIVE_SURVEILLANCE_EXCLUDED]:
     "Exclusión por vigilancia activa. No entregar FIT.",
   [HOME_ALGO_OUTCOME.HIGH_RISK_REFERRAL]:
-    "Riesgo elevado. No candidato a campaña de screening poblacional. Recomendar consulta médica.",
+    "Riesgo elevado. No se considera candidato a campaña de screening poblacional. En estos casos la recomendación es que la persona realice una consulta médica. No entregar FIT.",
   [HOME_ALGO_OUTCOME.FIT_CANDIDATE]: "Candidato a Test FIT",
 });
 
@@ -1460,9 +1460,21 @@ function formatHomeAlgorithmDeviceTimestamp(timestamp, fallback = "-") {
   if (Number.isNaN(parsed.getTime())) return fallback;
 
   try {
-    return parsed.toLocaleString("es-AR");
+    return new Intl.DateTimeFormat("es-AR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(parsed);
   } catch (_error) {
-    return parsed.toISOString();
+    const day = String(parsed.getDate()).padStart(2, "0");
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const year = parsed.getFullYear();
+    const hour = String(parsed.getHours()).padStart(2, "0");
+    const minute = String(parsed.getMinutes()).padStart(2, "0");
+    return `${day}/${month}/${year}, ${hour}:${minute}`;
   }
 }
 
@@ -2250,7 +2262,7 @@ function onHomeAlgorithmConfirmStep1() {
 
   const confirmedAt = new Date();
   const confirmedAtIso = confirmedAt.toISOString();
-  const confirmedAtDisplay = confirmedAt.toLocaleString("es-AR");
+  const confirmedAtDisplay = formatHomeAlgorithmDeviceTimestamp(confirmedAtIso, "");
 
   homeAlgorithmState.interview.stationId = result.values.stationId;
   homeAlgorithmState.interview.stationName = result.values.stationName;
