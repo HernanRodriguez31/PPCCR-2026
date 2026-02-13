@@ -295,7 +295,7 @@ const HOME_ALGO_OUTCOME_TEXT = Object.freeze({
   [HOME_ALGO_OUTCOME.ACTIVE_SURVEILLANCE_EXCLUDED]:
     "Exclusión por vigilancia activa. No entregar FIT.",
   [HOME_ALGO_OUTCOME.HIGH_RISK_REFERRAL]:
-    "Derivación a Colonoscopía (VCC). No entregar FIT.",
+    "Riesgo elevado. No candidato a campaña de screening poblacional. Recomendar consulta médica.",
   [HOME_ALGO_OUTCOME.FIT_CANDIDATE]: "Candidato a Test FIT",
 });
 
@@ -1558,9 +1558,9 @@ function buildHomeAlgorithmModalReason(outcome, interview, labelMaps) {
       labelMaps?.step3 || new Map(),
     );
     if (items.length === 0) {
-      return "Motivo de derivación: riesgo elevado.";
+      return "Motivo de cierre: riesgo elevado.";
     }
-    return `Motivo de derivación: ${items.join(" | ")}`;
+    return `Motivo de cierre por riesgo elevado: ${items.join(" | ")}`;
   }
 
   if (outcome === HOME_ALGO_OUTCOME.FIT_CANDIDATE) {
