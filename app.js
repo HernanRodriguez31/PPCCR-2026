@@ -293,7 +293,7 @@ const HOME_ALGO_OUTCOME = Object.freeze({
 const HOME_ALGO_OUTCOME_TEXT = Object.freeze({
   [HOME_ALGO_OUTCOME.AGE_EXCLUDED]: "No incluye (<45)",
   [HOME_ALGO_OUTCOME.ACTIVE_SURVEILLANCE_EXCLUDED]:
-    "Exclusión por vigilancia activa. No entregar FIT.",
+    "Exclusión por vigilancia activa. No se considera candidato a campaña de screening poblacional. En estos casos la recomendación es que la persona realice una consulta médica. No entregar FIT.",
   [HOME_ALGO_OUTCOME.HIGH_RISK_REFERRAL]:
     "Riesgo elevado. No se considera candidato a campaña de screening poblacional. En estos casos la recomendación es que la persona realice una consulta médica. No entregar FIT.",
   [HOME_ALGO_OUTCOME.FIT_CANDIDATE]: "Candidato a Test FIT",
@@ -2098,15 +2098,17 @@ function renderHomeAlgorithmStepLocks() {
   if (!homeAlgorithmState) return;
 
   const lockStep1 =
-    homeAlgorithmState.maxUnlockedStep >= ALGORITHM_HOME.steps.VIGILANCE ||
-    homeAlgorithmState.finalized;
+    homeAlgorithmState.finalized ||
+    homeAlgorithmState.currentStep !== ALGORITHM_HOME.steps.AGE;
   const lockStep2 =
-    homeAlgorithmState.maxUnlockedStep >= ALGORITHM_HOME.steps.RISK ||
-    homeAlgorithmState.finalized;
+    homeAlgorithmState.finalized ||
+    homeAlgorithmState.currentStep !== ALGORITHM_HOME.steps.VIGILANCE;
   const lockStep3 =
-    homeAlgorithmState.maxUnlockedStep >= ALGORITHM_HOME.steps.DECISION ||
-    homeAlgorithmState.finalized;
-  const lockStep4 = homeAlgorithmState.finalized;
+    homeAlgorithmState.finalized ||
+    homeAlgorithmState.currentStep !== ALGORITHM_HOME.steps.RISK;
+  const lockStep4 =
+    homeAlgorithmState.finalized ||
+    homeAlgorithmState.currentStep !== ALGORITHM_HOME.steps.DECISION;
 
   homeAlgorithmState.ageInput.disabled = lockStep1;
   homeAlgorithmState.sexRadios.forEach((radio) => {
@@ -2330,13 +2332,19 @@ function onHomeAlgorithmStep2Changed() {
   homeAlgorithmState.interview.step2.exclusions = exclusions;
   homeAlgorithmState.interview.step2.hasExclusion = exclusions.length > 0;
   homeAlgorithmState.step2Reviewed = false;
+  homeAlgorithmState.step3Reviewed = false;
+  homeAlgorithmState.maxUnlockedStep = Math.min(
+    homeAlgorithmState.maxUnlockedStep,
+    ALGORITHM_HOME.steps.VIGILANCE,
+  );
+  homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.VIGILANCE;
 
   setHomeAlgorithmFeedback(
     homeAlgorithmState.step2Feedback,
     "Cambios detectados. Presioná Evaluar paso 2.",
     "neutral",
   );
-  renderHomeAlgorithmStep2State();
+  renderHomeAlgorithm();
   persistHomeAlgorithmDraft();
 }
 
@@ -2392,13 +2400,18 @@ function onHomeAlgorithmStep3Changed() {
   homeAlgorithmState.interview.step3.riskFlags = riskFlags;
   homeAlgorithmState.interview.step3.hasHighRisk = riskFlags.length > 0;
   homeAlgorithmState.step3Reviewed = false;
+  homeAlgorithmState.maxUnlockedStep = Math.min(
+    homeAlgorithmState.maxUnlockedStep,
+    ALGORITHM_HOME.steps.RISK,
+  );
+  homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.RISK;
 
   setHomeAlgorithmFeedback(
     homeAlgorithmState.step3Feedback,
     "Cambios detectados. Presioná Evaluar paso 3.",
     "neutral",
   );
-  renderHomeAlgorithmStep3State();
+  renderHomeAlgorithm();
   persistHomeAlgorithmDraft();
 }
 
@@ -2905,8 +2918,12 @@ function initHomeAlgorithm() {
     homeAlgorithmState.interview.deviceTimestamp = "";
 
     homeAlgorithmState.step1Confirmed = false;
+    homeAlgorithmState.step2Reviewed = false;
+    homeAlgorithmState.step3Reviewed = false;
+    homeAlgorithmState.maxUnlockedStep = ALGORITHM_HOME.steps.AGE;
+    homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.AGE;
     setHomeAlgorithmStationInputs();
-    renderHomeAlgorithmStep1State();
+    renderHomeAlgorithm();
     persistHomeAlgorithmDraft();
   });
 
@@ -2921,11 +2938,15 @@ function initHomeAlgorithm() {
         homeAlgorithmState.interview.step1.sexOtherDetail = "";
       }
       homeAlgorithmState.interview.deviceTimestamp = "";
+      homeAlgorithmState.step2Reviewed = false;
+      homeAlgorithmState.step3Reviewed = false;
+      homeAlgorithmState.maxUnlockedStep = ALGORITHM_HOME.steps.AGE;
+      homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.AGE;
       renderHomeAlgorithmSexOtherInput({
         focus: homeAlgorithmState.interview.step1.sex === HOME_ALGO_SEX.OTHER,
       });
       setHomeAlgorithmStationInputs();
-      renderHomeAlgorithmStep1State();
+      renderHomeAlgorithm();
       persistHomeAlgorithmDraft();
     });
   });
@@ -2940,8 +2961,12 @@ function initHomeAlgorithm() {
       homeAlgorithmState.sexOtherInput.value || "",
     ).trim();
     homeAlgorithmState.interview.deviceTimestamp = "";
+    homeAlgorithmState.step2Reviewed = false;
+    homeAlgorithmState.step3Reviewed = false;
+    homeAlgorithmState.maxUnlockedStep = ALGORITHM_HOME.steps.AGE;
+    homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.AGE;
     setHomeAlgorithmStationInputs();
-    renderHomeAlgorithmStep1State();
+    renderHomeAlgorithm();
     persistHomeAlgorithmDraft();
   });
 
