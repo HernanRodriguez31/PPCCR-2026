@@ -55,6 +55,8 @@ type NormalizedStation = Pick<StationDefinition, "stationId" | "stationName" | "
 type Stage1RecordBase = {
   fecha: string;
   submittedAtIso: string;
+  clientTimestampIso?: string;
+  clientParticipantId?: string;
   sex: string;
   age: number;
   criterionAge: number;
@@ -174,6 +176,17 @@ function normalizeStationById(stationId: unknown): NormalizedStation | null {
   const normalized = foldText(stationId);
   if (!normalized) return null;
   return normalizeStation(normalized);
+}
+
+function normalizeStationLenient(stationId: unknown, participantId: unknown): NormalizedStation | null {
+  const fromStationId = normalizeStation(stationId) || normalizeStationById(stationId);
+  if (fromStationId) return fromStationId;
+
+  const participantPrefix = String(participantId || "").split("-")[0] || "";
+  const fromParticipant = normalizeStation(participantPrefix);
+  if (fromParticipant) return fromParticipant;
+
+  return null;
 }
 
 function normalizeSex(value: unknown): string {
@@ -700,6 +713,8 @@ export const submitAlgorithmStage1 = onRequest(
       return;
     }
 
+    console.log("📥 Payload recibido:", req.body);
+
     let payload: Record<string, unknown>;
     try {
       payload = parseJsonBody(req);
@@ -708,6 +723,24 @@ export const submitAlgorithmStage1 = onRequest(
         ok: false,
         message: "JSON invalido.",
       });
+      return;
+    }
+
+    const participantId = String(payload.participantId || "").trim();
+    const stationIdInput = String(payload.stationId || "").trim();
+    const sexInput = String(payload.sex || "").trim();
+    const timestampInput = String(payload.timestamp || "").trim();
+    const ageInput = payload.age;
+
+    if (
+      !participantId ||
+      ageInput === undefined ||
+      ageInput === null ||
+      !sexInput ||
+      !stationIdInput ||
+      !timestampInput
+    ) {
+      res.status(400).json({ error: "Faltan datos", recibidos: req.body });
       return;
     }
 
@@ -720,16 +753,17 @@ export const submitAlgorithmStage1 = onRequest(
       return;
     }
 
-    const station = normalizeStation(payload.stationName);
+    // Lenient station validation to avoid temporary case/format mismatch issues.
+    const station = normalizeStationLenient(stationIdInput, participantId);
     if (!station) {
       res.status(400).json({
         ok: false,
-        message: `Estacion invalida. Valores permitidos: ${ALLOWED_STATIONS_TEXT}.`,
+        message: `stationId invalido. Permitidos: ${ALLOWED_STATIONS_TEXT}.`,
       });
       return;
     }
 
-    const age = Number.parseInt(String(payload.age ?? "").trim(), 10);
+    const age = Number.parseInt(String(ageInput ?? "").trim(), 10);
     if (!Number.isFinite(age) || age < 0 || age > 120) {
       res.status(400).json({
         ok: false,
@@ -738,13 +772,24 @@ export const submitAlgorithmStage1 = onRequest(
       return;
     }
 
-    const now = new Date();
+    const clientTimestamp = new Date(timestampInput);
+    if (Number.isNaN(clientTimestamp.getTime())) {
+      res.status(400).json({
+        ok: false,
+        message: "timestamp invalido. Debe ser fecha ISO valida.",
+      });
+      return;
+    }
+
+    const now = clientTimestamp;
     const ageMeetsInclusion = age >= STAGE1_MIN_AGE;
     const outcome = ageMeetsInclusion ? "cumple_criterio_edad" : "sin_criterio_inclusion_edad";
 
     const stage1RecordBase: Stage1RecordBase = {
       fecha: formatDateForSheet(now),
       submittedAtIso: now.toISOString(),
+      clientTimestampIso: timestampInput,
+      clientParticipantId: participantId,
       sex,
       age,
       criterionAge: STAGE1_MIN_AGE,

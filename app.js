@@ -2262,9 +2262,11 @@ function getHomeAlgorithmStep1Values() {
 
 async function submitHomeAlgorithmStage1(values = {}) {
   const payload = {
+    participantId: String(values.participantId || "").trim(),
     age: values.age,
     sex: values.sex,
     stationId: values.stationId,
+    timestamp: String(values.timestamp || new Date().toISOString()),
   };
 
   console.log("🟡 Enviando Paso 1 al backend:", payload);
@@ -2315,6 +2317,11 @@ function onHomeAlgorithmConfirmStep1() {
   const confirmedAt = new Date();
   const confirmedAtIso = confirmedAt.toISOString();
   const confirmedAtDisplay = formatHomeAlgorithmDeviceTimestamp(confirmedAtIso, "");
+  const participantId = String(
+    homeAlgorithmState.participantInput?.value ||
+      homeAlgorithmState.interview.participantNumber ||
+      "",
+  ).trim();
 
   homeAlgorithmState.interview.stationId = result.values.stationId;
   homeAlgorithmState.interview.stationName = result.values.stationName;
@@ -2325,9 +2332,11 @@ function onHomeAlgorithmConfirmStep1() {
     result.values.sex === HOME_ALGO_SEX.OTHER ? result.values.sexOtherDetail : "";
   homeAlgorithmState.interview.step1.includedByAge = result.values.age >= ALGORITHM_HOME.minAge;
   void submitHomeAlgorithmStage1({
+    participantId,
     age: result.values.age,
     sex: result.values.sex,
     stationId: result.values.stationId,
+    timestamp: confirmedAtIso,
   });
 
   if (homeAlgorithmState.deviceTimeInput) {
