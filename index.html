@@ -258,7 +258,7 @@
         <div class="container">
           <header class="section-header">
             <h2 class="section-title" id="algoritmo-title">
-              Algoritmo de toma de decisión
+              Algoritmo Dinámico de Inclusión
             </h2>
             <p class="section-subtitle">
               Carga operativa en 4 etapas. Etapa 1 activa: criterio de inclusión
@@ -341,41 +341,6 @@
 
               <div class="home-algo__grid">
                 <div class="home-algo__field">
-                  <label class="home-algo__label" for="home-algo-participant"
-                    >Número de participante</label
-                  >
-                  <input
-                    class="home-algo__input"
-                    id="home-algo-participant"
-                    name="home-algo-participant"
-                    type="text"
-                    maxlength="24"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    placeholder="Ej: 10245"
-                  />
-                </div>
-
-                <div class="home-algo__field">
-                  <label class="home-algo__label" for="home-algo-station"
-                    >Estación saludable</label
-                  >
-                  <select
-                    class="home-algo__input"
-                    id="home-algo-station"
-                    name="home-algo-station"
-                  >
-                    <option value="">Seleccionar estación</option>
-                    <option value="Parque Saavedra">Parque Saavedra</option>
-                    <option value="Parque Rivadavia">Parque Rivadavia</option>
-                    <option value="Parque Chacabuco">Parque Chacabuco</option>
-                    <option value="Aristóbulo del Valle">
-                      Aristóbulo del Valle
-                    </option>
-                  </select>
-                </div>
-
-                <div class="home-algo__field">
                   <label class="home-algo__label" for="home-algo-age">Edad</label>
                   <input
                     class="home-algo__input"
@@ -387,46 +352,107 @@
                     inputmode="numeric"
                     autocomplete="off"
                     placeholder="45"
+                    aria-describedby="home-algo-step1-required"
+                    required
+                  />
+                </div>
+
+                <div class="home-algo__field">
+                  <label class="home-algo__label" for="home-algo-station"
+                    >Estación saludable</label
+                  >
+                  <input
+                    class="home-algo__input"
+                    id="home-algo-station"
+                    name="home-algo-station"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Se completa automáticamente"
+                    readonly
+                    aria-readonly="true"
+                    aria-describedby="home-algo-step1-required"
+                    required
+                  />
+                </div>
+
+                <div class="home-algo__field">
+                  <label class="home-algo__label" for="home-algo-participant"
+                    >Número de participante</label
+                  >
+                  <input
+                    class="home-algo__input"
+                    id="home-algo-participant"
+                    name="home-algo-participant"
+                    type="text"
+                    maxlength="16"
+                    autocomplete="off"
+                    placeholder="Se asigna al guardar"
+                    readonly
+                    aria-readonly="true"
+                    aria-describedby="home-algo-step1-required"
+                    required
                   />
                 </div>
 
                 <fieldset class="home-algo__field home-algo__field--full">
                   <legend class="home-algo__label">Sexo</legend>
                   <div
+                    id="home-algo-sex-switch"
                     class="home-algo__sex-switch"
-                    role="radiogroup"
-                    aria-label="Sexo del participante"
+                    aria-describedby="home-algo-step1-required"
                   >
-                    <button
-                      type="button"
-                      class="home-algo__sex-button"
-                      data-home-algo-sex="M"
-                      role="radio"
-                      aria-checked="false"
-                    >
-                      M
-                    </button>
-                    <button
-                      type="button"
-                      class="home-algo__sex-button"
-                      data-home-algo-sex="OTROS"
-                      role="radio"
-                      aria-checked="false"
-                    >
-                      Otros
-                    </button>
-                    <button
-                      type="button"
-                      class="home-algo__sex-button"
-                      data-home-algo-sex="F"
-                      role="radio"
-                      aria-checked="false"
-                    >
-                      F
-                    </button>
+                    <div class="home-algo__sex-option">
+                      <input
+                        class="home-algo__sex-radio"
+                        type="radio"
+                        name="home-algo-sex"
+                        id="home-algo-sex-m"
+                        value="M"
+                      />
+                      <label
+                        class="home-algo__sex-label home-algo__sex-label--m"
+                        for="home-algo-sex-m"
+                      >
+                        M
+                      </label>
+                    </div>
+                    <div class="home-algo__sex-option">
+                      <input
+                        class="home-algo__sex-radio"
+                        type="radio"
+                        name="home-algo-sex"
+                        id="home-algo-sex-otros"
+                        value="OTROS"
+                      />
+                      <label
+                        class="home-algo__sex-label home-algo__sex-label--otros"
+                        for="home-algo-sex-otros"
+                      >
+                        Otros
+                      </label>
+                    </div>
+                    <div class="home-algo__sex-option">
+                      <input
+                        class="home-algo__sex-radio"
+                        type="radio"
+                        name="home-algo-sex"
+                        id="home-algo-sex-f"
+                        value="F"
+                      />
+                      <label
+                        class="home-algo__sex-label home-algo__sex-label--f"
+                        for="home-algo-sex-f"
+                      >
+                        F
+                      </label>
+                    </div>
                   </div>
                 </fieldset>
               </div>
+
+              <p class="home-algo__required-note" id="home-algo-step1-required">
+                Todos los campos son obligatorios para evaluar la Etapa 1.
+              </p>
 
               <p
                 class="home-algo__feedback"

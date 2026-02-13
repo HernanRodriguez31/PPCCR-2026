@@ -2,7 +2,8 @@
 
 const admin = require("firebase-admin");
 const { logger } = require("firebase-functions");
-const { onRequest } = require("firebase-functions/v2/https");
+const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
 const jwt = require("jsonwebtoken");
 
 if (!admin.apps.length) {
@@ -10,12 +11,64 @@ if (!admin.apps.length) {
 }
 
 const STAGE1_MIN_AGE = 45;
+const PARTICIPANT_SEQUENCE_PADDING = 6;
+const FIRESTORE_COUNTERS_COLLECTION = "ppccr_stage1_counters";
+const FIRESTORE_RECORDS_COLLECTION = "ppccr_stage1_records";
+const GOOGLE_SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
+const SHEET_ROW_RANGE_REGEX = /![A-Z]+(\d+):[A-Z]+(\d+)$/;
+
+const SHEETS_SERVICE_ACCOUNT_EMAIL_SECRET = defineSecret(
+  "PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL",
+);
+const SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY_SECRET = defineSecret(
+  "PPCCR_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY",
+);
+const SHEETS_STAGE1_SHEET_ID_SECRET = defineSecret("PPCCR_STAGE1_SHEET_ID");
+const SHEETS_STAGE1_SHEET_TAB_SECRET = defineSecret("PPCCR_STAGE1_SHEET_TAB");
+
 const SHEET_HEADERS = Object.freeze([
   "Fecha",
   "Numero de participante",
   "Tipo de Estacion Saludable",
   "Sexo",
   "Edad",
+]);
+
+const SHEET_HEADERS_A_TO_G = Object.freeze([
+  "Fecha",
+  "Numero de participante",
+  "Tipo de Estacion Saludable",
+  "Sexo",
+  "Edad",
+  "Resultado",
+  "Etapa alcanzada",
+]);
+
+const STATIONS = Object.freeze([
+  Object.freeze({
+    stationId: "saavedra",
+    stationName: "Parque Saavedra",
+    stationCode: "SA",
+    aliases: Object.freeze(["saavedra", "parque saavedra"]),
+  }),
+  Object.freeze({
+    stationId: "aristobulo",
+    stationName: "Aristóbulo del Valle",
+    stationCode: "AR",
+    aliases: Object.freeze(["aristobulo", "aristobulo del valle", "aristóbulo del valle"]),
+  }),
+  Object.freeze({
+    stationId: "rivadavia",
+    stationName: "Parque Rivadavia",
+    stationCode: "RI",
+    aliases: Object.freeze(["rivadavia", "parque rivadavia"]),
+  }),
+  Object.freeze({
+    stationId: "chacabuco",
+    stationName: "Parque Chacabuco",
+    stationCode: "CH",
+    aliases: Object.freeze(["chacabuco", "parque chacabuco"]),
+  }),
 ]);
 
 function foldText(value) {
@@ -26,19 +79,47 @@ function foldText(value) {
     .trim();
 }
 
-function normalizeStationName(value) {
+const STATION_INDEX = (() => {
+  const map = new Map();
+
+  STATIONS.forEach((station) => {
+    const keys = new Set([
+      station.stationId,
+      station.stationName,
+      station.stationCode,
+      ...station.aliases,
+    ]);
+
+    keys.forEach((key) => {
+      const normalized = foldText(key);
+      if (!normalized) return;
+      map.set(normalized, station);
+    });
+  });
+
+  return map;
+})();
+
+const ALLOWED_STATIONS_TEXT = STATIONS.map((station) => station.stationName).join(", ");
+
+function normalizeStation(value) {
   const normalized = foldText(value);
-  const byKey = {
-    "parque saavedra": "Parque Saavedra",
-    saavedra: "Parque Saavedra",
-    "parque rivadavia": "Parque Rivadavia",
-    rivadavia: "Parque Rivadavia",
-    "parque chacabuco": "Parque Chacabuco",
-    chacabuco: "Parque Chacabuco",
-    "aristobulo del valle": "Aristóbulo del Valle",
-    aristobulo: "Aristóbulo del Valle",
+  if (!normalized) return null;
+
+  const station = STATION_INDEX.get(normalized);
+  if (!station) return null;
+
+  return {
+    stationId: station.stationId,
+    stationName: station.stationName,
+    stationCode: station.stationCode,
   };
-  return byKey[normalized] || "";
+}
+
+function normalizeStationById(stationId) {
+  const normalized = foldText(stationId);
+  if (!normalized) return null;
+  return normalizeStation(normalized);
 }
 
 function normalizeSex(value) {
@@ -79,6 +160,153 @@ function parseJsonBody(req) {
   return {};
 }
 
+function getSecretOrEnv(secretParam, fallbackEnvKey = "") {
+  const fromSecret = String(secretParam?.value?.() || "").trim();
+  if (fromSecret) return fromSecret;
+  if (!fallbackEnvKey) return "";
+  return String(process.env[fallbackEnvKey] || "").trim();
+}
+
+function getSheetsConfig() {
+  const sheetId = getSecretOrEnv(SHEETS_STAGE1_SHEET_ID_SECRET, "PPCCR_STAGE1_SHEET_ID");
+  const sheetTab =
+    getSecretOrEnv(SHEETS_STAGE1_SHEET_TAB_SECRET, "PPCCR_STAGE1_SHEET_TAB") || "Etapa1";
+  const serviceAccountEmail = getSecretOrEnv(
+    SHEETS_SERVICE_ACCOUNT_EMAIL_SECRET,
+    "PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL",
+  );
+  const serviceAccountKeyRaw = getSecretOrEnv(
+    SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY_SECRET,
+    "PPCCR_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY",
+  );
+  const serviceAccountKey = serviceAccountKeyRaw.replace(/\\n/g, "\n");
+
+  return {
+    sheetId,
+    sheetTab,
+    serviceAccountEmail,
+    serviceAccountKey,
+  };
+}
+
+function formatParticipantNumber(stationCode, participantSequence) {
+  return `${stationCode}-${String(participantSequence).padStart(PARTICIPANT_SEQUENCE_PADDING, "0")}`;
+}
+
+async function allocateAndPersistStage1Tx(station, stage1RecordBase) {
+  const db = admin.firestore();
+  const countersRef = db.collection(FIRESTORE_COUNTERS_COLLECTION).doc(station.stationId);
+  const recordRef = db.collection(FIRESTORE_RECORDS_COLLECTION).doc();
+
+  let allocation = null;
+
+  await db.runTransaction(async (transaction) => {
+    const counterSnap = await transaction.get(countersRef);
+    const rawLastSequence = counterSnap.exists ? Number(counterSnap.get("lastSequence")) : 0;
+    const lastSequence =
+      Number.isFinite(rawLastSequence) && rawLastSequence > 0 ? Math.floor(rawLastSequence) : 0;
+
+    const participantSequence = lastSequence + 1;
+    const participantNumber = formatParticipantNumber(station.stationCode, participantSequence);
+
+    transaction.set(
+      countersRef,
+      {
+        stationId: station.stationId,
+        stationName: station.stationName,
+        stationCode: station.stationCode,
+        lastSequence: participantSequence,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    transaction.set(recordRef, {
+      ...stage1RecordBase,
+      stationId: station.stationId,
+      stationName: station.stationName,
+      stationCode: station.stationCode,
+      participantNumber,
+      participantSequence,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    allocation = {
+      participantNumber,
+      participantSequence,
+      recordId: recordRef.id,
+    };
+  });
+
+  if (!allocation) {
+    throw new Error("No se pudo asignar numero de participante en Firestore.");
+  }
+
+  return allocation;
+}
+
+async function reserveParticipantNumberTx(station) {
+  const db = admin.firestore();
+  const countersRef = db.collection(FIRESTORE_COUNTERS_COLLECTION).doc(station.stationId);
+
+  let allocation = null;
+  await db.runTransaction(async (transaction) => {
+    const counterSnap = await transaction.get(countersRef);
+    const rawLastSequence = counterSnap.exists ? Number(counterSnap.get("lastSequence")) : 0;
+    const lastSequence =
+      Number.isFinite(rawLastSequence) && rawLastSequence > 0 ? Math.floor(rawLastSequence) : 0;
+
+    const participantSequence = lastSequence + 1;
+    const participantNumber = formatParticipantNumber(station.stationCode, participantSequence);
+
+    transaction.set(
+      countersRef,
+      {
+        stationId: station.stationId,
+        stationName: station.stationName,
+        stationCode: station.stationCode,
+        lastSequence: participantSequence,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    allocation = {
+      participantNumber,
+      participantSequence,
+      stationId: station.stationId,
+      stationCode: station.stationCode,
+    };
+  });
+
+  if (!allocation) {
+    throw new Error("No se pudo reservar numero de participante.");
+  }
+  return allocation;
+}
+
+function parseSheetRowFromUpdatedRange(updatedRange) {
+  const range = String(updatedRange || "").trim();
+  if (!range) return null;
+  const match = range.match(SHEET_ROW_RANGE_REGEX);
+  if (!match) return null;
+  const row = Number.parseInt(match[1], 10);
+  if (!Number.isFinite(row) || row < 2) return null;
+  return row;
+}
+
+function buildSheetRowAtoG(record) {
+  return [
+    record.fecha || "",
+    record.participantNumber || "",
+    record.stationName || "",
+    record.sex || "",
+    Number.isFinite(record.age) ? record.age : "",
+    record.outcome || "",
+    Number.isFinite(record.stageReached) ? record.stageReached : "",
+  ];
+}
+
 async function getGoogleAccessToken(serviceAccountEmail, privateKey) {
   const issuedAt = Math.floor(Date.now() / 1000);
   const assertion = jwt.sign(
@@ -111,7 +339,7 @@ async function getGoogleAccessToken(serviceAccountEmail, privateKey) {
 
   const tokenPayload = await response.json();
   if (!tokenPayload?.access_token) {
-    throw new Error("Respuesta inválida al obtener token de Google.");
+    throw new Error("Respuesta invalida al obtener token de Google.");
   }
 
   return tokenPayload.access_token;
@@ -164,15 +392,7 @@ async function ensureSheetHeaders(sheetId, sheetTab, accessToken) {
 }
 
 async function appendToGoogleSheets(record) {
-  const sheetId = String(process.env.PPCCR_STAGE1_SHEET_ID || "").trim();
-  const sheetTab = String(process.env.PPCCR_STAGE1_SHEET_TAB || "Etapa1").trim();
-  const serviceAccountEmail = String(
-    process.env.PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL || "",
-  ).trim();
-  const serviceAccountKeyRaw = String(
-    process.env.PPCCR_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || "",
-  ).trim();
-  const serviceAccountKey = serviceAccountKeyRaw.replace(/\\n/g, "\n");
+  const { sheetId, sheetTab, serviceAccountEmail, serviceAccountKey } = getSheetsConfig();
 
   if (!sheetId || !serviceAccountEmail || !serviceAccountKey) {
     return { status: "not_configured" };
@@ -190,31 +410,11 @@ async function appendToGoogleSheets(record) {
     accessToken,
     body: {
       majorDimension: "ROWS",
-      values: [
-        [
-          record.fecha,
-          record.participantNumber,
-          record.stationName,
-          record.sex,
-          record.age,
-        ],
-      ],
+      values: [[record.fecha, record.participantNumber, record.stationName, record.sex, record.age]],
     },
   });
 
   return { status: "saved" };
-}
-
-async function saveStage1Backup(record) {
-  const ref = admin.database().ref("algoritmo_toma_decision/etapa1").push();
-  await ref.set({
-    ...record,
-    savedAt: admin.database.ServerValue.TIMESTAMP,
-  });
-  return {
-    status: "saved",
-    id: ref.key,
-  };
 }
 
 exports.submitAlgorithmStage1 = onRequest({ region: "us-central1" }, async (req, res) => {
@@ -228,7 +428,7 @@ exports.submitAlgorithmStage1 = onRequest({ region: "us-central1" }, async (req,
   if (req.method !== "POST") {
     res.status(405).json({
       ok: false,
-      message: "Método no permitido. Usar POST.",
+      message: "Metodo no permitido. Usar POST.",
     });
     return;
   }
@@ -239,18 +439,7 @@ exports.submitAlgorithmStage1 = onRequest({ region: "us-central1" }, async (req,
   } catch (_error) {
     res.status(400).json({
       ok: false,
-      message: "JSON inválido.",
-    });
-    return;
-  }
-
-  const participantNumber = String(payload.participantNumber || "")
-    .replace(/\D+/g, "")
-    .trim();
-  if (!/^\d{1,24}$/.test(participantNumber)) {
-    res.status(400).json({
-      ok: false,
-      message: "Número de participante inválido.",
+      message: "JSON invalido.",
     });
     return;
   }
@@ -259,17 +448,16 @@ exports.submitAlgorithmStage1 = onRequest({ region: "us-central1" }, async (req,
   if (!sex) {
     res.status(400).json({
       ok: false,
-      message: "Sexo inválido. Valores permitidos: M, F, OTROS.",
+      message: "Sexo invalido. Valores permitidos: M, F, OTROS.",
     });
     return;
   }
 
-  const stationName = normalizeStationName(payload.stationName);
-  if (!stationName) {
+  const station = normalizeStation(payload.stationName);
+  if (!station) {
     res.status(400).json({
       ok: false,
-      message:
-        "Estación inválida. Valores permitidos: Parque Saavedra, Parque Rivadavia, Parque Chacabuco, Aristóbulo del Valle.",
+      message: `Estacion invalida. Valores permitidos: ${ALLOWED_STATIONS_TEXT}.`,
     });
     return;
   }
@@ -278,22 +466,18 @@ exports.submitAlgorithmStage1 = onRequest({ region: "us-central1" }, async (req,
   if (!Number.isFinite(age) || age < 0 || age > 120) {
     res.status(400).json({
       ok: false,
-      message: "Edad inválida. Debe estar entre 0 y 120.",
+      message: "Edad invalida. Debe estar entre 0 y 120.",
     });
     return;
   }
 
   const now = new Date();
   const ageMeetsInclusion = age >= STAGE1_MIN_AGE;
-  const outcome = ageMeetsInclusion
-    ? "cumple_criterio_edad"
-    : "sin_criterio_inclusion_edad";
+  const outcome = ageMeetsInclusion ? "cumple_criterio_edad" : "sin_criterio_inclusion_edad";
 
-  const stage1Record = {
+  const stage1RecordBase = {
     fecha: formatDateForSheet(now),
     submittedAtIso: now.toISOString(),
-    participantNumber,
-    stationName,
     sex,
     age,
     criterionAge: STAGE1_MIN_AGE,
@@ -303,19 +487,37 @@ exports.submitAlgorithmStage1 = onRequest({ region: "us-central1" }, async (req,
     source: String(payload.source || "home").trim() || "home",
   };
 
-  let backup = { status: "error" };
-  let sheets = { status: "error" };
-
+  let allocation;
   try {
-    backup = await saveStage1Backup(stage1Record);
+    allocation = await allocateAndPersistStage1Tx(station, stage1RecordBase);
   } catch (error) {
-    logger.error("No se pudo guardar respaldo Firebase de Etapa 1.", error);
-    backup = {
-      status: "error",
-      message: "No se pudo guardar respaldo Firebase.",
-    };
+    logger.error("No se pudo guardar Etapa 1 en Firestore.", error);
+    res.status(500).json({
+      ok: false,
+      message: "No se pudo guardar la Etapa 1 en Firestore. Reintenta.",
+      firestore: {
+        status: "error",
+        message: "No se pudo guardar en Firestore.",
+      },
+      backup: {
+        status: "error",
+        message: "No se pudo guardar en Firestore.",
+      },
+      sheets: { status: "error" },
+    });
+    return;
   }
 
+  const stage1Record = {
+    ...stage1RecordBase,
+    stationId: station.stationId,
+    stationName: station.stationName,
+    stationCode: station.stationCode,
+    participantNumber: allocation.participantNumber,
+    participantSequence: allocation.participantSequence,
+  };
+
+  let sheets = { status: "error" };
   try {
     sheets = await appendToGoogleSheets(stage1Record);
   } catch (error) {
@@ -326,22 +528,28 @@ exports.submitAlgorithmStage1 = onRequest({ region: "us-central1" }, async (req,
     };
   }
 
-  if (backup.status !== "saved" && sheets.status !== "saved") {
-    res.status(500).json({
-      ok: false,
-      message:
-        "No se pudo guardar la Etapa 1 en Google Sheets ni en Firebase. Reintentá.",
-      backup,
-      sheets,
-    });
-    return;
-  }
+  const firestore = {
+    status: "saved",
+    id: allocation.recordId,
+  };
+
+  logger.info("Etapa 1 guardada.", {
+    stationId: station.stationId,
+    participantNumber: allocation.participantNumber,
+    recordId: allocation.recordId,
+    sheetsStatus: sheets.status,
+  });
 
   res.status(200).json({
     ok: true,
+    participantNumber: allocation.participantNumber,
+    participantSequence: allocation.participantSequence,
+    stationId: station.stationId,
+    stationCode: station.stationCode,
     outcome,
     nextStep: ageMeetsInclusion ? 2 : 1,
-    backup,
+    firestore,
+    backup: firestore,
     sheets,
   });
 });
