@@ -261,12 +261,29 @@
               Algoritmo Dinámico de Inclusión
             </h2>
             <p class="section-subtitle">
-              Carga operativa en 4 etapas. Etapa 1 activa: criterio de inclusión
-              por edad (45 años o más).
+              Flujo operativo cerrado en 4 pasos con validación clínica y
+              cierre de entrevista.
             </p>
           </header>
 
-          <article class="home-algo" id="home-algo" aria-label="Algoritmo operativo">
+          <article
+            class="home-algo"
+            id="home-algo"
+            aria-label="Algoritmo operativo"
+          >
+            <div class="home-algo__topbar">
+              <p class="home-algo__status-chip" id="home-algo-status-chip">
+                Entrevista en curso
+              </p>
+              <button
+                type="button"
+                class="btn btn-ghost"
+                id="home-algo-restart"
+              >
+                Reiniciar entrevista
+              </button>
+            </div>
+
             <nav aria-label="Etapas del algoritmo">
               <ol class="home-algo__stepper" id="home-algo-stepper">
                 <li class="home-algo__stepper-item">
@@ -292,7 +309,7 @@
                     <span class="home-algo__stepper-index" aria-hidden="true"
                       >2</span
                     >
-                    <span class="home-algo__stepper-label">Vigilancia</span>
+                    <span class="home-algo__stepper-label">Vigilancia activa</span>
                   </button>
                 </li>
                 <li class="home-algo__stepper-item">
@@ -305,9 +322,7 @@
                     <span class="home-algo__stepper-index" aria-hidden="true"
                       >3</span
                     >
-                    <span class="home-algo__stepper-label"
-                      >Riesgo elevado</span
-                    >
+                    <span class="home-algo__stepper-label">Riesgo elevado</span>
                   </button>
                 </li>
                 <li class="home-algo__stepper-item">
@@ -320,7 +335,9 @@
                     <span class="home-algo__stepper-index" aria-hidden="true"
                       >4</span
                     >
-                    <span class="home-algo__stepper-label">Decisión final</span>
+                    <span class="home-algo__stepper-label"
+                      >Datos de contacto</span
+                    >
                   </button>
                 </li>
               </ol>
@@ -333,30 +350,14 @@
               aria-labelledby="home-algo-step1-title"
             >
               <h3 class="home-algo__panel-title" id="home-algo-step1-title">
-                Etapa 1: Criterio por edad
+                Paso 1: Criterio por edad
               </h3>
               <p class="home-algo__panel-copy">
-                Criterio de inclusión fijo: 45 años o más.
+                Confirmá los datos obligatorios. Si edad es menor a 45, la
+                entrevista finaliza en este paso.
               </p>
 
               <div class="home-algo__grid">
-                <div class="home-algo__field">
-                  <label class="home-algo__label" for="home-algo-age">Edad</label>
-                  <input
-                    class="home-algo__input"
-                    id="home-algo-age"
-                    name="home-algo-age"
-                    type="number"
-                    min="0"
-                    max="120"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    placeholder="45"
-                    aria-describedby="home-algo-step1-required"
-                    required
-                  />
-                </div>
-
                 <div class="home-algo__field">
                   <label class="home-algo__label" for="home-algo-station"
                     >Estación saludable</label
@@ -386,9 +387,44 @@
                     type="text"
                     maxlength="16"
                     autocomplete="off"
-                    placeholder="Se asigna al guardar"
+                    placeholder="Placeholder local"
                     readonly
                     aria-readonly="true"
+                    aria-describedby="home-algo-step1-required"
+                    required
+                  />
+                </div>
+
+                <div class="home-algo__field">
+                  <label class="home-algo__label" for="home-algo-device-time"
+                    >Fecha y hora del dispositivo</label
+                  >
+                  <input
+                    class="home-algo__input"
+                    id="home-algo-device-time"
+                    name="home-algo-device-time"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Se captura al confirmar Paso 1"
+                    readonly
+                    aria-readonly="true"
+                  />
+                </div>
+
+                <div class="home-algo__field">
+                  <label class="home-algo__label" for="home-algo-age"
+                    >Edad</label
+                  >
+                  <input
+                    class="home-algo__input"
+                    id="home-algo-age"
+                    name="home-algo-age"
+                    type="number"
+                    min="0"
+                    max="120"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="45"
                     aria-describedby="home-algo-step1-required"
                     required
                   />
@@ -421,21 +457,6 @@
                         class="home-algo__sex-radio"
                         type="radio"
                         name="home-algo-sex"
-                        id="home-algo-sex-otros"
-                        value="OTROS"
-                      />
-                      <label
-                        class="home-algo__sex-label home-algo__sex-label--otros"
-                        for="home-algo-sex-otros"
-                      >
-                        Otros
-                      </label>
-                    </div>
-                    <div class="home-algo__sex-option">
-                      <input
-                        class="home-algo__sex-radio"
-                        type="radio"
-                        name="home-algo-sex"
                         id="home-algo-sex-f"
                         value="F"
                       />
@@ -446,12 +467,47 @@
                         F
                       </label>
                     </div>
+                    <div class="home-algo__sex-option">
+                      <input
+                        class="home-algo__sex-radio"
+                        type="radio"
+                        name="home-algo-sex"
+                        id="home-algo-sex-other"
+                        value="OTRO"
+                      />
+                      <label
+                        class="home-algo__sex-label home-algo__sex-label--other"
+                        for="home-algo-sex-other"
+                      >
+                        Otro
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="home-algo__sex-other"
+                    id="home-algo-sex-other-wrap"
+                    hidden
+                  >
+                    <label
+                      class="home-algo__label home-algo__label--subtle"
+                      for="home-algo-sex-other-text"
+                    >
+                      Especificar otro sexo
+                    </label>
+                    <input
+                      class="home-algo__input"
+                      id="home-algo-sex-other-text"
+                      name="home-algo-sex-other-text"
+                      type="text"
+                      autocomplete="off"
+                      placeholder="Ej: No binario"
+                    />
                   </div>
                 </fieldset>
               </div>
 
               <p class="home-algo__required-note" id="home-algo-step1-required">
-                Todos los campos son obligatorios para evaluar la Etapa 1.
+                Edad y sexo son obligatorios para confirmar Paso 1.
               </p>
 
               <p
@@ -459,7 +515,7 @@
                 id="home-algo-step1-feedback"
                 aria-live="polite"
               >
-                Completá los datos para evaluar la inclusión en el programa.
+                Completá los datos para confirmar el Paso 1.
               </p>
 
               <article
@@ -469,11 +525,10 @@
                 hidden
               >
                 <h4 class="home-algo__alert-title">
-                  Sin criterios de inclusion al programa
+                  Resultado: No incluye por edad
                 </h4>
                 <p class="home-algo__alert-text">
-                  La evaluación finaliza en Etapa 1 por no cumplir edad mínima
-                  de 45 años.
+                  Edad menor a 45 años. Se cierra la entrevista en este punto.
                 </p>
               </article>
 
@@ -485,17 +540,17 @@
               >
                 <h4 class="home-algo__alert-title">Criterio cumplido</h4>
                 <p class="home-algo__alert-text">
-                  Cumple criterio de inclusión por edad. Se habilita Etapa 2.
+                  Edad igual o mayor a 45 años. Se habilita el Paso 2.
                 </p>
               </article>
 
               <div class="home-algo__actions">
                 <button
                   type="button"
-                  class="btn btn-secondary"
-                  id="home-algo-step1-evaluate"
+                  class="btn btn-primary"
+                  id="home-algo-step1-confirm"
                 >
-                  Evaluar etapa 1
+                  Confirmar paso 1
                 </button>
                 <button
                   type="button"
@@ -503,23 +558,17 @@
                   id="home-algo-step1-finish"
                   hidden
                 >
-                  Finalizar etapa
+                  Finalizar entrevista
                 </button>
                 <button
                   type="button"
-                  class="btn btn-primary"
+                  class="btn btn-secondary"
                   id="home-algo-step1-continue"
                   hidden
                 >
-                  Continuar a etapa 2
+                  Continuar a paso 2
                 </button>
               </div>
-
-              <p
-                class="home-algo__save-status"
-                id="home-algo-step1-save-status"
-                aria-live="polite"
-              ></p>
             </section>
 
             <section
@@ -530,12 +579,134 @@
               hidden
             >
               <h3 class="home-algo__panel-title" id="home-algo-step2-title">
-                Etapa 2: Vigilancia
+                Paso 2: Criterios de vigilancia activa (exclusión)
               </h3>
               <p class="home-algo__panel-copy">
-                Etapa habilitada. Continuar con la carga de criterios clínicos
-                de vigilancia.
+                Marcá si aplica alguno de los siguientes criterios. Con un solo
+                criterio marcado, no corresponde entregar FIT.
               </p>
+
+              <fieldset class="home-algo__group">
+                <legend class="home-algo__group-title">
+                  Criterios de exclusión por vigilancia activa
+                </legend>
+                <div class="home-algo__checklist">
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step2-colonoscopy-normal-10y"
+                      data-home-algo-step2-code="COLONOSCOPY_NORMAL_10Y"
+                    />
+                    <span
+                      >Colonoscopía normal en los últimos 10 años</span
+                    >
+                  </label>
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step2-adenoma-low-5y"
+                      data-home-algo-step2-code="LOW_GRADE_ADENOMA_SURVEILLANCE_5Y"
+                    />
+                    <span
+                      >Colonoscopía con adenomas bajo grado con vigilancia
+                      vigente (últimos 5 años)</span
+                    >
+                  </label>
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step2-adenoma-high-3y"
+                      data-home-algo-step2-code="HIGH_RISK_ADENOMA_SURVEILLANCE_3Y"
+                    />
+                    <span
+                      >Colonoscopía con adenomas de alto riesgo con vigilancia
+                      vigente (últimos 3 años)</span
+                    >
+                  </label>
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step2-polyps-control-6m"
+                      data-home-algo-step2-code="LARGE_POLYP_INCOMPLETE_RESECTION_6M"
+                    />
+                    <span
+                      >Colonoscopía con pólipos grandes o resección incompleta
+                      con control pendiente/reciente (últimos 6 meses)</span
+                    >
+                  </label>
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step2-fit-last-12m"
+                      data-home-algo-step2-code="FIT_LAST_12M"
+                    />
+                    <span>Test FIT realizado en el último año</span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <p
+                class="home-algo__feedback"
+                id="home-algo-step2-feedback"
+                aria-live="polite"
+              >
+                Sin criterios marcados. Si continúa así, avanzará al Paso 3.
+              </p>
+
+              <article
+                class="home-algo__alert home-algo__alert--danger"
+                id="home-algo-step2-stop"
+                role="alert"
+                hidden
+              >
+                <h4 class="home-algo__alert-title">
+                  Resultado: Exclusión por vigilancia activa
+                </h4>
+                <p class="home-algo__alert-text">
+                  Hay criterios de vigilancia activa vigentes. No entregar FIT.
+                </p>
+              </article>
+
+              <article
+                class="home-algo__alert home-algo__alert--success"
+                id="home-algo-step2-ok"
+                role="status"
+                hidden
+              >
+                <h4 class="home-algo__alert-title">
+                  Paso 2 sin exclusiones
+                </h4>
+                <p class="home-algo__alert-text">
+                  No se marcaron criterios de vigilancia activa. Se habilita el
+                  Paso 3.
+                </p>
+              </article>
+
+              <div class="home-algo__actions">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  id="home-algo-step2-evaluate"
+                >
+                  Evaluar paso 2
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-danger"
+                  id="home-algo-step2-finish"
+                  hidden
+                >
+                  Finalizar entrevista
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  id="home-algo-step2-continue"
+                  hidden
+                >
+                  Continuar a paso 3
+                </button>
+              </div>
             </section>
 
             <section
@@ -546,11 +717,200 @@
               hidden
             >
               <h3 class="home-algo__panel-title" id="home-algo-step3-title">
-                Etapa 3: Riesgo elevado
+                Paso 3: Criterios de riesgo elevado (derivación VCC)
               </h3>
               <p class="home-algo__panel-copy">
-                Espacio reservado para la carga de criterios de riesgo elevado.
+                Si se marca al menos un criterio, corresponde derivación a
+                colonoscopía y no se entrega FIT.
               </p>
+
+              <fieldset class="home-algo__group">
+                <legend class="home-algo__group-title">
+                  A) Antecedentes heredofamiliares
+                </legend>
+                <div class="home-algo__checklist">
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step3-family-crc-adenoma"
+                      data-home-algo-step3-code="FAMILY_HISTORY_CRC_OR_ADENOMA"
+                    />
+                    <span
+                      >Familiar de 1.º o 2.º grado con Cáncer Colorrectal o
+                      Adenoma</span
+                    >
+                  </label>
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step3-hereditary-syndrome"
+                      data-home-algo-step3-code="HEREDITARY_SYNDROMES_FAP_LYNCH"
+                    />
+                    <span>Síndromes hereditarios (FAP, Lynch)</span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset class="home-algo__group">
+                <legend class="home-algo__group-title">
+                  B) Antecedentes personales
+                </legend>
+                <div class="home-algo__checklist">
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step3-ibd"
+                      data-home-algo-step3-code="IBD_CU_CROHN"
+                    />
+                    <span
+                      >Enfermedad inflamatoria intestinal (CU / Crohn)</span
+                    >
+                  </label>
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step3-adenomatous-polyps"
+                      data-home-algo-step3-code="ADENOMATOUS_POLYPS_MULTIPLE_LARGE"
+                    />
+                    <span>Pólipos adenomatosos previos (múltiples o grandes)</span>
+                  </label>
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step3-prior-crc"
+                      data-home-algo-step3-code="PRIOR_CRC"
+                    />
+                    <span>Cáncer colorrectal previo</span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset class="home-algo__group">
+                <legend class="home-algo__group-title">
+                  C) Signos y síntomas de alerta
+                </legend>
+                <div class="home-algo__checklist">
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step3-fatigue-anemia"
+                      data-home-algo-step3-code="FATIGUE_ANEMIA_SUSPECT"
+                    />
+                    <span
+                      >Debilidad o fatiga marcada (sospecha de anemia)</span
+                    >
+                  </label>
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step3-persistent-pain"
+                      data-home-algo-step3-code="PERSISTENT_ABDOMINAL_PAIN"
+                    />
+                    <span>Dolor o calambres abdominales persistentes</span>
+                  </label>
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step3-rectal-bleeding"
+                      data-home-algo-step3-code="RECTAL_BLEEDING"
+                    />
+                    <span
+                      >Sangrado rectal (heces oscuras, mezcladas o goteo)</span
+                    >
+                  </label>
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step3-bowel-change"
+                      data-home-algo-step3-code="PERSISTENT_BOWEL_HABIT_CHANGE"
+                    />
+                    <span
+                      >Cambio del hábito evacuatorio persistente
+                      (diarrea/estreñimiento)</span
+                    >
+                  </label>
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step3-thin-stool"
+                      data-home-algo-step3-code="THIN_RIBBON_STOOLS"
+                    />
+                    <span>Heces estrechas o acintadas</span>
+                  </label>
+                  <label class="home-algo__check">
+                    <input
+                      type="checkbox"
+                      id="home-algo-step3-weight-loss"
+                      data-home-algo-step3-code="UNINTENDED_WEIGHT_LOSS"
+                    />
+                    <span>Pérdida de peso no intencionada</span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <p
+                class="home-algo__feedback"
+                id="home-algo-step3-feedback"
+                aria-live="polite"
+              >
+                Si no se marca ningún criterio, avanzará a Paso 4 como candidato
+                FIT.
+              </p>
+
+              <article
+                class="home-algo__alert home-algo__alert--danger"
+                id="home-algo-step3-stop"
+                role="alert"
+                hidden
+              >
+                <h4 class="home-algo__alert-title">
+                  Resultado: Derivación a Colonoscopía (VCC)
+                </h4>
+                <p class="home-algo__alert-text">
+                  Se detectaron criterios de riesgo aumentado. No entregar FIT.
+                </p>
+              </article>
+
+              <article
+                class="home-algo__alert home-algo__alert--success"
+                id="home-algo-step3-ok"
+                role="status"
+                hidden
+              >
+                <h4 class="home-algo__alert-title">
+                  Riesgo promedio confirmado
+                </h4>
+                <p class="home-algo__alert-text">
+                  Sin criterios de riesgo elevado. Continuar al Paso 4 para
+                  cargar datos de contacto.
+                </p>
+              </article>
+
+              <div class="home-algo__actions">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  id="home-algo-step3-evaluate"
+                >
+                  Evaluar paso 3
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-danger"
+                  id="home-algo-step3-finish"
+                  hidden
+                >
+                  Finalizar entrevista
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  id="home-algo-step3-continue"
+                  hidden
+                >
+                  Continuar a paso 4
+                </button>
+              </div>
             </section>
 
             <section
@@ -561,11 +921,102 @@
               hidden
             >
               <h3 class="home-algo__panel-title" id="home-algo-step4-title">
-                Etapa 4: Decisión final
+                Paso 4: Datos de contacto (candidato FIT)
               </h3>
               <p class="home-algo__panel-copy">
-                Espacio reservado para la clasificación y cierre operativo final.
+                Este paso sólo se habilita si Paso 2 y Paso 3 no tienen
+                criterios marcados.
               </p>
+
+              <div class="home-algo__grid home-algo__grid--step4">
+                <div class="home-algo__field home-algo__field--full">
+                  <label class="home-algo__label" for="home-algo-full-name"
+                    >Apellido y nombre</label
+                  >
+                  <input
+                    class="home-algo__input"
+                    id="home-algo-full-name"
+                    name="home-algo-full-name"
+                    type="text"
+                    autocomplete="name"
+                    required
+                  />
+                </div>
+                <div class="home-algo__field">
+                  <label class="home-algo__label" for="home-algo-document-id"
+                    >Documento</label
+                  >
+                  <input
+                    class="home-algo__input"
+                    id="home-algo-document-id"
+                    name="home-algo-document-id"
+                    type="text"
+                    autocomplete="off"
+                    required
+                  />
+                </div>
+                <div class="home-algo__field">
+                  <label class="home-algo__label" for="home-algo-email"
+                    >Email</label
+                  >
+                  <input
+                    class="home-algo__input"
+                    id="home-algo-email"
+                    name="home-algo-email"
+                    type="email"
+                    autocomplete="email"
+                    required
+                  />
+                </div>
+                <div class="home-algo__field">
+                  <label class="home-algo__label" for="home-algo-phone"
+                    >Celular</label
+                  >
+                  <input
+                    class="home-algo__input"
+                    id="home-algo-phone"
+                    name="home-algo-phone"
+                    type="tel"
+                    autocomplete="tel"
+                    required
+                  />
+                </div>
+              </div>
+
+              <p
+                class="home-algo__feedback"
+                id="home-algo-step4-feedback"
+                aria-live="polite"
+              >
+                Completá los datos de contacto para cerrar como candidato FIT.
+              </p>
+
+              <div class="home-algo__actions">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  id="home-algo-step4-finish"
+                >
+                  Finalizar entrevista
+                </button>
+              </div>
+            </section>
+
+            <section
+              class="home-algo__summary"
+              aria-labelledby="home-algo-summary-title"
+            >
+              <h3 class="home-algo__summary-title" id="home-algo-summary-title">
+                Resumen en vivo
+              </h3>
+              <pre class="home-algo__summary-pre" id="home-algo-summary-pre">
+Aún no hay datos confirmados.
+              </pre>
+              <p
+                class="home-algo__save-status"
+                id="home-algo-save-status"
+                aria-live="polite"
+              ></p>
             </section>
           </article>
 
@@ -587,43 +1038,38 @@
               tabindex="-1"
             >
               <h3 class="home-algo__modal-title" id="home-algo-modal-title">
-                Etapa 1 finalizada
+                Entrevista finalizada
               </h3>
-              <p class="home-algo__modal-text" id="home-algo-modal-text">
-                Sin criterios de inclusion al programa.
+              <p class="home-algo__modal-outcome" id="home-algo-modal-outcome">
+                -
               </p>
-              <dl class="home-algo__modal-data">
-                <div class="home-algo__modal-row">
-                  <dt>Participante</dt>
-                  <dd id="home-algo-modal-participant">-</dd>
-                </div>
-                <div class="home-algo__modal-row">
-                  <dt>Estación</dt>
-                  <dd id="home-algo-modal-station">-</dd>
-                </div>
-                <div class="home-algo__modal-row">
-                  <dt>Sexo</dt>
-                  <dd id="home-algo-modal-sex">-</dd>
-                </div>
-                <div class="home-algo__modal-row">
-                  <dt>Edad</dt>
-                  <dd id="home-algo-modal-age">-</dd>
-                </div>
-              </dl>
+              <p class="home-algo__modal-text" id="home-algo-modal-text">
+                -
+              </p>
+              <pre
+                class="home-algo__modal-summary"
+                id="home-algo-modal-summary"
+              ></pre>
               <div class="home-algo__modal-actions">
                 <button
                   type="button"
-                  class="btn btn-primary"
-                  data-home-algo-close-modal="true"
+                  class="btn btn-secondary"
+                  id="home-algo-modal-edit"
                 >
-                  Cerrar
+                  Editar Algoritmo
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  id="home-algo-modal-finalize"
+                >
+                  Finalizar
                 </button>
               </div>
             </div>
           </div>
         </div>
       </section>
-
       <!-- REGISTRO -->
       <section
         class="section section-anchor section-muted"
