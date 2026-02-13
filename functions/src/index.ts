@@ -853,11 +853,8 @@ export const reserveParticipantNumber = onCall({ region: "us-central1" }, async 
       stationCode: allocation.stationCode,
     };
   } catch (error) {
-    logger.error("No se pudo reservar numero de participante.", {
-      stationId: station.stationId,
-      error,
-    });
-    throw new HttpsError("internal", "No se pudo reservar numero de participante. Reintenta.");
+    console.error("ERROR REAL reserveParticipantNumber:", error);
+    throw error;
   }
 });
 
