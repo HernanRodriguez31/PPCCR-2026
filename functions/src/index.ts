@@ -228,23 +228,6 @@ function formatDateForSheet(date: Date): string {
   return formatter.format(date).replace(",", "");
 }
 
-function formatTimestampForBuenosAiresSheet(date: Date): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(date);
-
-  const pick = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((part) => part.type === type)?.value || "";
-
-  return `${pick("year")}-${pick("month")}-${pick("day")} ${pick("hour")}:${pick("minute")}`;
-}
-
 function setCorsHeaders(res: { set: (key: string, value: string) => void }): void {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "POST,OPTIONS");
@@ -955,7 +938,15 @@ export const submitAlgorithmStage1 = onRequest(
     }
 
     const now = clientTimestamp;
-    const timestampForSheet = formatTimestampForBuenosAiresSheet(now);
+    const timestamp = new Date().toLocaleString("es-AR", {
+      timeZone: "America/Argentina/Buenos_Aires",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).replace(",", "");
     const ageMeetsInclusion = age >= STAGE1_MIN_AGE;
     const outcome = finalResult || (ageMeetsInclusion ? "cumple_criterio_edad" : "sin_criterio_inclusion_edad");
 
@@ -970,7 +961,7 @@ export const submitAlgorithmStage1 = onRequest(
 
     const rowValues: Array<string | number> = [
       participantId,
-      timestampForSheet,
+      timestamp,
       stationIdInput,
       sexInput,
       age,
