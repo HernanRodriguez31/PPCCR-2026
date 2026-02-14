@@ -43,6 +43,22 @@ const SHEET_HEADERS_A_TO_G = Object.freeze([
   "Exclusion Paso 2",
 ]);
 
+const SHEET_HEADERS_A_TO_M = Object.freeze([
+  "ID Participante",
+  "Fecha/Hora",
+  "Station ID",
+  "Sexo",
+  "Edad",
+  "Resultado Paso 1",
+  "Exclusion Paso 2",
+  "Riesgo Paso 3",
+  "Resultado Final",
+  "Nombre",
+  "DNI",
+  "Email",
+  "Celular",
+]);
+
 type StationDefinition = {
   stationId: string;
   stationName: string;
@@ -228,6 +244,13 @@ function parseJsonBody(req: { body?: unknown }): Record<string, unknown> {
   }
 
   return {};
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
 }
 
 function getSecretOrEnv(secretParam: { value?: () => string } | null, fallbackEnvKey = ""): string {
@@ -484,6 +507,38 @@ async function ensureSheetHeadersAtoG(
   });
 }
 
+async function ensureSheetHeadersAtoM(
+  sheetId: string,
+  sheetTab: string,
+  accessToken: string,
+): Promise<void> {
+  const headerRange = `${sheetTab}!A1:M1`;
+  const getUrl = `${GOOGLE_SHEETS_API_BASE}/${sheetId}/values/${encodeURIComponent(headerRange)}`;
+
+  const getResponse = await googleSheetsRequest<{ values?: string[][] }>({
+    method: "GET",
+    url: getUrl,
+    accessToken,
+  });
+
+  const current = Array.isArray(getResponse?.values?.[0]) ? getResponse?.values?.[0] || [] : [];
+  const hasHeaders = SHEET_HEADERS_A_TO_M.every((header, index) => current[index] === header);
+  if (hasHeaders) return;
+
+  const putUrl = `${GOOGLE_SHEETS_API_BASE}/${sheetId}/values/${encodeURIComponent(headerRange)}?valueInputOption=RAW`;
+
+  await googleSheetsRequest({
+    method: "PUT",
+    url: putUrl,
+    accessToken,
+    body: {
+      range: headerRange,
+      majorDimension: "ROWS",
+      values: [SHEET_HEADERS_A_TO_M],
+    },
+  });
+}
+
 async function appendSheetRowAtoG({
   sheetId,
   sheetTab,
@@ -496,6 +551,38 @@ async function appendSheetRowAtoG({
   row: Array<string | number>;
 }): Promise<number> {
   const appendRange = `${sheetTab}!A:G`;
+  const appendUrl = `${GOOGLE_SHEETS_API_BASE}/${sheetId}/values/${encodeURIComponent(appendRange)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+
+  const appendResponse = await googleSheetsRequest<{ updates?: { updatedRange?: string } }>({
+    method: "POST",
+    url: appendUrl,
+    accessToken,
+    body: {
+      majorDimension: "ROWS",
+      values: [row],
+    },
+  });
+
+  const rowNumber = parseSheetRowFromUpdatedRange(appendResponse?.updates?.updatedRange || "");
+  if (!rowNumber) {
+    throw new Error("No se pudo inferir fila de Google Sheets despues del append.");
+  }
+
+  return rowNumber;
+}
+
+async function appendSheetRowAtoM({
+  sheetId,
+  sheetTab,
+  accessToken,
+  row,
+}: {
+  sheetId: string;
+  sheetTab: string;
+  accessToken: string;
+  row: Array<string | number>;
+}): Promise<number> {
+  const appendRange = `${sheetTab}!A:M`;
   const appendUrl = `${GOOGLE_SHEETS_API_BASE}/${sheetId}/values/${encodeURIComponent(appendRange)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
 
   const appendResponse = await googleSheetsRequest<{ updates?: { updatedRange?: string } }>({
@@ -788,23 +875,32 @@ export const submitAlgorithmStage1 = onRequest(
 
     const participantId = String(payload.participantId || "").trim();
     const stationIdInput = String(payload.stationId || "").trim();
-    const sexInput = String(payload.sex || "").trim();
     const timestampInput = String(payload.timestamp || "").trim();
-    const ageInput = payload.age;
+    const finalResult = String(payload.finalResult || "").trim();
+
+    const step1Data = asRecord(payload.step1Data);
+    const step2Data = asRecord(payload.step2Data);
+    const step3Data = asRecord(payload.step3Data);
+    const step4Data = asRecord(payload.step4Data);
+
+    const sexInput = String(step1Data?.sex ?? "").trim().toUpperCase();
+    const ageInput = step1Data?.age;
+    const step1ResultInput = String(step1Data?.result ?? "").trim();
 
     if (
       !participantId ||
+      !stationIdInput ||
+      !timestampInput ||
+      !finalResult ||
       ageInput === undefined ||
       ageInput === null ||
-      !sexInput ||
-      !stationIdInput ||
-      !timestampInput
+      !sexInput
     ) {
       res.status(400).json({ error: "Faltan datos", recibidos: req.body });
       return;
     }
 
-    const sex = normalizeSex(payload.sex);
+    const sex = normalizeSex(sexInput);
     if (!sex) {
       res.status(400).json({
         ok: false,
@@ -843,7 +939,38 @@ export const submitAlgorithmStage1 = onRequest(
 
     const now = clientTimestamp;
     const ageMeetsInclusion = age >= STAGE1_MIN_AGE;
-    const outcome = ageMeetsInclusion ? "cumple_criterio_edad" : "sin_criterio_inclusion_edad";
+    const outcome = finalResult || (ageMeetsInclusion ? "cumple_criterio_edad" : "sin_criterio_inclusion_edad");
+
+    const step1Result = step1ResultInput || (ageMeetsInclusion ? "Cumple criterio por edad" : "No incluye por edad");
+
+    const step2Details = step2Data ? String(step2Data.details || "").trim() : "";
+    const step3Details = step3Data ? String(step3Data.details || "").trim() : "";
+    const step4Name = step4Data ? String(step4Data.name || "").trim() : "";
+    const step4Dni = step4Data ? String(step4Data.dni || "").trim() : "";
+    const step4Email = step4Data ? String(step4Data.email || "").trim() : "";
+    const step4Phone = step4Data ? String(step4Data.phone || "").trim() : "";
+
+    const rowValues: Array<string | number> = [
+      participantId,
+      timestampInput,
+      stationIdInput,
+      sexInput,
+      age,
+      step1Result,
+      step2Details,
+      step3Details,
+      finalResult,
+      step4Name,
+      step4Dni,
+      step4Email,
+      step4Phone,
+    ];
+
+    const stageReached =
+      step4Data ? 4 :
+        step3Data ? 3 :
+          step2Data ? 2 :
+            ageMeetsInclusion ? 2 : 1;
 
     const stage1RecordBase: Stage1RecordBase = {
       fecha: formatDateForSheet(now),
@@ -855,7 +982,7 @@ export const submitAlgorithmStage1 = onRequest(
       criterionAge: STAGE1_MIN_AGE,
       ageMeetsInclusion,
       outcome,
-      stageReached: ageMeetsInclusion ? 2 : 1,
+      stageReached,
       source: String(payload.source || "home").trim() || "home",
     };
 
@@ -880,34 +1007,29 @@ export const submitAlgorithmStage1 = onRequest(
       return;
     }
 
-    const stage1Record: Stage1Record = {
-      ...stage1RecordBase,
-      stationId: station.stationId,
-      stationName: station.stationName,
-      stationCode: station.stationCode,
-      participantNumber: allocation.participantNumber,
-      participantSequence: allocation.participantSequence,
-    };
-
     let sheets: SheetsResult = { status: "error" };
     try {
-      sheets = await appendToGoogleSheets(stage1Record);
-
-      // Sheets BLOQUEANTE: si no guardó, esto es error real.
-      if (sheets.status !== "saved" || typeof sheets.row !== "number") {
-        const cfg = getSheetsConfig();
-        const hint =
-          sheets.status === "not_configured"
-            ? `Sheets no configurado. Revisar secrets: PPCCR_STAGE1_SHEET_ID / PPCCR_STAGE1_SHEET_TAB / PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL / PPCCR_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY. sheetId="${cfg.sheetId}", tab="${cfg.sheetTab}", email="${cfg.serviceAccountEmail}"`
-            : `Sheets status inesperado: ${sheets.status}`;
-        throw new Error(hint);
+      const { sheetId, sheetTab, serviceAccountEmail, serviceAccountKey } = getSheetsConfig();
+      if (!sheetId || !serviceAccountEmail || !serviceAccountKey) {
+        throw new Error(
+          "Sheets no configurado. Revisar secrets: PPCCR_STAGE1_SHEET_ID / PPCCR_STAGE1_SHEET_TAB / PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL / PPCCR_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.",
+        );
       }
 
+      const accessToken = await getGoogleAccessToken(serviceAccountEmail, serviceAccountKey);
+      await ensureSheetHeadersAtoM(sheetId, sheetTab, accessToken);
+      const row = await appendSheetRowAtoM({
+        sheetId,
+        sheetTab,
+        accessToken,
+        row: rowValues,
+      });
+      sheets = { status: "saved", row };
+
       // Persistimos el row para poder actualizarlo en pasos 2/3/4.
-      const { sheetId, sheetTab } = getSheetsConfig();
       await persistSheetIntegrationRow({
         recordId: allocation.recordId,
-        row: sheets.row,
+        row,
         sheetId,
         sheetTab,
       });

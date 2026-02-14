@@ -2430,17 +2430,60 @@ async function saveHomeAlgorithmInterview(finalResult) {
 
   syncInterviewStateFromInterview({ status: "submitting" });
 
+  const selectedStep2Items = getHomeAlgorithmCodeItems(
+    interviewState.step2.exclusions,
+    homeAlgorithmState?.step2Labels || new Map(),
+  );
+  const selectedStep3Items = getHomeAlgorithmCodeItems(
+    interviewState.step3.riskFlags,
+    homeAlgorithmState?.step3Labels || new Map(),
+  );
+
+  const step1ResultText = interviewState.step1.includedByAge
+    ? "Cumple criterio por edad"
+    : "No incluye por edad";
+
+  const reachedStep2 =
+    homeAlgorithmState &&
+    (homeAlgorithmState.step2Reviewed ||
+      homeAlgorithmState.maxUnlockedStep >= ALGORITHM_HOME.steps.VIGILANCE);
+  const reachedStep3 =
+    homeAlgorithmState &&
+    (homeAlgorithmState.step3Reviewed ||
+      homeAlgorithmState.maxUnlockedStep >= ALGORITHM_HOME.steps.RISK);
+  const reachedStep4 =
+    homeAlgorithmState && homeAlgorithmState.maxUnlockedStep >= ALGORITHM_HOME.steps.DECISION;
+
   const payload = {
     participantId,
-    age: interviewState.step1.age,
-    sex: interviewState.step1.sex,
     stationId: interviewState.step1.stationId,
-    step1Data: interviewState.step1,
-    step2Data: interviewState.step2,
-    step3Data: interviewState.step3,
-    step4Data: interviewState.step4,
+    timestamp: homeAlgorithmState?.interview?.deviceTimestamp || new Date().toISOString(),
     finalResult: String(finalResult || "").trim(),
-    timestamp: new Date().toISOString(),
+    step1Data: {
+      age: interviewState.step1.age,
+      sex: interviewState.step1.sex,
+      result: step1ResultText,
+    },
+    step2Data: reachedStep2
+      ? {
+          excluded: Boolean(interviewState.step2.hasExclusion),
+          details: selectedStep2Items.join(" | "),
+        }
+      : null,
+    step3Data: reachedStep3
+      ? {
+          risk: Boolean(interviewState.step3.hasHighRisk),
+          details: selectedStep3Items.join(" | "),
+        }
+      : null,
+    step4Data: reachedStep4
+      ? {
+          name: interviewState.step4.fullName,
+          dni: interviewState.step4.documentId,
+          email: interviewState.step4.email,
+          phone: interviewState.step4.phone,
+        }
+      : null,
   };
 
   console.log("🟡 Enviando entrevista final:", payload);
@@ -2487,14 +2530,34 @@ async function saveHomeAlgorithmInterview(finalResult) {
   }
 }
 
-async function finalizeAndPersistHomeInterview(outcome, finalStep, feedbackElement) {
+async function finalizeAndPersistHomeInterview(
+  outcome,
+  finalStep,
+  feedbackElement,
+  triggerButton = null,
+) {
   const finalResult = getFinalResultLabel(outcome);
+  let restoreLabel = "";
+
+  if (triggerButton) {
+    restoreLabel = String(triggerButton.textContent || "");
+    triggerButton.disabled = true;
+    triggerButton.textContent = "⏳ Guardando...";
+  }
+  if (feedbackElement) {
+    setHomeAlgorithmFeedback(feedbackElement, "Guardando entrevista final...", "neutral");
+  }
+
   const result = await saveHomeAlgorithmInterview(finalResult);
   if (!result.ok) {
     const message =
       result.error instanceof Error ? result.error.message : "No se pudo guardar la entrevista.";
     if (feedbackElement) {
       setHomeAlgorithmFeedback(feedbackElement, `Error al guardar: ${message}`, "danger");
+    }
+    if (triggerButton) {
+      triggerButton.disabled = false;
+      triggerButton.textContent = restoreLabel;
     }
     return;
   }
@@ -2553,6 +2616,7 @@ async function onHomeAlgorithmFinishStep1() {
     HOME_ALGO_OUTCOME.AGE_EXCLUDED,
     ALGORITHM_HOME.steps.AGE,
     homeAlgorithmState.step1Feedback,
+    homeAlgorithmState.step1Finish,
   );
 }
 
@@ -2637,6 +2701,7 @@ async function onHomeAlgorithmFinishStep2() {
     HOME_ALGO_OUTCOME.ACTIVE_SURVEILLANCE_EXCLUDED,
     ALGORITHM_HOME.steps.VIGILANCE,
     homeAlgorithmState.step2Feedback,
+    homeAlgorithmState.step2Finish,
   );
 }
 
@@ -2725,6 +2790,7 @@ async function onHomeAlgorithmFinishStep3() {
     HOME_ALGO_OUTCOME.HIGH_RISK_REFERRAL,
     ALGORITHM_HOME.steps.RISK,
     homeAlgorithmState.step3Feedback,
+    homeAlgorithmState.step3Finish,
   );
 }
 
@@ -2852,6 +2918,7 @@ async function onHomeAlgorithmFinishStep4() {
     HOME_ALGO_OUTCOME.FIT_CANDIDATE,
     ALGORITHM_HOME.steps.DECISION,
     homeAlgorithmState.step4Feedback,
+    homeAlgorithmState.step4Finish,
   );
 }
 
