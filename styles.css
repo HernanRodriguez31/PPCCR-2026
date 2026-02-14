@@ -958,6 +958,73 @@ code {
   color: var(--muted);
 }
 
+.mini-panel--primary {
+  grid-column: 1 / -1;
+  padding: 22px 24px;
+  border: 1px solid rgba(15, 95, 166, 0.22);
+  background:
+    radial-gradient(circle at 12% -18%, rgba(79, 184, 255, 0.16), transparent 44%),
+    linear-gradient(162deg, rgba(255, 255, 255, 0.98), rgba(234, 246, 255, 0.92));
+  box-shadow:
+    0 18px 34px rgba(2, 6, 23, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.mini-panel--primary .mini-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mini-panel__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(15, 95, 166, 0.1);
+  border: 1px solid rgba(15, 95, 166, 0.22);
+  color: var(--blue-900);
+  font-size: 0.78rem;
+  font-weight: 760;
+  letter-spacing: 0.01em;
+}
+
+.mini-panel__meta {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  color: #355a7a;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.mini-panel__meta li {
+  position: relative;
+  padding-left: 14px;
+}
+
+.mini-panel__meta li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #0f66b4;
+  font-weight: 800;
+}
+
+.mini-panel__cta {
+  margin-top: 14px;
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 14px;
+  font-size: 0.98rem;
+  font-weight: 780;
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -7801,11 +7868,11 @@ html.telefs-open {
   justify-content: center;
 }
 
-body.page-home .ppccr-modal[hidden] {
+body.page-home .ppccr-modal.modal--interview[hidden] {
   display: none !important;
 }
 
-body.page-home .ppccr-modal {
+body.page-home .ppccr-modal.modal--interview {
   position: fixed;
   inset: 0;
   z-index: 560;
@@ -7820,17 +7887,17 @@ body.page-home .ppccr-modal {
     visibility 180ms ease;
 }
 
-body.page-home .ppccr-modal.is-open {
+body.page-home .ppccr-modal.modal--interview.is-open {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
 }
 
-body.page-home .ppccr-modal.is-closing {
+body.page-home .ppccr-modal.modal--interview.is-closing {
   pointer-events: none;
 }
 
-body.page-home .ppccr-modal__backdrop {
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__backdrop {
   position: absolute;
   inset: 0;
   background: rgba(3, 13, 29, 0.58);
@@ -7840,11 +7907,11 @@ body.page-home .ppccr-modal__backdrop {
   transition: opacity 180ms ease;
 }
 
-body.page-home .ppccr-modal.is-open .ppccr-modal__backdrop {
+body.page-home .ppccr-modal.modal--interview.is-open .ppccr-modal__backdrop {
   opacity: 1;
 }
 
-body.page-home .ppccr-modal__card {
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__card {
   position: relative;
   z-index: 1;
   width: min(1000px, calc(100vw - 48px));
@@ -7871,12 +7938,12 @@ body.page-home .ppccr-modal__card {
     transform 180ms ease;
 }
 
-body.page-home .ppccr-modal.is-open .ppccr-modal__card {
+body.page-home .ppccr-modal.modal--interview.is-open .ppccr-modal__card {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
 
-body.page-home .ppccr-modal__header {
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__header {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -7887,11 +7954,11 @@ body.page-home .ppccr-modal__header {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 252, 255, 0.95));
 }
 
-body.page-home .ppccr-modal__titlewrap {
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__titlewrap {
   min-width: 0;
 }
 
-body.page-home .ppccr-modal__header h2 {
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__header h2 {
   margin: 0;
   color: var(--blue-950);
   font-size: clamp(1.08rem, 1.55vw, 1.3rem);
@@ -7900,7 +7967,7 @@ body.page-home .ppccr-modal__header h2 {
   letter-spacing: -0.016em;
 }
 
-body.page-home .ppccr-modal__subtitle {
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__subtitle {
   margin: 2px 0 0;
   color: #436787;
   font-size: 0.8rem;
@@ -7908,7 +7975,7 @@ body.page-home .ppccr-modal__subtitle {
   font-weight: 600;
 }
 
-body.page-home .ppccr-modal__close {
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__close {
   width: 38px;
   height: 38px;
   border-radius: 50%;
@@ -7925,19 +7992,19 @@ body.page-home .ppccr-modal__close {
     box-shadow 180ms ease;
 }
 
-body.page-home .ppccr-modal__close:hover,
-body.page-home .ppccr-modal__close:focus-visible {
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__close:hover,
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__close:focus-visible {
   border-color: rgba(15, 95, 166, 0.42);
   background: #fff;
   box-shadow: 0 0 0 3px rgba(42, 137, 230, 0.16);
   outline: none;
 }
 
-body.page-home .ppccr-modal__close:active {
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__close:active {
   transform: scale(0.97);
 }
 
-body.page-home .ppccr-modal__body {
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__body {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
@@ -7946,7 +8013,7 @@ body.page-home .ppccr-modal__body {
   padding: 8px 10px 10px;
 }
 
-body.page-home .ppccr-modal__body > .home-algo {
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__body > .home-algo {
   flex: 1 1 auto;
   min-height: 0;
   margin: 0;
@@ -7958,13 +8025,13 @@ body.page-home .ppccr-modal__body > .home-algo {
   overflow: hidden;
 }
 
-body.page-home .ppccr-modal .home-algo__topbar {
+body.page-home .ppccr-modal.modal--interview .home-algo__topbar {
   margin: 0;
   padding: 0;
   min-height: 0;
 }
 
-body.page-home .ppccr-modal .home-algo__status-chip {
+body.page-home .ppccr-modal.modal--interview .home-algo__status-chip {
   padding: 3px 9px;
   border-radius: 999px;
   font-size: 0.72rem;
@@ -7973,22 +8040,22 @@ body.page-home .ppccr-modal .home-algo__status-chip {
   letter-spacing: 0.01em;
 }
 
-body.page-home .ppccr-modal .home-algo__status-chip[data-state="final"] {
+body.page-home .ppccr-modal.modal--interview .home-algo__status-chip[data-state="final"] {
   display: block;
   padding: 5px 10px;
   border-radius: 999px;
   box-shadow: none;
 }
 
-body.page-home .ppccr-modal .home-algo > nav {
+body.page-home .ppccr-modal.modal--interview .home-algo > nav {
   margin: 0;
 }
 
-body.page-home .ppccr-modal .home-algo__stepper {
+body.page-home .ppccr-modal.modal--interview .home-algo__stepper {
   gap: 5px;
 }
 
-body.page-home .ppccr-modal .home-algo__stepper-button {
+body.page-home .ppccr-modal.modal--interview .home-algo__stepper-button {
   min-height: 42px;
   padding: 6px 9px;
   transition:
@@ -7998,19 +8065,19 @@ body.page-home .ppccr-modal .home-algo__stepper-button {
     transform 150ms ease;
 }
 
-body.page-home .ppccr-modal .home-algo__stepper-label {
+body.page-home .ppccr-modal.modal--interview .home-algo__stepper-label {
   font-size: 0.8rem;
   line-height: 1.22;
   font-weight: 760;
 }
 
-body.page-home .ppccr-modal .home-algo__stepper-index {
+body.page-home .ppccr-modal.modal--interview .home-algo__stepper-index {
   width: 22px;
   height: 22px;
   font-size: 0.72rem;
 }
 
-body.page-home .ppccr-modal .home-algo__flow-status {
+body.page-home .ppccr-modal.modal--interview .home-algo__flow-status {
   margin: 8px 0 0;
   padding: 6px 10px;
   border-radius: 10px;
@@ -8023,23 +8090,23 @@ body.page-home .ppccr-modal .home-algo__flow-status {
   width: 100%;
 }
 
-body.page-home .ppccr-modal .home-algo__flow-status[data-tone="danger"] {
+body.page-home .ppccr-modal.modal--interview .home-algo__flow-status[data-tone="danger"] {
   border-color: rgba(177, 36, 58, 0.34);
   background: rgba(255, 236, 240, 0.98);
   color: #8f1f34;
 }
 
-body.page-home .ppccr-modal .home-algo__flow-status[data-tone="success"] {
+body.page-home .ppccr-modal.modal--interview .home-algo__flow-status[data-tone="success"] {
   border-color: rgba(20, 129, 82, 0.34);
   background: rgba(233, 251, 240, 0.98);
   color: #0f6b43;
 }
 
-body.page-home .ppccr-modal .home-algo__panel:not([hidden]) {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel:not([hidden]) {
   flex: 1 1 auto;
 }
 
-body.page-home .ppccr-modal .home-algo__panel {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -8057,34 +8124,34 @@ body.page-home .ppccr-modal .home-algo__panel {
     transform 180ms ease;
 }
 
-body.page-home .ppccr-modal .home-algo__panel.is-step-entering {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel.is-step-entering {
   animation: homeAlgoPanelIn 180ms ease both;
 }
 
-body.page-home .ppccr-modal .home-algo__panel.is-overflow-top {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel.is-overflow-top {
   box-shadow:
     inset 0 13px 14px -14px rgba(10, 36, 71, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.74);
 }
 
-body.page-home .ppccr-modal .home-algo__panel.is-overflow-bottom {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel.is-overflow-bottom {
   box-shadow:
     inset 0 -15px 16px -16px rgba(10, 36, 71, 0.48),
     inset 0 1px 0 rgba(255, 255, 255, 0.74);
 }
 
-body.page-home .ppccr-modal .home-algo__panel.is-overflow-top.is-overflow-bottom {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel.is-overflow-top.is-overflow-bottom {
   box-shadow:
     inset 0 13px 14px -14px rgba(10, 36, 71, 0.42),
     inset 0 -15px 16px -16px rgba(10, 36, 71, 0.46),
     inset 0 1px 0 rgba(255, 255, 255, 0.74);
 }
 
-body.page-home .ppccr-modal .home-algo__panel::after {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel::after {
   content: none;
 }
 
-body.page-home .ppccr-modal .home-algo__panel.is-overflow-bottom::after {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel.is-overflow-bottom::after {
   content: "Deslizá para ver más";
   position: absolute;
   left: 50%;
@@ -8105,27 +8172,27 @@ body.page-home .ppccr-modal .home-algo__panel.is-overflow-bottom::after {
   border-radius: 10px;
 }
 
-body.page-home .ppccr-modal .home-algo__panel::-webkit-scrollbar {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel::-webkit-scrollbar {
   width: 10px;
 }
 
-body.page-home .ppccr-modal .home-algo__panel::-webkit-scrollbar-track {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel::-webkit-scrollbar-track {
   background: rgba(227, 240, 252, 0.86);
   border-radius: 999px;
 }
 
-body.page-home .ppccr-modal .home-algo__panel::-webkit-scrollbar-thumb {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, rgba(15, 95, 166, 0.6), rgba(42, 137, 230, 0.6));
   border-radius: 999px;
   border: 2px solid rgba(227, 240, 252, 0.86);
 }
 
-body.page-home .ppccr-modal .home-algo__panel {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel {
   scrollbar-width: thin;
   scrollbar-color: rgba(15, 95, 166, 0.65) rgba(227, 240, 252, 0.88);
 }
 
-body.page-home .ppccr-modal .home-algo__panel-title {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel-title {
   margin-bottom: 4px;
   color: var(--blue-950);
   font-size: clamp(1.08rem, 1.95vw, 1.24rem);
@@ -8133,36 +8200,36 @@ body.page-home .ppccr-modal .home-algo__panel-title {
   letter-spacing: -0.013em;
 }
 
-body.page-home .ppccr-modal .home-algo__panel-copy {
+body.page-home .ppccr-modal.modal--interview .home-algo__panel-copy {
   margin-bottom: 10px;
   color: #365977;
   font-size: 0.93rem;
   line-height: 1.4;
 }
 
-body.page-home .ppccr-modal .home-algo__group-title {
+body.page-home .ppccr-modal.modal--interview .home-algo__group-title {
   font-size: 0.95rem;
   font-weight: 790;
 }
 
-body.page-home .ppccr-modal .home-algo__label {
+body.page-home .ppccr-modal.modal--interview .home-algo__label {
   font-size: 0.9rem;
   font-weight: 780;
 }
 
-body.page-home .ppccr-modal .home-algo__required-note {
+body.page-home .ppccr-modal.modal--interview .home-algo__required-note {
   margin-top: 10px;
   color: #3d5f7d;
   font-size: 0.86rem;
   line-height: 1.34;
 }
 
-body.page-home .ppccr-modal .home-algo__feedback,
-body.page-home .ppccr-modal .home-algo__alert {
+body.page-home .ppccr-modal.modal--interview .home-algo__feedback,
+body.page-home .ppccr-modal.modal--interview .home-algo__alert {
   display: none !important;
 }
 
-body.page-home .ppccr-modal .home-algo__actions {
+body.page-home .ppccr-modal.modal--interview .home-algo__actions {
   flex: 0 0 auto;
   margin-top: auto;
   position: sticky;
@@ -8180,55 +8247,55 @@ body.page-home .ppccr-modal .home-algo__actions {
   backdrop-filter: blur(6px);
 }
 
-body.page-home .ppccr-modal .home-algo__actions .btn {
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn {
   min-height: 42px;
   border-radius: 12px;
   font-weight: 760;
   letter-spacing: 0.003em;
 }
 
-body.page-home .ppccr-modal .home-algo__actions .btn-primary,
-body.page-home .ppccr-modal .home-algo__actions .btn-success,
-body.page-home .ppccr-modal .home-algo__actions .btn-danger {
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-primary,
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-success,
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-danger {
   background: linear-gradient(145deg, #0f66b4, #0a4f90);
   border-color: rgba(255, 255, 255, 0.24);
   color: #fff;
 }
 
-body.page-home .ppccr-modal .home-algo__actions .btn-primary:hover,
-body.page-home .ppccr-modal .home-algo__actions .btn-success:hover,
-body.page-home .ppccr-modal .home-algo__actions .btn-danger:hover {
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-primary:hover,
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-success:hover,
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-danger:hover {
   background: linear-gradient(145deg, #1273cb, #0b5ca5);
 }
 
-body.page-home .ppccr-modal .home-algo__actions .btn-outline-secondary,
-body.page-home .ppccr-modal .home-algo__actions .btn-ghost {
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-outline-secondary,
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-ghost {
   background: rgba(255, 255, 255, 0.95);
   color: var(--blue-900);
   border-color: rgba(15, 95, 166, 0.3);
 }
 
-body.page-home .ppccr-modal .home-algo__actions .btn-outline-secondary:hover,
-body.page-home .ppccr-modal .home-algo__actions .btn-ghost:hover {
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-outline-secondary:hover,
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-ghost:hover {
   background: rgba(240, 248, 255, 0.98);
   border-color: rgba(15, 95, 166, 0.46);
 }
 
-body.page-home .ppccr-modal .home-algo__actions .btn[disabled],
-body.page-home .ppccr-modal .home-algo__actions .btn[aria-disabled="true"] {
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn[disabled],
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn[aria-disabled="true"] {
   opacity: 0.62;
   box-shadow: none;
   transform: none;
   filter: saturate(0.84);
 }
 
-body.page-home .ppccr-modal .home-algo__actions .btn.is-loading {
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn.is-loading {
   position: relative;
   pointer-events: none;
   cursor: wait;
 }
 
-body.page-home .ppccr-modal .home-algo__actions .btn.is-loading::before {
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn.is-loading::before {
   content: "";
   width: 14px;
   height: 14px;
@@ -8241,36 +8308,36 @@ body.page-home .ppccr-modal .home-algo__actions .btn.is-loading::before {
   animation: ppccrSpin 700ms linear infinite;
 }
 
-body.page-home .ppccr-modal
+body.page-home .ppccr-modal.modal--interview
   :is(.home-algo__stepper-button, .home-algo__actions .btn, .home-algo__input, .home-algo__check input):focus-visible {
   outline: 3px solid rgba(13, 109, 193, 0.44);
   outline-offset: 2px;
 }
 
-body.page-home .ppccr-modal .home-algo__check:focus-within {
+body.page-home .ppccr-modal.modal--interview .home-algo__check:focus-within {
   border-color: rgba(15, 95, 166, 0.4);
   box-shadow:
     0 0 0 3px rgba(13, 109, 193, 0.16),
     0 10px 18px rgba(9, 48, 95, 0.08);
 }
 
-body.page-home .ppccr-modal .home-algo__actions #home-algo-restart {
+body.page-home .ppccr-modal.modal--interview .home-algo__actions #home-algo-restart {
   margin-left: auto;
 }
 
-body.page-home .ppccr-modal .home-algo__modal {
+body.page-home .ppccr-modal.modal--interview .home-algo__modal {
   position: absolute;
   inset: 0;
   z-index: 18;
 }
 
-body.page-home .ppccr-modal .home-algo__modal-backdrop {
+body.page-home .ppccr-modal.modal--interview .home-algo__modal-backdrop {
   background: rgba(3, 13, 29, 0.52);
   -webkit-backdrop-filter: blur(5px);
   backdrop-filter: blur(5px);
 }
 
-body.page-home .ppccr-modal .home-algo__modal-card {
+body.page-home .ppccr-modal.modal--interview .home-algo__modal-card {
   margin-top: 5.5vh;
 }
 
@@ -8329,6 +8396,200 @@ body.page-home .home-algo-complete__actions {
   flex-wrap: wrap;
 }
 
+/* --------------------------------------------------------------------------
+   Interview Modal Layout Refactor (scoped)
+   -------------------------------------------------------------------------- */
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__card {
+  width: min(980px, calc(100vw - 48px));
+  height: min(82vh, 760px);
+  height: min(82dvh, 760px);
+  max-height: min(82vh, 760px);
+  max-height: min(82dvh, 760px);
+}
+
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__header {
+  padding: 16px 20px 12px;
+}
+
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__subtitle {
+  margin-top: 4px;
+}
+
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__body {
+  padding: 0;
+}
+
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__body > .home-algo {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo :is(p, li, label, .home-algo__check span) {
+  font-weight: 400;
+  letter-spacing: 0.1px;
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__panel-title {
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__label {
+  font-weight: 560;
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-top {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(12, 42, 79, 0.1);
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-top .home-algo__topbar {
+  margin: 0;
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-top .home-algo__stepper {
+  margin-top: 8px;
+  gap: 8px;
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-top .home-algo__stepper-button {
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-top .home-algo__stepper-index {
+  width: 26px;
+  height: 26px;
+  font-size: 0.78rem;
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  padding: 14px 16px 18px;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(12, 42, 79, 0.35) transparent;
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-body::-webkit-scrollbar-thumb {
+  background: rgba(12, 42, 79, 0.28);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-body.is-overflow-bottom::after {
+  content: "Deslizá para ver más";
+  position: sticky;
+  left: 0;
+  bottom: 0;
+  display: block;
+  width: 100%;
+  margin-top: -2px;
+  padding: 22px 0 6px;
+  text-align: center;
+  pointer-events: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(20, 60, 90, 0.74);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.9) 45%,
+    rgba(255, 255, 255, 0.98)
+  );
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-body .home-algo__panel {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  padding: 16px 16px 10px;
+  border-radius: 16px;
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-body .home-algo__panel::after {
+  content: none !important;
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-body .home-algo__flow-status {
+  margin: 0 0 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+body.page-home .ppccr-modal.modal--interview .interview-footer {
+  flex: 0 0 auto;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid rgba(12, 42, 79, 0.12);
+  box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.1);
+}
+
+body.page-home .ppccr-modal.modal--interview #home-algo-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 42px;
+}
+
+body.page-home .ppccr-modal.modal--interview #home-algo-actions .home-algo__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  position: static;
+  border: 0;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__actions-anchor {
+  display: none !important;
+}
+
+body.page-home .ppccr-modal.modal--interview #home-algo-actions .btn,
+body.page-home .ppccr-modal.modal--interview #home-algo-restart {
+  min-height: 42px;
+  padding: 0 14px;
+}
+
+body.page-home .ppccr-modal.modal--interview #home-algo-restart {
+  margin-left: auto;
+}
+
 body.ppccr-modal-open,
 html.ppccr-modal-open {
   overflow: hidden;
@@ -8339,53 +8600,58 @@ body.ppccr-modal-open {
 }
 
 @media (max-width: 980px) {
-  body.page-home .ppccr-modal {
+  body.page-home .ppccr-modal.modal--interview {
     padding: 12px;
   }
 
-  body.page-home .ppccr-modal__card {
+  body.page-home .ppccr-modal.modal--interview .ppccr-modal__card {
     width: calc(100vw - 24px);
-    height: calc(100vh - 24px);
-    height: calc(100dvh - 24px);
-    max-height: calc(100vh - 24px);
-    max-height: calc(100dvh - 24px);
+    height: min(92vh, 740px);
+    height: min(92dvh, 740px);
+    max-height: min(92vh, 740px);
+    max-height: min(92dvh, 740px);
     border-radius: 16px;
   }
 
-  body.page-home .ppccr-modal__header {
+  body.page-home .ppccr-modal.modal--interview .ppccr-modal__header {
     padding: 10px 12px;
   }
 
-  body.page-home .ppccr-modal__subtitle {
+  body.page-home .ppccr-modal.modal--interview .ppccr-modal__subtitle {
     font-size: 0.74rem;
   }
 
-  body.page-home .ppccr-modal__body {
+  body.page-home .ppccr-modal.modal--interview .ppccr-modal__body {
     padding: 8px;
   }
 
-  body.page-home .ppccr-modal__body > .home-algo {
-    padding: 10px;
+  body.page-home .ppccr-modal.modal--interview .ppccr-modal__body > .home-algo {
+    padding: 0;
   }
 
-  body.page-home .ppccr-modal .home-algo__stepper {
+  body.page-home .ppccr-modal.modal--interview .interview-top .home-algo__stepper {
     grid-template-columns: 1fr;
   }
 
-  body.page-home .ppccr-modal .home-algo__panel {
-    padding-bottom: 220px;
+  body.page-home .ppccr-modal.modal--interview .interview-body {
+    padding: 12px;
   }
 
-  body.page-home .ppccr-modal .home-algo__actions {
+  body.page-home .ppccr-modal.modal--interview #home-algo-actions {
     flex-direction: column;
     align-items: stretch;
   }
 
-  body.page-home .ppccr-modal .home-algo__actions .btn {
+  body.page-home .ppccr-modal.modal--interview #home-algo-actions .home-algo__actions {
     width: 100%;
   }
 
-  body.page-home .ppccr-modal .home-algo__actions #home-algo-restart {
+  body.page-home .ppccr-modal.modal--interview #home-algo-actions .btn,
+  body.page-home .ppccr-modal.modal--interview #home-algo-restart {
+    width: 100%;
+  }
+
+  body.page-home .ppccr-modal.modal--interview #home-algo-restart {
     margin-left: 0;
   }
 
@@ -8400,11 +8666,11 @@ body.ppccr-modal-open {
 }
 
 @media (max-height: 760px) {
-  body.page-home .ppccr-modal {
+  body.page-home .ppccr-modal.modal--interview {
     padding: 12px;
   }
 
-  body.page-home .ppccr-modal__card {
+  body.page-home .ppccr-modal.modal--interview .ppccr-modal__card {
     height: min(92vh, 720px);
     height: min(92dvh, 720px);
     max-height: min(92vh, 720px);
@@ -8413,12 +8679,12 @@ body.ppccr-modal-open {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body.page-home .ppccr-modal,
-  body.page-home .ppccr-modal__backdrop,
-  body.page-home .ppccr-modal__card,
-  body.page-home .ppccr-modal .home-algo__panel,
-  body.page-home .ppccr-modal .home-algo__actions .btn,
-  body.page-home .ppccr-modal .home-algo__actions .btn.is-loading::before {
+  body.page-home .ppccr-modal.modal--interview,
+  body.page-home .ppccr-modal.modal--interview .ppccr-modal__backdrop,
+  body.page-home .ppccr-modal.modal--interview .ppccr-modal__card,
+  body.page-home .ppccr-modal.modal--interview .home-algo__panel,
+  body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn,
+  body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn.is-loading::before {
     animation: none !important;
     transition: none !important;
   }

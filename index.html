@@ -184,17 +184,6 @@
                 tu navegador.
               </p>
 
-              <div class="hero-algo-launch">
-                <button
-                  type="button"
-                  class="btn btn-primary hero-algo-launch__btn"
-                  id="ppccr-open-algo"
-                  data-open-algo="true"
-                >
-                  Iniciar entrevista
-                </button>
-              </div>
-
               <div
                 class="hero-cta"
                 role="group"
@@ -217,6 +206,28 @@
 
             <div class="hero-right" aria-label="Resumen del sitio">
               <div class="mini-panels">
+                <article class="mini-panel mini-panel--primary" aria-label="Entrevista Inicial">
+                  <div class="mini-panel__header">
+                    <h3 class="mini-panel__title">Entrevista Inicial</h3>
+                    <span class="mini-panel__badge">4 pasos</span>
+                  </div>
+                  <p class="mini-panel__text">
+                    Entrevista guiada en 4 pasos. Registrá el resultado y guardá automáticamente.
+                  </p>
+                  <ul class="mini-panel__meta">
+                    <li>Duración estimada: 1–2 min</li>
+                    <li>Guardado automático por paso</li>
+                    <li>Cierre asistido</li>
+                  </ul>
+                  <button
+                    id="startInterviewBtn"
+                    class="btn btn-primary mini-panel__cta"
+                    type="button"
+                    data-open-algo="true"
+                  >
+                    Iniciar entrevista
+                  </button>
+                </article>
                 <a
                   class="mini-panel mini-panel--link"
                   href="#guias"
@@ -287,12 +298,9 @@
       >
         <div class="container">
           <header class="section-header">
-            <h2 class="section-title" id="algoritmo-title">
-              Protocolo de Inclusión (PPCCR 2026)
-            </h2>
+            <h2 class="section-title" id="algoritmo-title">Entrevista Inicial</h2>
             <p class="section-subtitle">
-              Entrevista guiada en 4 pasos. Registrá el resultado y guardá
-              automáticamente.
+              Flujo asistido de evaluación inicial con validaciones por paso.
             </p>
           </header>
 
@@ -324,87 +332,81 @@
             id="home-algo"
             aria-label="Algoritmo operativo"
           >
-            <div class="home-algo__topbar">
-              <p class="home-algo__status-chip" id="home-algo-status-chip">
-                Entrevista en curso
-              </p>
+            <div class="interview-top">
+              <div class="home-algo__topbar">
+                <p class="home-algo__status-chip" id="home-algo-status-chip">
+                  Entrevista en curso
+                </p>
+              </div>
+
+              <nav aria-label="Etapas del algoritmo">
+                <ol class="home-algo__stepper" id="home-algo-stepper">
+                  <li class="home-algo__stepper-item">
+                    <button
+                      type="button"
+                      class="home-algo__stepper-button is-current"
+                      data-home-algo-step-target="1"
+                      aria-controls="home-algo-step-1"
+                    >
+                      <span class="home-algo__stepper-index" aria-hidden="true"
+                        >1</span
+                      >
+                      <span class="home-algo__stepper-label">Criterio por edad</span>
+                    </button>
+                  </li>
+                  <li class="home-algo__stepper-item">
+                    <button
+                      type="button"
+                      class="home-algo__stepper-button"
+                      data-home-algo-step-target="2"
+                      aria-controls="home-algo-step-2"
+                    >
+                      <span class="home-algo__stepper-index" aria-hidden="true"
+                        >2</span
+                      >
+                      <span class="home-algo__stepper-label">Vigilancia activa</span>
+                    </button>
+                  </li>
+                  <li class="home-algo__stepper-item">
+                    <button
+                      type="button"
+                      class="home-algo__stepper-button"
+                      data-home-algo-step-target="3"
+                      aria-controls="home-algo-step-3"
+                    >
+                      <span class="home-algo__stepper-index" aria-hidden="true"
+                        >3</span
+                      >
+                      <span class="home-algo__stepper-label">Riesgo elevado</span>
+                    </button>
+                  </li>
+                  <li class="home-algo__stepper-item">
+                    <button
+                      type="button"
+                      class="home-algo__stepper-button"
+                      data-home-algo-step-target="4"
+                      aria-controls="home-algo-step-4"
+                    >
+                      <span class="home-algo__stepper-index" aria-hidden="true"
+                        >4</span
+                      >
+                      <span class="home-algo__stepper-label"
+                        >Datos de contacto</span
+                      >
+                    </button>
+                  </li>
+                </ol>
+              </nav>
             </div>
 
-            <nav aria-label="Etapas del algoritmo">
-              <ol class="home-algo__stepper" id="home-algo-stepper">
-                <li class="home-algo__stepper-item">
-                  <button
-                    type="button"
-                    class="home-algo__stepper-button is-current"
-                    data-home-algo-step-target="1"
-                    aria-controls="home-algo-step-1"
-                  >
-                    <span class="home-algo__stepper-index" aria-hidden="true"
-                      >1</span
-                    >
-                    <span class="home-algo__stepper-label">Criterio por edad</span>
-                  </button>
-                </li>
-                <li class="home-algo__stepper-item">
-                  <button
-                    type="button"
-                    class="home-algo__stepper-button"
-                    data-home-algo-step-target="2"
-                    aria-controls="home-algo-step-2"
-                  >
-                    <span class="home-algo__stepper-index" aria-hidden="true"
-                      >2</span
-                    >
-                    <span class="home-algo__stepper-label">Vigilancia activa</span>
-                  </button>
-                </li>
-                <li class="home-algo__stepper-item">
-                  <button
-                    type="button"
-                    class="home-algo__stepper-button"
-                    data-home-algo-step-target="3"
-                    aria-controls="home-algo-step-3"
-                  >
-                    <span class="home-algo__stepper-index" aria-hidden="true"
-                      >3</span
-                    >
-                    <span class="home-algo__stepper-label">Riesgo elevado</span>
-                  </button>
-                </li>
-                <li class="home-algo__stepper-item">
-                  <button
-                    type="button"
-                    class="home-algo__stepper-button"
-                    data-home-algo-step-target="4"
-                    aria-controls="home-algo-step-4"
-                  >
-                    <span class="home-algo__stepper-index" aria-hidden="true"
-                      >4</span
-                    >
-                    <span class="home-algo__stepper-label"
-                      >Datos de contacto</span
-                    >
-                  </button>
-                </li>
-              </ol>
-            </nav>
-
-            <p
-              class="home-algo__flow-status"
-              id="home-algo-flow-status"
-              aria-live="polite"
-            >
-              Completá los datos para continuar.
-            </p>
-
-            <button
-              type="button"
-              class="btn btn-outline-secondary"
-              id="home-algo-restart"
-              hidden
-            >
-              Reiniciar entrevista
-            </button>
+            <main class="interview-body" id="interviewScroll">
+              <p
+                class="home-algo__flow-status"
+                id="home-algo-flow-status"
+                aria-live="polite"
+              >
+                Completá los datos para continuar.
+              </p>
 
             <section
               class="home-algo__panel"
@@ -607,7 +609,7 @@
                 </p>
               </article>
 
-              <div class="home-algo__actions">
+              <div class="home-algo__actions" data-home-algo-actions="1">
                 <button
                   type="button"
                   class="btn btn-primary"
@@ -756,7 +758,7 @@
                 </p>
               </article>
 
-              <div class="home-algo__actions">
+              <div class="home-algo__actions" data-home-algo-actions="2">
                 <button
                   type="button"
                   class="btn btn-primary"
@@ -981,7 +983,7 @@
                 </p>
               </article>
 
-              <div class="home-algo__actions">
+              <div class="home-algo__actions" data-home-algo-actions="3">
                 <button
                   type="button"
                   class="btn btn-primary"
@@ -1103,7 +1105,7 @@
                 Completá los datos de contacto para cerrar como candidato FIT.
               </p>
 
-              <div class="home-algo__actions">
+              <div class="home-algo__actions" data-home-algo-actions="4">
                 <button
                   type="button"
                   class="btn btn-secondary"
@@ -1127,6 +1129,19 @@
                 </button>
               </div>
             </section>
+            </main>
+
+            <footer class="interview-footer">
+              <div id="home-algo-actions"></div>
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                id="home-algo-restart"
+                hidden
+              >
+                Reiniciar entrevista
+              </button>
+            </footer>
 
           </article>
 
@@ -1498,7 +1513,7 @@
 
     <div
       id="ppccr-algo-modal"
-      class="ppccr-modal"
+      class="ppccr-modal modal--interview"
       hidden
       role="dialog"
       aria-modal="true"
@@ -1508,7 +1523,7 @@
       <div class="ppccr-modal__card" role="document">
         <header class="ppccr-modal__header">
           <div class="ppccr-modal__titlewrap">
-            <h2 id="ppccr-algo-modal-title">Algoritmo de Inclusión — PPCCR 2026</h2>
+            <h2 id="ppccr-algo-modal-title">Entrevista y Algoritmo Inicial</h2>
             <p class="ppccr-modal__subtitle">Entrevista en 4 pasos</p>
           </div>
           <button

@@ -1565,10 +1565,6 @@ function setHomeAlgorithmButtonLoading(
 
 function updateHomeAlgorithmPanelOverflowHints(panel) {
   if (!(panel instanceof HTMLElement)) return;
-  if (panel.hidden) {
-    panel.classList.remove("is-overflow-scrollable", "is-overflow-top", "is-overflow-bottom");
-    return;
-  }
 
   const hasOverflow = panel.scrollHeight - panel.clientHeight > 4;
   panel.classList.toggle("is-overflow-scrollable", hasOverflow);
@@ -1583,13 +1579,18 @@ function updateHomeAlgorithmPanelOverflowHints(panel) {
   panel.classList.toggle("is-overflow-bottom", !isAtBottom);
 }
 
+function getHomeAlgorithmScrollContainer() {
+  if (!homeAlgorithmState) return null;
+  if (homeAlgorithmState.interviewScroll instanceof HTMLElement) {
+    return homeAlgorithmState.interviewScroll;
+  }
+  return homeAlgorithmState.stepPanels.find((panel) => !panel.hidden) || null;
+}
+
 function refreshHomeAlgorithmOverflowHints() {
-  if (!homeAlgorithmState?.stepPanels) return;
-  homeAlgorithmState.stepPanels.forEach((panel) => {
-    if (!panel.hidden) {
-      updateHomeAlgorithmPanelOverflowHints(panel);
-    }
-  });
+  const container = getHomeAlgorithmScrollContainer();
+  if (!container) return;
+  updateHomeAlgorithmPanelOverflowHints(container);
 }
 
 function getHomeAlgorithmOutcomeText(outcome) {
@@ -2077,6 +2078,8 @@ function renderHomeAlgorithmStepper() {
 
 function renderHomeAlgorithmPanels() {
   if (!homeAlgorithmState) return;
+  let switchedStep = false;
+
   homeAlgorithmState.stepPanels.forEach((panel) => {
     const step = Number(panel.dataset.homeAlgoStepPanel || "");
     const isCurrent = step === homeAlgorithmState.currentStep;
@@ -2085,9 +2088,10 @@ function renderHomeAlgorithmPanels() {
 
     if (!isCurrent) {
       panel.classList.remove("is-step-entering");
-      updateHomeAlgorithmPanelOverflowHints(panel);
       return;
     }
+
+    switchedStep = switchedStep || wasHidden;
 
     if (wasHidden && !userPrefersReducedMotion()) {
       panel.classList.remove("is-step-entering");
@@ -2098,9 +2102,13 @@ function renderHomeAlgorithmPanels() {
         panel.classList.remove("is-step-entering");
       }, HOME_ALGO_UI_TRANSITION_MS);
     }
-
-    updateHomeAlgorithmPanelOverflowHints(panel);
   });
+
+  const scrollContainer = getHomeAlgorithmScrollContainer();
+  if (scrollContainer && switchedStep) {
+    scrollContainer.scrollTop = 0;
+  }
+  refreshHomeAlgorithmOverflowHints();
 }
 
 function renderHomeAlgorithmStatusChip() {
@@ -2367,6 +2375,7 @@ function renderHomeAlgorithm() {
   renderHomeAlgorithmStep3State();
   renderHomeAlgorithmStep4State();
   renderHomeAlgorithmStepLocks();
+  mountHomeAlgorithmStepActionsFooter();
   mountHomeAlgorithmFlowStatus();
   mountHomeAlgorithmRestartAction();
   refreshHomeAlgorithmOverflowHints();
@@ -3232,10 +3241,17 @@ function resetAlgoFlowModalViewport() {
   if (homeAlgorithmFlowModalState.body) {
     homeAlgorithmFlowModalState.body.scrollTop = 0;
   }
-  if (!homeAlgorithmState?.stepPanels) return;
+  if (!homeAlgorithmState) return;
+
+  const scrollContainer = getHomeAlgorithmScrollContainer();
+  if (scrollContainer) {
+    scrollContainer.scrollTop = 0;
+    updateHomeAlgorithmPanelOverflowHints(scrollContainer);
+  }
+
+  if (!homeAlgorithmState.stepPanels) return;
   homeAlgorithmState.stepPanels.forEach((panel) => {
     panel.scrollTop = 0;
-    updateHomeAlgorithmPanelOverflowHints(panel);
   });
 }
 
@@ -3259,10 +3275,34 @@ function mountHomeAlgorithmFlowStatus() {
   anchor.insertAdjacentElement("afterend", homeAlgorithmState.flowStatus);
 }
 
+function mountHomeAlgorithmStepActionsFooter() {
+  if (!homeAlgorithmState?.actionsDock || !homeAlgorithmState?.stepActionSlots) return;
+  const activeStep = Number(homeAlgorithmState.currentStep || 0);
+  if (!Number.isFinite(activeStep) || activeStep <= 0) return;
+
+  homeAlgorithmState.stepActionSlots.forEach((slot, step) => {
+    if (!slot?.actions || !slot?.anchor) return;
+    if (step === activeStep) {
+      if (slot.actions.parentElement !== homeAlgorithmState.actionsDock) {
+        homeAlgorithmState.actionsDock.append(slot.actions);
+      }
+      slot.actions.hidden = false;
+      return;
+    }
+
+    const owner = slot.anchor.parentElement;
+    if (!owner) return;
+    if (slot.actions.parentElement !== owner) {
+      owner.insertBefore(slot.actions, slot.anchor.nextSibling);
+    }
+  });
+}
+
 function mountHomeAlgorithmRestartAction() {
   if (!homeAlgorithmState?.restartBtn) return;
-  const visiblePanel = homeAlgorithmState.stepPanels.find((panel) => !panel.hidden);
-  const actions = visiblePanel?.querySelector(".home-algo__actions");
+  const actions =
+    homeAlgorithmState.actionsDock?.querySelector(".home-algo__actions") ||
+    homeAlgorithmState.stepPanels.find((panel) => !panel.hidden)?.querySelector(".home-algo__actions");
   if (!actions) return;
 
   if (
@@ -3804,6 +3844,20 @@ function initHomeAlgorithm() {
 
   const stepButtons = Array.from(root.querySelectorAll("[data-home-algo-step-target]"));
   const stepPanels = Array.from(root.querySelectorAll("[data-home-algo-step-panel]"));
+  const interviewScroll = $("#interviewScroll", root);
+  const actionsDock = $("#home-algo-actions", root);
+
+  const stepActionSlots = new Map();
+  stepPanels.forEach((panel) => {
+    const step = Number(panel.dataset.homeAlgoStepPanel || "");
+    const actions = panel.querySelector(".home-algo__actions");
+    if (!Number.isFinite(step) || !actions) return;
+    const anchor = document.createElement("div");
+    anchor.className = "home-algo__actions-anchor";
+    anchor.hidden = true;
+    actions.insertAdjacentElement("beforebegin", anchor);
+    stepActionSlots.set(step, { actions, anchor });
+  });
 
   const stationInput = $("#home-algo-station");
   const participantInput = $("#home-algo-participant");
@@ -3906,6 +3960,9 @@ function initHomeAlgorithm() {
     !step4Edit ||
     !step4Back ||
     !step4Finish ||
+    !interviewScroll ||
+    !actionsDock ||
+    stepActionSlots.size === 0 ||
     !statusChip ||
     !flowStatus ||
     !restartBtn ||
@@ -3937,6 +3994,9 @@ function initHomeAlgorithm() {
 
     stepButtons,
     stepPanels,
+    interviewScroll,
+    actionsDock,
+    stepActionSlots,
 
     stationInput,
     participantInput,
@@ -4031,15 +4091,15 @@ function initHomeAlgorithm() {
   hydrateHomeAlgorithmFormFromInterview();
   renderHomeAlgorithm();
 
-  homeAlgorithmState.stepPanels.forEach((panel) => {
-    panel.addEventListener(
+  if (homeAlgorithmState.interviewScroll) {
+    homeAlgorithmState.interviewScroll.addEventListener(
       "scroll",
       () => {
-        updateHomeAlgorithmPanelOverflowHints(panel);
+        updateHomeAlgorithmPanelOverflowHints(homeAlgorithmState.interviewScroll);
       },
       { passive: true },
     );
-  });
+  }
 
   window.addEventListener(
     "resize",
