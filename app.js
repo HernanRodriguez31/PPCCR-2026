@@ -284,6 +284,8 @@ const HOME_ALGO_STORAGE_KEY = "ppccr_home_algorithm_interview_v1";
 const HOME_ALGO_PARTICIPANT_COUNTER_KEY = "ppccr_home_algorithm_counter_v1";
 const HOME_ALGO_STAGE1_SUBMIT_URL =
   "https://us-central1-ppccr-2026.cloudfunctions.net/submitAlgorithmStage1";
+const HOME_ALGO_UPDATE_STAGE_URL =
+  "https://us-central1-ppccr-2026.cloudfunctions.net/updateParticipantStage";
 
 const HOME_ALGO_OUTCOME = Object.freeze({
   AGE_EXCLUDED: "AGE_EXCLUDED",
@@ -2300,6 +2302,59 @@ async function submitHomeAlgorithmStage1(values = {}) {
   }
 }
 
+function getHomeAlgorithmParticipantId() {
+  if (!homeAlgorithmState) return "";
+  return String(
+    homeAlgorithmState.participantInput?.value ||
+      homeAlgorithmState.interview.participantNumber ||
+      "",
+  ).trim();
+}
+
+async function updateHomeAlgorithmStage(stage, data = {}) {
+  const participantId = getHomeAlgorithmParticipantId();
+  if (!participantId) {
+    console.error("❌ updateParticipantStage omitido: participantId vacío.");
+    return;
+  }
+
+  const payload = {
+    participantId,
+    stage,
+    data,
+  };
+
+  console.log("🟡 Enviando updateParticipantStage:", payload);
+
+  try {
+    const response = await fetch(HOME_ALGO_UPDATE_STAGE_URL, {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const rawBody = await response.text();
+    let parsedBody = rawBody;
+    try {
+      parsedBody = rawBody ? JSON.parse(rawBody) : {};
+    } catch (_error) {
+      parsedBody = rawBody;
+    }
+
+    console.log("🟢 Respuesta updateParticipantStage:", {
+      ok: response.ok,
+      status: response.status,
+      body: parsedBody,
+    });
+  } catch (error) {
+    console.error("❌ Error enviando updateParticipantStage:", error);
+  }
+}
+
 function onHomeAlgorithmConfirmStep1() {
   console.log("🔴 CLIC DETECTADO EN PASO 1");
   if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
@@ -2424,6 +2479,15 @@ function onHomeAlgorithmEvaluateStep2() {
   homeAlgorithmState.interview.step2.hasExclusion = exclusions.length > 0;
   homeAlgorithmState.step2Reviewed = true;
 
+  const exclusionItems = getHomeAlgorithmCodeItems(
+    exclusions,
+    homeAlgorithmState.step2Labels,
+  );
+  void updateHomeAlgorithmStage(2, {
+    hasExclusion: homeAlgorithmState.interview.step2.hasExclusion,
+    exclusions: exclusionItems,
+  });
+
   renderHomeAlgorithm();
   persistHomeAlgorithmDraft({ message: "Paso 2 evaluado y guardado en borrador local." });
 }
@@ -2490,6 +2554,15 @@ function onHomeAlgorithmEvaluateStep3() {
   homeAlgorithmState.interview.step3.riskFlags = riskFlags;
   homeAlgorithmState.interview.step3.hasHighRisk = riskFlags.length > 0;
   homeAlgorithmState.step3Reviewed = true;
+
+  const riskItems = getHomeAlgorithmCodeItems(
+    riskFlags,
+    homeAlgorithmState.step3Labels,
+  );
+  void updateHomeAlgorithmStage(3, {
+    hasHighRisk: homeAlgorithmState.interview.step3.hasHighRisk,
+    riskFlags: riskItems,
+  });
 
   renderHomeAlgorithm();
   persistHomeAlgorithmDraft({ message: "Paso 3 evaluado y guardado en borrador local." });
@@ -2606,6 +2679,14 @@ function onHomeAlgorithmFinishStep4() {
     email: result.values.email,
     phone: result.values.phone,
   };
+
+  void updateHomeAlgorithmStage(4, {
+    finalResult: getHomeAlgorithmOutcomeText(HOME_ALGO_OUTCOME.FIT_CANDIDATE),
+    fullName: result.values.fullName,
+    documentId: result.values.documentId,
+    email: result.values.email,
+    phone: result.values.phone,
+  });
 
   finalizeHomeAlgorithmInterview(HOME_ALGO_OUTCOME.FIT_CANDIDATE, ALGORITHM_HOME.steps.DECISION);
 }

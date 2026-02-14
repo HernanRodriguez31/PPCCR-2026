@@ -34,13 +34,13 @@ const SHEETS_SECRETS = [
 ] as const;
 
 const SHEET_HEADERS_A_TO_G = Object.freeze([
-  "Fecha",
+  "ID Participante",
   "Numero de participante",
   "Tipo de Estacion Saludable",
   "Sexo",
   "Edad",
-  "Resultado",
-  "Etapa alcanzada",
+  "Resultado Paso 1",
+  "Exclusion Paso 2",
 ]);
 
 type StationDefinition = {
@@ -375,13 +375,13 @@ function asPositiveRow(value: unknown): number | null {
 
 function buildSheetRowAtoG(record: Partial<Stage1Record>): Array<string | number> {
   return [
-    String(record.fecha || ""),
+    String(record.clientParticipantId || record.participantNumber || ""),
     String(record.participantNumber || ""),
     String(record.stationName || ""),
     String(record.sex || ""),
     Number.isFinite(record.age) ? (record.age as number) : "",
     String(record.outcome || ""),
-    Number.isFinite(record.stageReached) ? (record.stageReached as number) : "",
+    "",
   ];
 }
 
@@ -542,6 +542,66 @@ async function updateSheetRowAtoG({
       values: [row],
     },
   });
+}
+
+async function updateSheetRange({
+  sheetId,
+  range,
+  accessToken,
+  values,
+}: {
+  sheetId: string;
+  range: string;
+  accessToken: string;
+  values: Array<Array<string | number>>;
+}): Promise<void> {
+  const updateUrl =
+    `${GOOGLE_SHEETS_API_BASE}/${sheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`;
+
+  await googleSheetsRequest({
+    method: "PUT",
+    url: updateUrl,
+    accessToken,
+    body: {
+      range,
+      majorDimension: "ROWS",
+      values,
+    },
+  });
+}
+
+async function findParticipantRowInColumnA({
+  sheetId,
+  sheetTab,
+  accessToken,
+  participantId,
+}: {
+  sheetId: string;
+  sheetTab: string;
+  accessToken: string;
+  participantId: string;
+}): Promise<number | null> {
+  const range = `${sheetTab}!A2:A`;
+  const getUrl = `${GOOGLE_SHEETS_API_BASE}/${sheetId}/values/${encodeURIComponent(range)}`;
+
+  const response = await googleSheetsRequest<{ values?: string[][] }>({
+    method: "GET",
+    url: getUrl,
+    accessToken,
+  });
+
+  const target = String(participantId || "").trim();
+  if (!target) return null;
+
+  const rows = Array.isArray(response?.values) ? response.values : [];
+  for (let idx = 0; idx < rows.length; idx += 1) {
+    const value = String(rows[idx]?.[0] || "").trim();
+    if (value === target) {
+      return idx + 2;
+    }
+  }
+
+  return null;
 }
 
 async function appendToGoogleSheets(record: Stage1Record): Promise<SheetsResult> {
@@ -907,6 +967,196 @@ export const submitAlgorithmStage1 = onRequest(
       backup: firestore,
       sheets,
     });
+  },
+);
+
+export const updateParticipantStage = onRequest(
+  {
+    region: "us-central1",
+    secrets: [...SHEETS_SECRETS],
+  },
+  async (req, res) => {
+    setCorsHeaders(res);
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+
+    if (req.method !== "POST") {
+      res.status(405).json({
+        ok: false,
+        message: "Metodo no permitido. Usar POST.",
+      });
+      return;
+    }
+
+    console.log("📥 updateParticipantStage payload:", req.body);
+
+    let payload: Record<string, unknown>;
+    try {
+      payload = parseJsonBody(req);
+    } catch (_error) {
+      res.status(400).json({
+        ok: false,
+        message: "JSON invalido.",
+      });
+      return;
+    }
+
+    const participantId = String(payload.participantId || "").trim();
+    const stage = Number.parseInt(String(payload.stage ?? "").trim(), 10);
+    const data = payload.data && typeof payload.data === "object"
+      ? (payload.data as Record<string, unknown>)
+      : null;
+
+    if (!participantId || !Number.isFinite(stage) || stage < 2 || stage > 4 || !data) {
+      res.status(400).json({
+        ok: false,
+        message: "Payload invalido. Requiere { participantId, stage, data }.",
+      });
+      return;
+    }
+
+    const { sheetId, sheetTab, serviceAccountEmail, serviceAccountKey } = getSheetsConfig();
+    if (!sheetId || !serviceAccountEmail || !serviceAccountKey) {
+      res.status(500).json({
+        ok: false,
+        message: "Google Sheets no esta configurado en secrets/env para Functions.",
+      });
+      return;
+    }
+
+    try {
+      const accessToken = await getGoogleAccessToken(serviceAccountEmail, serviceAccountKey);
+      await ensureSheetHeadersAtoG(sheetId, sheetTab, accessToken);
+
+      const row = await findParticipantRowInColumnA({
+        sheetId,
+        sheetTab,
+        accessToken,
+        participantId,
+      });
+
+      if (!row) {
+        res.status(404).json({
+          ok: false,
+          message: `No se encontro participantId "${participantId}" en la columna A.`,
+        });
+        return;
+      }
+
+      if (stage === 2) {
+        const hasExclusion = Boolean(data.hasExclusion);
+        const exclusions = Array.isArray(data.exclusions)
+          ? data.exclusions.map((item) => String(item || "").trim()).filter(Boolean)
+          : [];
+
+        const exclusionText =
+          String(data.exclusionText || "").trim() ||
+          (exclusions.length > 0
+            ? exclusions.join(" | ")
+            : hasExclusion
+              ? "Exclusion detectada en Paso 2"
+              : "Sin exclusion en Paso 2");
+
+        await updateSheetRange({
+          sheetId,
+          range: `${sheetTab}!G${row}`,
+          accessToken,
+          values: [[exclusionText]],
+        });
+
+        if (hasExclusion || exclusions.length > 0) {
+          await updateSheetRange({
+            sheetId,
+            range: `${sheetTab}!I${row}`,
+            accessToken,
+            values: [["Excluido"]],
+          });
+        }
+
+        res.status(200).json({
+          ok: true,
+          participantId,
+          stage,
+          row,
+          updated: hasExclusion || exclusions.length > 0 ? ["G", "I"] : ["G"],
+        });
+        return;
+      }
+
+      if (stage === 3) {
+        const hasHighRisk = Boolean(data.hasHighRisk);
+        const riskFlags = Array.isArray(data.riskFlags)
+          ? data.riskFlags.map((item) => String(item || "").trim()).filter(Boolean)
+          : [];
+
+        const riskText =
+          String(data.riskText || "").trim() ||
+          (riskFlags.length > 0
+            ? riskFlags.join(" | ")
+            : hasHighRisk
+              ? "Riesgo detectado en Paso 3"
+              : "Sin riesgo en Paso 3");
+
+        await updateSheetRange({
+          sheetId,
+          range: `${sheetTab}!H${row}`,
+          accessToken,
+          values: [[riskText]],
+        });
+
+        if (hasHighRisk || riskFlags.length > 0) {
+          await updateSheetRange({
+            sheetId,
+            range: `${sheetTab}!I${row}`,
+            accessToken,
+            values: [["Excluido"]],
+          });
+        }
+
+        res.status(200).json({
+          ok: true,
+          participantId,
+          stage,
+          row,
+          updated: hasHighRisk || riskFlags.length > 0 ? ["H", "I"] : ["H"],
+        });
+        return;
+      }
+
+      const finalResult = String(data.finalResult || data.result || "Candidato FIT").trim() || "Candidato FIT";
+      const fullName = String(data.fullName || "").trim();
+      const documentId = String(data.documentId || "").trim();
+      const email = String(data.email || "").trim();
+      const phone = String(data.phone || "").trim();
+
+      await updateSheetRange({
+        sheetId,
+        range: `${sheetTab}!I${row}:M${row}`,
+        accessToken,
+        values: [[finalResult, fullName, documentId, email, phone]],
+      });
+
+      res.status(200).json({
+        ok: true,
+        participantId,
+        stage,
+        row,
+        updated: ["I", "J", "K", "L", "M"],
+      });
+    } catch (error) {
+      logger.error("No se pudo actualizar etapa del participante en Google Sheets.", {
+        participantId,
+        stage,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        ok: false,
+        message: "No se pudo actualizar Google Sheets.",
+      });
+    }
   },
 );
 
