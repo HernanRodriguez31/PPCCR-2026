@@ -191,7 +191,7 @@
                   id="ppccr-open-algo"
                   data-open-algo="true"
                 >
-                  Iniciar nuevo protocolo
+                  Iniciar entrevista
                 </button>
               </div>
 
@@ -288,30 +288,32 @@
         <div class="container">
           <header class="section-header">
             <h2 class="section-title" id="algoritmo-title">
-              Algoritmo de inclusión (PPCCR)
+              Protocolo de Inclusión (PPCCR 2026)
             </h2>
             <p class="section-subtitle">
-              Entrevista guiada en 4 pasos. Completá la evaluación del
-              participante y registrá el resultado.
+              Entrevista guiada en 4 pasos. Registrá el resultado y guardá
+              automáticamente.
             </p>
           </header>
 
           <article class="algo-teaser" aria-label="Acceso al algoritmo">
-            <h3 class="algo-teaser__title">Iniciar protocolo de inclusión</h3>
+            <h3 class="algo-teaser__title">Iniciar entrevista operativa</h3>
             <p class="algo-teaser__text">
-              Iniciá una entrevista guiada en modal, con validaciones por paso y
-              cierre asistido.
+              Lanzá el flujo de inclusión desde el dashboard y completá la
+              evaluación en una sola ventana.
             </p>
-            <p class="algo-teaser__note">
-              Los datos se guardan automáticamente al confirmar cada paso.
-            </p>
+            <ul class="algo-teaser__bullets" aria-label="Resumen del protocolo">
+              <li>Duración estimada: 1–2 min</li>
+              <li>Guardado por paso (automático)</li>
+              <li>Cierre asistido</li>
+            </ul>
             <div class="algo-teaser__actions">
               <button
                 type="button"
                 class="btn btn-secondary"
                 data-open-algo="true"
               >
-                Abrir algoritmo
+                Iniciar entrevista
               </button>
             </div>
           </article>
@@ -1505,7 +1507,10 @@
       <div class="ppccr-modal__backdrop" data-algo-close="true"></div>
       <div class="ppccr-modal__card" role="document">
         <header class="ppccr-modal__header">
-          <h2 id="ppccr-algo-modal-title">Algoritmo de inclusión · PPCCR 2026</h2>
+          <div class="ppccr-modal__titlewrap">
+            <h2 id="ppccr-algo-modal-title">Algoritmo de Inclusión — PPCCR 2026</h2>
+            <p class="ppccr-modal__subtitle">Entrevista en 4 pasos</p>
+          </div>
           <button
             type="button"
             class="ppccr-modal__close"
@@ -1531,22 +1536,22 @@
           ></div>
           <div class="home-algo-complete__card" role="document" tabindex="-1">
             <h3 class="home-algo-complete__title" id="home-algo-complete-title">
-              Entrevista guardada
+              Registro completado
             </h3>
             <p class="home-algo-complete__text" id="home-algo-complete-text">
-              La entrevista se registró correctamente.
+              La entrevista se guardó correctamente.
             </p>
             <div class="home-algo-complete__actions">
               <button
                 type="button"
-                class="btn btn-primary"
+                class="btn btn-secondary"
                 id="home-algo-complete-close"
               >
                 Cerrar
               </button>
               <button
                 type="button"
-                class="btn btn-secondary"
+                class="btn btn-primary"
                 id="home-algo-complete-new"
               >
                 Nueva entrevista

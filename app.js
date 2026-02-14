@@ -2367,6 +2367,7 @@ function renderHomeAlgorithm() {
   renderHomeAlgorithmStep3State();
   renderHomeAlgorithmStep4State();
   renderHomeAlgorithmStepLocks();
+  mountHomeAlgorithmFlowStatus();
   mountHomeAlgorithmRestartAction();
   refreshHomeAlgorithmOverflowHints();
 }
@@ -2737,7 +2738,7 @@ async function finalizeAndPersistHomeInterview(
   if (feedbackElement) {
     setHomeAlgorithmFeedback(
       feedbackElement,
-      "Paciente guardado correctamente.",
+      "Entrevista guardada correctamente.",
       "success",
     );
   }
@@ -3238,6 +3239,26 @@ function resetAlgoFlowModalViewport() {
   });
 }
 
+function mountHomeAlgorithmFlowStatus() {
+  if (!homeAlgorithmState?.flowStatus) return;
+  const visiblePanel = homeAlgorithmState.stepPanels.find((panel) => !panel.hidden);
+  if (!visiblePanel) return;
+
+  const anchor =
+    visiblePanel.querySelector(".home-algo__panel-copy") ||
+    visiblePanel.querySelector(".home-algo__panel-title");
+  if (!anchor) return;
+
+  if (
+    homeAlgorithmState.flowStatus.parentElement === visiblePanel &&
+    anchor.nextElementSibling === homeAlgorithmState.flowStatus
+  ) {
+    return;
+  }
+
+  anchor.insertAdjacentElement("afterend", homeAlgorithmState.flowStatus);
+}
+
 function mountHomeAlgorithmRestartAction() {
   if (!homeAlgorithmState?.restartBtn) return;
   const visiblePanel = homeAlgorithmState.stepPanels.find((panel) => !panel.hidden);
@@ -3291,7 +3312,7 @@ function openHomeAlgorithmCompletionDialog({
 
   homeAlgorithmFlowModalState.completionDialog.hidden = false;
   homeAlgorithmFlowModalState.completionDialog.setAttribute("aria-hidden", "false");
-  const preferredButton = homeAlgorithmFlowModalState.completionCloseBtn;
+  const preferredButton = homeAlgorithmFlowModalState.completionNewBtn;
   if (preferredButton instanceof HTMLElement) {
     preferredButton.focus();
   } else if (homeAlgorithmFlowModalState.completionCard instanceof HTMLElement) {
@@ -3590,7 +3611,7 @@ function onAlgoFlowModalCaptureKeydown(event) {
     if (event.key === "Enter") {
       event.preventDefault();
       event.stopPropagation();
-      closeAlgoFlowModalFromCompletion();
+      startNewHomeAlgorithmInterviewInModal();
       return;
     }
     trapHomeAlgorithmCompletionFocus(event);
