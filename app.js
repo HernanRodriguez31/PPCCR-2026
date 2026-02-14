@@ -321,8 +321,10 @@ const HOME_ALGO_STEP4_FIELDS = Object.freeze({
   phone: "phone",
 });
 
-const HOME_ALGO_CONTINUE_BUTTON_CLASS = "btn btn-success text-white px-4 fw-bold";
-const HOME_ALGO_EDIT_BUTTON_CLASS = "btn btn-outline-secondary";
+const HOME_ALGO_PRIMARY_BUTTON_CLASS = "btn btn-primary";
+const HOME_ALGO_SECONDARY_BUTTON_CLASS = "btn btn-outline-secondary";
+const HOME_ALGO_CONTINUE_BUTTON_CLASS = "btn btn-primary px-4 fw-bold";
+const HOME_ALGO_UI_TRANSITION_MS = 180;
 
 let homeAlgorithmState = null;
 let homeAlgorithmFlowModalState = {
@@ -339,6 +341,7 @@ let homeAlgorithmFlowModalState = {
   escListenerBound: false,
   captureListenerBound: false,
   autoCloseTimerId: 0,
+  modalTransitionTimerId: 0,
   deviceClockTimerId: 0,
   previewDeviceTimestamp: "",
   scrollLockY: 0,
@@ -354,6 +357,14 @@ let interviewState = {
 /* ----------------------------- Helpers ----------------------------- */
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
+
+function userPrefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function getHomeAlgorithmTransitionMs() {
+  return userPrefersReducedMotion() ? 0 : HOME_ALGO_UI_TRANSITION_MS;
+}
 
 function isPlaceholderUrl(url) {
   if (!url) return true;
@@ -1526,6 +1537,61 @@ function setHomeAlgorithmFeedback(element, message, tone = "neutral") {
   homeAlgorithmState.flowStatus.dataset.tone = tone;
 }
 
+function setHomeAlgorithmButtonLoading(
+  button,
+  { loading = false, label = "Guardando..." } = {},
+) {
+  if (!(button instanceof HTMLButtonElement)) return;
+
+  if (loading) {
+    if (!button.dataset.originalLabel) {
+      button.dataset.originalLabel = button.innerHTML;
+    }
+    button.disabled = true;
+    button.classList.add("is-loading");
+    button.setAttribute("aria-busy", "true");
+    button.textContent = label;
+    return;
+  }
+
+  button.classList.remove("is-loading");
+  button.removeAttribute("aria-busy");
+  if (button.dataset.originalLabel) {
+    button.innerHTML = button.dataset.originalLabel;
+    delete button.dataset.originalLabel;
+  }
+  button.disabled = false;
+}
+
+function updateHomeAlgorithmPanelOverflowHints(panel) {
+  if (!(panel instanceof HTMLElement)) return;
+  if (panel.hidden) {
+    panel.classList.remove("is-overflow-scrollable", "is-overflow-top", "is-overflow-bottom");
+    return;
+  }
+
+  const hasOverflow = panel.scrollHeight - panel.clientHeight > 4;
+  panel.classList.toggle("is-overflow-scrollable", hasOverflow);
+  if (!hasOverflow) {
+    panel.classList.remove("is-overflow-top", "is-overflow-bottom");
+    return;
+  }
+
+  const isAtTop = panel.scrollTop <= 2;
+  const isAtBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 2;
+  panel.classList.toggle("is-overflow-top", !isAtTop);
+  panel.classList.toggle("is-overflow-bottom", !isAtBottom);
+}
+
+function refreshHomeAlgorithmOverflowHints() {
+  if (!homeAlgorithmState?.stepPanels) return;
+  homeAlgorithmState.stepPanels.forEach((panel) => {
+    if (!panel.hidden) {
+      updateHomeAlgorithmPanelOverflowHints(panel);
+    }
+  });
+}
+
 function getHomeAlgorithmOutcomeText(outcome) {
   return HOME_ALGO_OUTCOME_TEXT[outcome] || "-";
 }
@@ -2013,7 +2079,27 @@ function renderHomeAlgorithmPanels() {
   if (!homeAlgorithmState) return;
   homeAlgorithmState.stepPanels.forEach((panel) => {
     const step = Number(panel.dataset.homeAlgoStepPanel || "");
-    panel.hidden = step !== homeAlgorithmState.currentStep;
+    const isCurrent = step === homeAlgorithmState.currentStep;
+    const wasHidden = panel.hidden;
+    panel.hidden = !isCurrent;
+
+    if (!isCurrent) {
+      panel.classList.remove("is-step-entering");
+      updateHomeAlgorithmPanelOverflowHints(panel);
+      return;
+    }
+
+    if (wasHidden && !userPrefersReducedMotion()) {
+      panel.classList.remove("is-step-entering");
+      // Restart animation only when switching panel.
+      void panel.offsetWidth;
+      panel.classList.add("is-step-entering");
+      window.setTimeout(() => {
+        panel.classList.remove("is-step-entering");
+      }, HOME_ALGO_UI_TRANSITION_MS);
+    }
+
+    updateHomeAlgorithmPanelOverflowHints(panel);
   });
 }
 
@@ -2200,13 +2286,30 @@ function renderHomeAlgorithmActionHierarchy() {
   });
 
   [
+    homeAlgorithmState.step1Confirm,
+    homeAlgorithmState.step2Evaluate,
+    homeAlgorithmState.step3Evaluate,
+    homeAlgorithmState.step1Finish,
+    homeAlgorithmState.step2Finish,
+    homeAlgorithmState.step3Finish,
+    homeAlgorithmState.step4Finish,
+  ].forEach((button) => {
+    if (!button) return;
+    button.className = HOME_ALGO_PRIMARY_BUTTON_CLASS;
+  });
+
+  [
     homeAlgorithmState.step1Edit,
     homeAlgorithmState.step2Edit,
     homeAlgorithmState.step3Edit,
     homeAlgorithmState.step4Edit,
+    homeAlgorithmState.step2Back,
+    homeAlgorithmState.step3Back,
+    homeAlgorithmState.step4Back,
+    homeAlgorithmState.restartBtn,
   ].forEach((button) => {
     if (!button) return;
-    button.className = HOME_ALGO_EDIT_BUTTON_CLASS;
+    button.className = HOME_ALGO_SECONDARY_BUTTON_CLASS;
   });
 }
 
@@ -2265,6 +2368,7 @@ function renderHomeAlgorithm() {
   renderHomeAlgorithmStep4State();
   renderHomeAlgorithmStepLocks();
   mountHomeAlgorithmRestartAction();
+  refreshHomeAlgorithmOverflowHints();
 }
 
 function goToHomeAlgorithmStep(step) {
@@ -2608,12 +2712,10 @@ async function finalizeAndPersistHomeInterview(
   triggerButton = null,
 ) {
   const finalResult = getFinalResultLabel(outcome);
-  let restoreLabel = "";
-
-  if (triggerButton) {
-    restoreLabel = String(triggerButton.textContent || "");
-    triggerButton.disabled = true;
-    triggerButton.textContent = "⏳ Guardando...";
+  const loadingButton =
+    triggerButton instanceof HTMLButtonElement ? triggerButton : null;
+  if (loadingButton) {
+    setHomeAlgorithmButtonLoading(loadingButton, { loading: true, label: "Guardando..." });
   }
   if (feedbackElement) {
     setHomeAlgorithmFeedback(feedbackElement, "Guardando entrevista final...", "neutral");
@@ -2626,9 +2728,8 @@ async function finalizeAndPersistHomeInterview(
     if (feedbackElement) {
       setHomeAlgorithmFeedback(feedbackElement, `Error al guardar: ${message}`, "danger");
     }
-    if (triggerButton) {
-      triggerButton.disabled = false;
-      triggerButton.textContent = restoreLabel;
+    if (loadingButton) {
+      setHomeAlgorithmButtonLoading(loadingButton, { loading: false });
     }
     return;
   }
@@ -2641,9 +2742,8 @@ async function finalizeAndPersistHomeInterview(
     );
   }
 
-  if (triggerButton) {
-    triggerButton.disabled = false;
-    triggerButton.textContent = restoreLabel;
+  if (loadingButton) {
+    setHomeAlgorithmButtonLoading(loadingButton, { loading: false });
   }
 
   openHomeAlgorithmCompletionDialog({
@@ -3058,6 +3158,13 @@ function clearAlgoFlowModalAutoCloseTimer() {
   }
 }
 
+function clearAlgoFlowModalTransitionTimer() {
+  if (homeAlgorithmFlowModalState.modalTransitionTimerId) {
+    window.clearTimeout(homeAlgorithmFlowModalState.modalTransitionTimerId);
+    homeAlgorithmFlowModalState.modalTransitionTimerId = 0;
+  }
+}
+
 function updateAlgoFlowDeviceClockPreview() {
   if (!homeAlgorithmState?.deviceTimeInput) return;
   if (!isAlgoFlowModalOpen()) return;
@@ -3127,6 +3234,7 @@ function resetAlgoFlowModalViewport() {
   if (!homeAlgorithmState?.stepPanels) return;
   homeAlgorithmState.stepPanels.forEach((panel) => {
     panel.scrollTop = 0;
+    updateHomeAlgorithmPanelOverflowHints(panel);
   });
 }
 
@@ -3202,6 +3310,7 @@ function startNewHomeAlgorithmInterviewInModal() {
   clearAlgoFlowModalAutoCloseTimer();
   startAlgoFlowDeviceClockPreview();
   resetAlgoFlowModalViewport();
+  refreshHomeAlgorithmOverflowHints();
   focusAlgoFlowStep1Input();
 }
 
@@ -3321,6 +3430,7 @@ function openAlgoFlowModal(opener = null) {
   if (!homeAlgorithmFlowModalState.modal) return;
 
   clearAlgoFlowModalAutoCloseTimer();
+  clearAlgoFlowModalTransitionTimer();
   stopAlgoFlowDeviceClockPreview();
 
   const activeElement = document.activeElement;
@@ -3339,19 +3449,30 @@ function openAlgoFlowModal(opener = null) {
   }
   closeHomeAlgorithmCompletionDialog();
 
+  homeAlgorithmFlowModalState.modal.classList.remove("is-closing");
   homeAlgorithmFlowModalState.modal.hidden = false;
   homeAlgorithmFlowModalState.modal.setAttribute("aria-hidden", "false");
+  window.requestAnimationFrame(() => {
+    if (!homeAlgorithmFlowModalState.modal || homeAlgorithmFlowModalState.modal.hidden) return;
+    if (homeAlgorithmFlowModalState.modal.classList.contains("is-closing")) return;
+    homeAlgorithmFlowModalState.modal.classList.add("is-open");
+  });
   lockAlgoFlowBackgroundScroll();
 
   startAlgoFlowDeviceClockPreview();
   resetAlgoFlowModalViewport();
+  refreshHomeAlgorithmOverflowHints();
   focusAlgoFlowStep1Input();
 }
 
 function closeAlgoFlowModal({ force = false } = {}) {
   syncHomeAlgorithmFlowModalElements();
   if (!homeAlgorithmFlowModalState.modal) return false;
-  if (homeAlgorithmFlowModalState.modal.hidden) return true;
+  if (homeAlgorithmFlowModalState.modal.classList.contains("is-closing")) return true;
+  if (homeAlgorithmFlowModalState.modal.hidden) {
+    unlockAlgoFlowBackgroundScroll();
+    return true;
+  }
 
   if (!force && shouldConfirmCloseAlgoFlowModal()) {
     const allowClose = window.confirm(
@@ -3361,12 +3482,9 @@ function closeAlgoFlowModal({ force = false } = {}) {
   }
 
   clearAlgoFlowModalAutoCloseTimer();
+  clearAlgoFlowModalTransitionTimer();
   stopAlgoFlowDeviceClockPreview();
   closeHomeAlgorithmCompletionDialog();
-
-  homeAlgorithmFlowModalState.modal.hidden = true;
-  homeAlgorithmFlowModalState.modal.setAttribute("aria-hidden", "true");
-  unlockAlgoFlowBackgroundScroll();
 
   if (typeof closeHomeAlgorithmModal === "function") {
     closeHomeAlgorithmModal();
@@ -3377,8 +3495,29 @@ function closeAlgoFlowModal({ force = false } = {}) {
 
   const targetToRestore = homeAlgorithmFlowModalState.lastFocused;
   homeAlgorithmFlowModalState.lastFocused = null;
-  if (targetToRestore && typeof targetToRestore.focus === "function") {
-    targetToRestore.focus();
+
+  const finishClose = () => {
+    if (!homeAlgorithmFlowModalState.modal) return;
+    homeAlgorithmFlowModalState.modal.hidden = true;
+    homeAlgorithmFlowModalState.modal.classList.remove("is-closing", "is-open");
+    unlockAlgoFlowBackgroundScroll();
+    if (targetToRestore && typeof targetToRestore.focus === "function") {
+      targetToRestore.focus();
+    }
+  };
+
+  const closeDelay = getHomeAlgorithmTransitionMs();
+  homeAlgorithmFlowModalState.modal.classList.remove("is-open");
+  homeAlgorithmFlowModalState.modal.classList.add("is-closing");
+  homeAlgorithmFlowModalState.modal.setAttribute("aria-hidden", "true");
+
+  if (closeDelay > 0) {
+    homeAlgorithmFlowModalState.modalTransitionTimerId = window.setTimeout(() => {
+      homeAlgorithmFlowModalState.modalTransitionTimerId = 0;
+      finishClose();
+    }, closeDelay);
+  } else {
+    finishClose();
   }
 
   return true;
@@ -3472,6 +3611,8 @@ function setupAlgoFlowModalLifecycle() {
   mountHomeAlgorithmInFlowModal();
   syncHomeAlgorithmFlowModalElements();
   if (!homeAlgorithmFlowModalState.modal) return;
+
+  homeAlgorithmFlowModalState.modal.classList.remove("is-open", "is-closing");
 
   if (homeAlgorithmFlowModalState.completionDialog) {
     homeAlgorithmFlowModalState.completionDialog.hidden = true;
@@ -3868,6 +4009,25 @@ function initHomeAlgorithm() {
 
   hydrateHomeAlgorithmFormFromInterview();
   renderHomeAlgorithm();
+
+  homeAlgorithmState.stepPanels.forEach((panel) => {
+    panel.addEventListener(
+      "scroll",
+      () => {
+        updateHomeAlgorithmPanelOverflowHints(panel);
+      },
+      { passive: true },
+    );
+  });
+
+  window.addEventListener(
+    "resize",
+    () => {
+      if (!isAlgoFlowModalOpen()) return;
+      refreshHomeAlgorithmOverflowHints();
+    },
+    { passive: true },
+  );
 
   if (!draft) {
     persistHomeAlgorithmDraft({ message: "Borrador local inicializado." });
