@@ -307,23 +307,28 @@
           </header>
 
           <article class="algo-teaser" aria-label="Acceso al algoritmo">
-            <h3 class="algo-teaser__title">Iniciar entrevista operativa</h3>
-            <p class="algo-teaser__text">
-              Lanzá el flujo de inclusión desde el dashboard y completá la
-              evaluación en una sola ventana.
-            </p>
-            <ul class="algo-teaser__bullets" aria-label="Resumen del protocolo">
-              <li>Duración estimada: 1–2 min</li>
-              <li>Guardado por paso (automático)</li>
-              <li>Cierre asistido</li>
-            </ul>
+            <div class="algo-teaser__content">
+              <h3 class="algo-teaser__title">Determinación de Candidato a Test FIT</h3>
+              <p class="algo-teaser__text">
+                Algoritmo de triaje automatizado para criterios de inclusión
+                FIT.
+              </p>
+            </div>
+
             <div class="algo-teaser__actions">
               <button
                 type="button"
-                class="btn btn-secondary"
+                class="btn btn-primary btn-lg rounded-pill shadow algo-teaser__cta"
                 data-open-algo="true"
+                aria-label="Iniciar evaluación"
               >
-                Iniciar entrevista
+                <span>INICIAR EVALUACIÓN</span>
+                <span class="algo-teaser__cta-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M10 8.6v6.8l5-3.4z"></path>
+                  </svg>
+                </span>
               </button>
             </div>
           </article>
@@ -1424,7 +1429,9 @@
           <p class="footer-title">Partners</p>
           <div class="footer-logos" id="footer-logos"></div>
         </div>
-        <p class="footer-meta">© PPCCR 2026 | © Derechos Reservados.</p>
+        <p class="footer-meta">
+          © PPCCR 2026 | Acceso restringido a profesionales acreditados.
+        </p>
       </div>
     </footer>
 
