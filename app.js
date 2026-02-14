@@ -321,6 +321,9 @@ const HOME_ALGO_STEP4_FIELDS = Object.freeze({
   phone: "phone",
 });
 
+const HOME_ALGO_CONTINUE_BUTTON_CLASS = "btn btn-success text-white px-4 fw-bold";
+const HOME_ALGO_EDIT_BUTTON_CLASS = "btn btn-outline-secondary";
+
 let homeAlgorithmState = null;
 let interviewState = {
   step1: {},
@@ -2141,6 +2144,32 @@ function renderHomeAlgorithmStep4State() {
   homeAlgorithmState.step4Edit.hidden = false;
 }
 
+function renderHomeAlgorithmActionHierarchy() {
+  if (!homeAlgorithmState) return;
+
+  const continueButtons = [
+    { button: homeAlgorithmState.step1Continue, label: "Continuar a paso 2" },
+    { button: homeAlgorithmState.step2Continue, label: "Continuar a paso 3" },
+    { button: homeAlgorithmState.step3Continue, label: "Continuar a paso 4" },
+  ];
+
+  continueButtons.forEach(({ button, label }) => {
+    if (!button) return;
+    button.className = HOME_ALGO_CONTINUE_BUTTON_CLASS;
+    button.innerHTML = `${label} <i class="fa-solid fa-arrow-right ms-2" aria-hidden="true"></i>`;
+  });
+
+  [
+    homeAlgorithmState.step1Edit,
+    homeAlgorithmState.step2Edit,
+    homeAlgorithmState.step3Edit,
+    homeAlgorithmState.step4Edit,
+  ].forEach((button) => {
+    if (!button) return;
+    button.className = HOME_ALGO_EDIT_BUTTON_CLASS;
+  });
+}
+
 function renderHomeAlgorithmStepLocks() {
   if (!homeAlgorithmState) return;
 
@@ -2186,6 +2215,7 @@ function renderHomeAlgorithmStepLocks() {
 }
 
 function renderHomeAlgorithm() {
+  renderHomeAlgorithmActionHierarchy();
   renderHomeAlgorithmStepper();
   renderHomeAlgorithmPanels();
   renderHomeAlgorithmStatusChip();

@@ -1004,6 +1004,49 @@ code {
   border-color: rgba(15, 95, 166, 0.18);
 }
 
+.btn-success {
+  background: linear-gradient(140deg, #1f9d63, #14844f);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.26);
+}
+
+.btn-success:hover {
+  background: linear-gradient(140deg, #22ad6d, #17965a);
+}
+
+.btn-outline-secondary {
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--blue-900);
+  border-color: rgba(15, 95, 166, 0.18);
+}
+
+.text-white {
+  color: #ffffff !important;
+}
+
+.px-4 {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.fw-bold {
+  font-weight: 800;
+}
+
+.ms-2 {
+  margin-left: 8px;
+}
+
+.home-algo__actions .fa-solid.fa-arrow-right {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.home-algo__actions .fa-solid.fa-arrow-right::before {
+  content: "→";
+}
+
 .btn-danger {
   background: linear-gradient(140deg, #dd2f45, #bb1735);
   color: #ffffff;
