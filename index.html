@@ -17,143 +17,6 @@
     <script src="/host-guard.js"></script>
     <link rel="icon" href="assets/favicon.png" />
     <link rel="stylesheet" href="styles.css" />
-    <style>
-      .hero-algo-launch {
-        margin: 1rem 0 1.35rem;
-        display: flex;
-        justify-content: center;
-      }
-
-      .hero-algo-launch__btn {
-        width: min(100%, 24rem);
-        min-height: 58px;
-        padding: 0.9rem 1.5rem;
-        font-size: 1.08rem;
-        font-weight: 800;
-        box-shadow: 0 18px 32px rgba(8, 38, 74, 0.24);
-      }
-
-      .algo-teaser {
-        max-width: 760px;
-        margin: 0 auto;
-        padding: 22px;
-        border-radius: 20px;
-        border: 1px solid rgba(15, 95, 166, 0.2);
-        background:
-          radial-gradient(circle at 12% -20%, rgba(79, 184, 255, 0.16), transparent 40%),
-          linear-gradient(162deg, rgba(255, 255, 255, 0.98), rgba(233, 246, 255, 0.9));
-        box-shadow:
-          0 22px 48px rgba(2, 6, 23, 0.14),
-          inset 0 1px 0 rgba(255, 255, 255, 0.88);
-        text-align: center;
-      }
-
-      .algo-teaser__title {
-        margin: 0;
-        color: var(--blue-950);
-        font-size: clamp(1.12rem, 2.2vw, 1.3rem);
-      }
-
-      .algo-teaser__text {
-        margin: 10px 0 0;
-        color: var(--muted);
-      }
-
-      .algo-teaser__actions {
-        margin-top: 16px;
-        display: flex;
-        justify-content: center;
-      }
-
-      .ppccr-modal[hidden] {
-        display: none !important;
-      }
-
-      .ppccr-modal {
-        position: fixed;
-        inset: 0;
-        z-index: 1000;
-        display: grid;
-        place-items: center;
-        padding: clamp(8px, 2vw, 20px);
-      }
-
-      .ppccr-modal__backdrop {
-        position: absolute;
-        inset: 0;
-        background: rgba(3, 13, 29, 0.62);
-      }
-
-      .ppccr-modal__card {
-        position: relative;
-        z-index: 1;
-        width: min(1120px, 100%);
-        max-height: calc(100vh - (2 * clamp(8px, 2vw, 20px)));
-        border-radius: 20px;
-        border: 1px solid rgba(15, 95, 166, 0.2);
-        background: linear-gradient(165deg, rgba(255, 255, 255, 0.99), rgba(237, 247, 255, 0.95));
-        box-shadow:
-          0 30px 56px rgba(2, 6, 23, 0.3),
-          inset 0 1px 0 rgba(255, 255, 255, 0.9);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-
-      .ppccr-modal__header {
-        padding: 14px 16px;
-        border-bottom: 1px solid rgba(15, 95, 166, 0.14);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-      }
-
-      .ppccr-modal__header h2 {
-        margin: 0;
-        color: var(--blue-950);
-        font-size: clamp(1.06rem, 1.4vw, 1.25rem);
-      }
-
-      .ppccr-modal__close {
-        width: 40px;
-        height: 40px;
-        border: 1px solid rgba(15, 95, 166, 0.28);
-        border-radius: 50%;
-        background: #fff;
-        color: var(--blue-900);
-        font-size: 1.4rem;
-        line-height: 1;
-        cursor: pointer;
-      }
-
-      .ppccr-modal__body {
-        padding: clamp(0.75rem, 2vw, 1.25rem);
-        overflow: auto;
-      }
-
-      #ppccr-algo-modal .home-algo {
-        margin: 0;
-      }
-
-      #ppccr-algo-modal .home-algo__modal {
-        z-index: 130;
-      }
-
-      body.ppccr-modal-open {
-        overflow: hidden;
-      }
-
-      @media (max-width: 760px) {
-        .hero-algo-launch__btn {
-          width: 100%;
-        }
-
-        .ppccr-modal__header {
-          padding: 12px;
-        }
-      }
-    </style>
     <script src="/app.js" defer></script>
     <script src="/auth-gate.js" defer></script>
   </head>
@@ -425,19 +288,22 @@
         <div class="container">
           <header class="section-header">
             <h2 class="section-title" id="algoritmo-title">
-              Algoritmo Dinámico de Inclusión
+              Algoritmo de inclusión (PPCCR)
             </h2>
             <p class="section-subtitle">
-              Flujo operativo cerrado en 4 pasos con validación clínica y cierre
-              de entrevista, ahora disponible en modal.
+              Entrevista guiada en 4 pasos. Completá la evaluación del
+              participante y registrá el resultado.
             </p>
           </header>
 
           <article class="algo-teaser" aria-label="Acceso al algoritmo">
             <h3 class="algo-teaser__title">Iniciar protocolo de inclusión</h3>
             <p class="algo-teaser__text">
-              Abrí el algoritmo en modo focal para completar la entrevista sin
-              distracciones.
+              Iniciá una entrevista guiada en modal, con validaciones por paso y
+              cierre asistido.
+            </p>
+            <p class="algo-teaser__note">
+              Los datos se guardan automáticamente al confirmar cada paso.
             </p>
             <div class="algo-teaser__actions">
               <button
@@ -460,13 +326,6 @@
               <p class="home-algo__status-chip" id="home-algo-status-chip">
                 Entrevista en curso
               </p>
-              <button
-                type="button"
-                class="btn btn-ghost"
-                id="home-algo-restart"
-              >
-                Reiniciar entrevista
-              </button>
             </div>
 
             <nav aria-label="Etapas del algoritmo">
@@ -527,6 +386,23 @@
                 </li>
               </ol>
             </nav>
+
+            <p
+              class="home-algo__flow-status"
+              id="home-algo-flow-status"
+              aria-live="polite"
+            >
+              Completá los datos para continuar.
+            </p>
+
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              id="home-algo-restart"
+              hidden
+            >
+              Reiniciar entrevista
+            </button>
 
             <section
               class="home-algo__panel"
@@ -1629,7 +1505,7 @@
       <div class="ppccr-modal__backdrop" data-algo-close="true"></div>
       <div class="ppccr-modal__card" role="document">
         <header class="ppccr-modal__header">
-          <h2 id="ppccr-algo-modal-title">Algoritmo de Inclusión</h2>
+          <h2 id="ppccr-algo-modal-title">Algoritmo de inclusión · PPCCR 2026</h2>
           <button
             type="button"
             class="ppccr-modal__close"
@@ -1640,79 +1516,46 @@
           </button>
         </header>
         <div class="ppccr-modal__body" id="ppccr-algo-modal-content"></div>
+        <div
+          class="home-algo-complete"
+          id="home-algo-complete-dialog"
+          hidden
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="home-algo-complete-title"
+          aria-describedby="home-algo-complete-text"
+        >
+          <div
+            class="home-algo-complete__backdrop"
+            data-home-algo-complete-action="close"
+          ></div>
+          <div class="home-algo-complete__card" role="document" tabindex="-1">
+            <h3 class="home-algo-complete__title" id="home-algo-complete-title">
+              Entrevista guardada
+            </h3>
+            <p class="home-algo-complete__text" id="home-algo-complete-text">
+              La entrevista se registró correctamente.
+            </p>
+            <div class="home-algo-complete__actions">
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="home-algo-complete-close"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="home-algo-complete-new"
+              >
+                Nueva entrevista
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-
-    <script>
-      (() => {
-        const source = document.getElementById("ppccr-algo-source");
-        const flowModal = document.getElementById("ppccr-algo-modal");
-        const flowModalBody = document.getElementById("ppccr-algo-modal-content");
-        if (!source || !flowModal || !flowModalBody) return;
-
-        while (source.firstChild) {
-          flowModalBody.appendChild(source.firstChild);
-        }
-
-        const finishModal = document.getElementById("home-algo-finish-modal");
-        const openers = Array.from(
-          document.querySelectorAll("[data-open-algo='true']"),
-        );
-
-        const closeFlowModal = () => {
-          flowModal.hidden = true;
-          document.body.classList.remove("ppccr-modal-open");
-          if (finishModal && !finishModal.hidden) {
-            finishModal.hidden = true;
-            finishModal.setAttribute("aria-hidden", "true");
-          }
-        };
-
-        const resetHomeAlgorithm = () => {
-          if (typeof restartHomeAlgorithm === "function") {
-            restartHomeAlgorithm({ confirmRestart: false });
-            return;
-          }
-          const fallbackRestartButton = document.getElementById("home-algo-restart");
-          if (fallbackRestartButton) {
-            fallbackRestartButton.click();
-          }
-        };
-
-        const openFlowModal = () => {
-          resetHomeAlgorithm();
-          flowModal.hidden = false;
-          document.body.classList.add("ppccr-modal-open");
-          const closeButton = flowModal.querySelector(".ppccr-modal__close");
-          if (closeButton instanceof HTMLElement) {
-            closeButton.focus();
-          }
-        };
-
-        openers.forEach((opener) => {
-          opener.addEventListener("click", (event) => {
-            event.preventDefault();
-            openFlowModal();
-          });
-        });
-
-        flowModal.addEventListener("click", (event) => {
-          const target = event.target;
-          if (!(target instanceof Element)) return;
-          const shouldClose = target.closest("[data-algo-close='true']");
-          if (shouldClose) {
-            closeFlowModal();
-          }
-        });
-
-        document.addEventListener("keydown", (event) => {
-          if (flowModal.hidden || event.key !== "Escape") return;
-          if (finishModal && !finishModal.hidden) return;
-          event.preventDefault();
-          closeFlowModal();
-        });
-      })();
-    </script>
 
     <noscript>
       <div class="noscript">

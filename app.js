@@ -330,13 +330,18 @@ let homeAlgorithmFlowModalState = {
   card: null,
   body: null,
   source: null,
+  completionDialog: null,
+  completionCard: null,
+  completionText: null,
+  completionCloseBtn: null,
+  completionNewBtn: null,
   lastFocused: null,
   escListenerBound: false,
-  openListenerBound: false,
   captureListenerBound: false,
   autoCloseTimerId: 0,
   deviceClockTimerId: 0,
   previewDeviceTimestamp: "",
+  scrollLockY: 0,
 };
 let interviewState = {
   step1: {},
@@ -1507,6 +1512,18 @@ function setHomeAlgorithmFeedback(element, message, tone = "neutral") {
   if (!element) return;
   element.textContent = message;
   element.dataset.tone = tone;
+
+  if (!homeAlgorithmState?.flowStatus) return;
+
+  const panel = element.closest("[data-home-algo-step-panel]");
+  if (!panel) return;
+
+  const step = Number(panel.getAttribute("data-home-algo-step-panel") || "");
+  if (!Number.isFinite(step)) return;
+  if (step !== homeAlgorithmState.currentStep) return;
+
+  homeAlgorithmState.flowStatus.textContent = message;
+  homeAlgorithmState.flowStatus.dataset.tone = tone;
 }
 
 function getHomeAlgorithmOutcomeText(outcome) {
@@ -2085,7 +2102,7 @@ function renderHomeAlgorithmStep2State() {
     homeAlgorithmState.step2Back.hidden = false;
     setHomeAlgorithmFeedback(
       homeAlgorithmState.step2Feedback,
-      "Sin criterios marcados. Si continúa así, avanzará al Paso 3.",
+      "Revisá los criterios y confirmá el Paso 2.",
       "neutral",
     );
     return;
@@ -2098,7 +2115,7 @@ function renderHomeAlgorithmStep2State() {
     homeAlgorithmState.step2Back.hidden = false;
     setHomeAlgorithmFeedback(
       homeAlgorithmState.step2Feedback,
-      "Se detectó al menos un criterio de vigilancia activa. Podés editar o finalizar.",
+      "Criterio de exclusión detectado. La persona no es candidata a screening poblacional. Recomendación: consulta médica.",
       "danger",
     );
     return;
@@ -2110,7 +2127,7 @@ function renderHomeAlgorithmStep2State() {
   homeAlgorithmState.step2Back.hidden = false;
   setHomeAlgorithmFeedback(
     homeAlgorithmState.step2Feedback,
-    "Paso 2 sin exclusiones. Podés continuar al Paso 3.",
+    "Sin criterios de exclusión. Podés continuar.",
     "success",
   );
 }
@@ -2131,7 +2148,7 @@ function renderHomeAlgorithmStep3State() {
     homeAlgorithmState.step3Back.hidden = false;
     setHomeAlgorithmFeedback(
       homeAlgorithmState.step3Feedback,
-      "Si no se marca ningún criterio, avanzará a Paso 4 como candidato FIT.",
+      "Revisá los criterios y confirmá el Paso 3.",
       "neutral",
     );
     return;
@@ -2144,7 +2161,7 @@ function renderHomeAlgorithmStep3State() {
     homeAlgorithmState.step3Back.hidden = false;
     setHomeAlgorithmFeedback(
       homeAlgorithmState.step3Feedback,
-      "Se detectó al menos un criterio de riesgo elevado. Podés editar o finalizar.",
+      "Riesgo aumentado. La persona no es candidata a screening poblacional. Recomendación: consulta médica.",
       "danger",
     );
     return;
@@ -2156,7 +2173,7 @@ function renderHomeAlgorithmStep3State() {
   homeAlgorithmState.step3Back.hidden = false;
   setHomeAlgorithmFeedback(
     homeAlgorithmState.step3Feedback,
-    "Riesgo promedio confirmado. Continuá al Paso 4.",
+    "Riesgo promedio. Candidata/o a Test FIT. Podés continuar a Datos de contacto.",
     "success",
   );
 }
@@ -2247,6 +2264,7 @@ function renderHomeAlgorithm() {
   renderHomeAlgorithmStep3State();
   renderHomeAlgorithmStep4State();
   renderHomeAlgorithmStepLocks();
+  mountHomeAlgorithmRestartAction();
 }
 
 function goToHomeAlgorithmStep(step) {
@@ -2618,24 +2636,22 @@ async function finalizeAndPersistHomeInterview(
   if (feedbackElement) {
     setHomeAlgorithmFeedback(
       feedbackElement,
-      "Paciente guardado correctamente. Preparando nueva entrevista...",
+      "Paciente guardado correctamente.",
       "success",
     );
   }
 
-  window.alert("✅ Paciente guardado correctamente en la Base de Datos.");
-  restartHomeAlgorithm({ confirmRestart: false });
+  if (triggerButton) {
+    triggerButton.disabled = false;
+    triggerButton.textContent = restoreLabel;
+  }
 
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  window.scrollTo({
-    top: 0,
-    left: 0,
-    behavior: reduceMotion ? "auto" : "smooth",
+  openHomeAlgorithmCompletionDialog({
+    message: "La entrevista se registró correctamente en la base de datos.",
   });
 }
 
 function onHomeAlgorithmConfirmStep1() {
-  console.log("🔴 CLIC DETECTADO EN PASO 1");
   if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
 
   sanitizeHomeAlgorithmAgeInput();
@@ -3014,6 +3030,11 @@ function syncHomeAlgorithmFlowModalElements() {
   homeAlgorithmFlowModalState.card = $(".ppccr-modal__card", homeAlgorithmFlowModalState.modal || document);
   homeAlgorithmFlowModalState.body = $("#ppccr-algo-modal-content");
   homeAlgorithmFlowModalState.source = $("#ppccr-algo-source");
+  homeAlgorithmFlowModalState.completionDialog = $("#home-algo-complete-dialog");
+  homeAlgorithmFlowModalState.completionCard = $(".home-algo-complete__card", homeAlgorithmFlowModalState.modal || document);
+  homeAlgorithmFlowModalState.completionText = $("#home-algo-complete-text");
+  homeAlgorithmFlowModalState.completionCloseBtn = $("#home-algo-complete-close");
+  homeAlgorithmFlowModalState.completionNewBtn = $("#home-algo-complete-new");
 }
 
 function mountHomeAlgorithmInFlowModal() {
@@ -3035,14 +3056,6 @@ function clearAlgoFlowModalAutoCloseTimer() {
     window.clearTimeout(homeAlgorithmFlowModalState.autoCloseTimerId);
     homeAlgorithmFlowModalState.autoCloseTimerId = 0;
   }
-}
-
-function scheduleAlgoFlowModalAutoClose() {
-  clearAlgoFlowModalAutoCloseTimer();
-  if (!isAlgoFlowModalOpen()) return;
-  homeAlgorithmFlowModalState.autoCloseTimerId = window.setTimeout(() => {
-    closeAlgoFlowModal({ force: true });
-  }, 2000);
 }
 
 function updateAlgoFlowDeviceClockPreview() {
@@ -3074,6 +3087,152 @@ function startAlgoFlowDeviceClockPreview() {
   }, 1000);
 }
 
+function isHomeAlgorithmCompletionDialogOpen() {
+  return Boolean(
+    homeAlgorithmFlowModalState.completionDialog &&
+      !homeAlgorithmFlowModalState.completionDialog.hidden,
+  );
+}
+
+function lockAlgoFlowBackgroundScroll() {
+  if (document.body.classList.contains("ppccr-modal-open")) return;
+  homeAlgorithmFlowModalState.scrollLockY = window.scrollY || window.pageYOffset || 0;
+  document.body.classList.add("ppccr-modal-open");
+  document.documentElement.classList.add("ppccr-modal-open");
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${homeAlgorithmFlowModalState.scrollLockY}px`;
+  document.body.style.left = "0";
+  document.body.style.right = "0";
+  document.body.style.width = "100%";
+}
+
+function unlockAlgoFlowBackgroundScroll() {
+  document.body.classList.remove("ppccr-modal-open");
+  document.documentElement.classList.remove("ppccr-modal-open");
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.left = "";
+  document.body.style.right = "";
+  document.body.style.width = "";
+
+  const targetY = Number(homeAlgorithmFlowModalState.scrollLockY || 0);
+  window.scrollTo(0, targetY);
+  homeAlgorithmFlowModalState.scrollLockY = 0;
+}
+
+function resetAlgoFlowModalViewport() {
+  if (homeAlgorithmFlowModalState.body) {
+    homeAlgorithmFlowModalState.body.scrollTop = 0;
+  }
+  if (!homeAlgorithmState?.stepPanels) return;
+  homeAlgorithmState.stepPanels.forEach((panel) => {
+    panel.scrollTop = 0;
+  });
+}
+
+function mountHomeAlgorithmRestartAction() {
+  if (!homeAlgorithmState?.restartBtn) return;
+  const visiblePanel = homeAlgorithmState.stepPanels.find((panel) => !panel.hidden);
+  const actions = visiblePanel?.querySelector(".home-algo__actions");
+  if (!actions) return;
+
+  if (homeAlgorithmState.restartBtn.parentElement !== actions) {
+    actions.prepend(homeAlgorithmState.restartBtn);
+  }
+  homeAlgorithmState.restartBtn.hidden = false;
+}
+
+function getHomeAlgorithmCompletionFocusableElements() {
+  if (!homeAlgorithmFlowModalState.completionDialog) return [];
+  const selectors =
+    'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  const candidates = Array.from(
+    homeAlgorithmFlowModalState.completionDialog.querySelectorAll(selectors),
+  );
+  return candidates.filter((element) => {
+    if (!(element instanceof HTMLElement)) return false;
+    if (element.hidden) return false;
+    const styles = window.getComputedStyle(element);
+    return styles.display !== "none" && styles.visibility !== "hidden";
+  });
+}
+
+function closeHomeAlgorithmCompletionDialog() {
+  if (!homeAlgorithmFlowModalState.completionDialog) return;
+  homeAlgorithmFlowModalState.completionDialog.hidden = true;
+  homeAlgorithmFlowModalState.completionDialog.setAttribute("aria-hidden", "true");
+}
+
+function openHomeAlgorithmCompletionDialog({
+  message = "La entrevista se registró correctamente.",
+} = {}) {
+  syncHomeAlgorithmFlowModalElements();
+  if (!homeAlgorithmFlowModalState.completionDialog) return;
+
+  clearAlgoFlowModalAutoCloseTimer();
+  stopAlgoFlowDeviceClockPreview();
+  closeHomeAlgorithmCompletionDialog();
+  closeHomeAlgorithmModal();
+
+  if (homeAlgorithmFlowModalState.completionText) {
+    homeAlgorithmFlowModalState.completionText.textContent = message;
+  }
+
+  homeAlgorithmFlowModalState.completionDialog.hidden = false;
+  homeAlgorithmFlowModalState.completionDialog.setAttribute("aria-hidden", "false");
+  const preferredButton = homeAlgorithmFlowModalState.completionCloseBtn;
+  if (preferredButton instanceof HTMLElement) {
+    preferredButton.focus();
+  } else if (homeAlgorithmFlowModalState.completionCard instanceof HTMLElement) {
+    homeAlgorithmFlowModalState.completionCard.focus();
+  }
+}
+
+function startNewHomeAlgorithmInterviewInModal() {
+  closeHomeAlgorithmCompletionDialog();
+  if (typeof restartHomeAlgorithm === "function") {
+    restartHomeAlgorithm({ confirmRestart: false });
+  }
+  if (typeof goToHomeAlgorithmStep === "function") {
+    goToHomeAlgorithmStep(ALGORITHM_HOME.steps.AGE);
+  }
+  clearAlgoFlowModalAutoCloseTimer();
+  startAlgoFlowDeviceClockPreview();
+  resetAlgoFlowModalViewport();
+  focusAlgoFlowStep1Input();
+}
+
+function closeAlgoFlowModalFromCompletion() {
+  closeHomeAlgorithmCompletionDialog();
+  closeAlgoFlowModal({ force: true });
+}
+
+function trapHomeAlgorithmCompletionFocus(event) {
+  if (!isHomeAlgorithmCompletionDialogOpen()) return;
+  if (event.key !== "Tab") return;
+
+  const focusables = getHomeAlgorithmCompletionFocusableElements();
+  if (focusables.length === 0) {
+    event.preventDefault();
+    return;
+  }
+
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  const active = document.activeElement;
+
+  if (event.shiftKey && active === first) {
+    event.preventDefault();
+    last.focus();
+    return;
+  }
+
+  if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 function getAlgoFlowFocusableElements() {
   if (!homeAlgorithmFlowModalState.modal) return [];
   const selectors =
@@ -3090,6 +3249,7 @@ function getAlgoFlowFocusableElements() {
 
 function trapAlgoFlowModalFocus(event) {
   if (!isAlgoFlowModalOpen()) return;
+  if (isHomeAlgorithmCompletionDialogOpen()) return;
   if (event.key !== "Tab") return;
 
   const focusables = getAlgoFlowFocusableElements();
@@ -3174,13 +3334,14 @@ function openAlgoFlowModal(opener = null) {
   if (typeof goToHomeAlgorithmStep === "function") {
     goToHomeAlgorithmStep(ALGORITHM_HOME.steps.AGE);
   }
+  closeHomeAlgorithmCompletionDialog();
 
   homeAlgorithmFlowModalState.modal.hidden = false;
   homeAlgorithmFlowModalState.modal.setAttribute("aria-hidden", "false");
-  document.body.classList.add("ppccr-modal-open");
-  document.documentElement.classList.add("ppccr-modal-open");
+  lockAlgoFlowBackgroundScroll();
 
   startAlgoFlowDeviceClockPreview();
+  resetAlgoFlowModalViewport();
   focusAlgoFlowStep1Input();
 }
 
@@ -3198,11 +3359,11 @@ function closeAlgoFlowModal({ force = false } = {}) {
 
   clearAlgoFlowModalAutoCloseTimer();
   stopAlgoFlowDeviceClockPreview();
+  closeHomeAlgorithmCompletionDialog();
 
   homeAlgorithmFlowModalState.modal.hidden = true;
   homeAlgorithmFlowModalState.modal.setAttribute("aria-hidden", "true");
-  document.body.classList.remove("ppccr-modal-open");
-  document.documentElement.classList.remove("ppccr-modal-open");
+  unlockAlgoFlowBackgroundScroll();
 
   if (typeof closeHomeAlgorithmModal === "function") {
     closeHomeAlgorithmModal();
@@ -3223,6 +3384,30 @@ function closeAlgoFlowModal({ force = false } = {}) {
 function onAlgoFlowModalCaptureClick(event) {
   const target = event.target;
   if (!(target instanceof Element)) return;
+
+  if (isHomeAlgorithmCompletionDialogOpen()) {
+    const completionAction = target.closest("[data-home-algo-complete-action]");
+    if (completionAction) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeAlgoFlowModalFromCompletion();
+      return;
+    }
+
+    if (target.closest("#home-algo-complete-close")) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeAlgoFlowModalFromCompletion();
+      return;
+    }
+
+    if (target.closest("#home-algo-complete-new")) {
+      event.preventDefault();
+      event.stopPropagation();
+      startNewHomeAlgorithmInterviewInModal();
+      return;
+    }
+  }
 
   const opener = target.closest('[data-open-algo="true"]');
   if (opener) {
@@ -3253,6 +3438,23 @@ function onAlgoFlowModalCaptureClick(event) {
 function onAlgoFlowModalCaptureKeydown(event) {
   if (!isAlgoFlowModalOpen()) return;
 
+  if (isHomeAlgorithmCompletionDialogOpen()) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeAlgoFlowModalFromCompletion();
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeAlgoFlowModalFromCompletion();
+      return;
+    }
+    trapHomeAlgorithmCompletionFocus(event);
+    return;
+  }
+
   if (event.key === "Escape") {
     event.preventDefault();
     event.stopPropagation();
@@ -3268,14 +3470,9 @@ function setupAlgoFlowModalLifecycle() {
   syncHomeAlgorithmFlowModalElements();
   if (!homeAlgorithmFlowModalState.modal) return;
 
-  if (!homeAlgorithmFlowModalState.openListenerBound) {
-    document.querySelectorAll('[data-open-algo="true"]').forEach((trigger) => {
-      trigger.addEventListener("click", (event) => {
-        event.preventDefault();
-        openAlgoFlowModal(event.currentTarget);
-      });
-    });
-    homeAlgorithmFlowModalState.openListenerBound = true;
+  if (homeAlgorithmFlowModalState.completionDialog) {
+    homeAlgorithmFlowModalState.completionDialog.hidden = true;
+    homeAlgorithmFlowModalState.completionDialog.setAttribute("aria-hidden", "true");
   }
 
   if (!homeAlgorithmFlowModalState.captureListenerBound) {
@@ -3287,6 +3484,7 @@ function setupAlgoFlowModalLifecycle() {
     document.addEventListener("keydown", onAlgoFlowModalCaptureKeydown, true);
     homeAlgorithmFlowModalState.escListenerBound = true;
   }
+
 }
 
 function fillHomeAlgorithmModal() {
@@ -3318,7 +3516,6 @@ function openHomeAlgorithmModal() {
   homeAlgorithmState.modal.hidden = false;
   homeAlgorithmState.modal.setAttribute("aria-hidden", "false");
   homeAlgorithmState.modalDialog.focus();
-  scheduleAlgoFlowModalAutoClose();
 }
 
 function closeHomeAlgorithmModal() {
@@ -3432,6 +3629,7 @@ function restartHomeAlgorithm({ confirmRestart = true } = {}) {
   clearHomeAlgorithmAllFieldErrors();
   hydrateHomeAlgorithmFormFromInterview();
   renderHomeAlgorithm();
+  resetAlgoFlowModalViewport();
   persistHomeAlgorithmDraft({ message: "Entrevista reiniciada y borrador local renovado." });
 }
 
@@ -3489,6 +3687,7 @@ function initHomeAlgorithm() {
   const step4Finish = $("#home-algo-step4-finish");
 
   const statusChip = $("#home-algo-status-chip");
+  const flowStatus = $("#home-algo-flow-status");
   const restartBtn = $("#home-algo-restart");
 
   const modal = $("#home-algo-finish-modal");
@@ -3543,6 +3742,7 @@ function initHomeAlgorithm() {
     !step4Back ||
     !step4Finish ||
     !statusChip ||
+    !flowStatus ||
     !restartBtn ||
     !modal ||
     !modalDialog ||
@@ -3620,6 +3820,7 @@ function initHomeAlgorithm() {
     step4Finish,
 
     statusChip,
+    flowStatus,
     restartBtn,
 
     modal,
