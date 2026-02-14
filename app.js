@@ -3719,14 +3719,6 @@ function onAlgoFlowModalCaptureClick(event) {
     return;
   }
 
-  const anchorOpener = target.closest('a[href="#algoritmo"], a[href="#algoritmo-section"]');
-  if (anchorOpener) {
-    event.preventDefault();
-    event.stopPropagation();
-    openAlgoFlowModal(anchorOpener);
-    return;
-  }
-
   if (!isAlgoFlowModalOpen()) return;
 
   const closer = target.closest("[data-algo-close='true']");
