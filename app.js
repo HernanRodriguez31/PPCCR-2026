@@ -284,8 +284,6 @@ const HOME_ALGO_STORAGE_KEY = "ppccr_home_algorithm_interview_v1";
 const HOME_ALGO_PARTICIPANT_COUNTER_KEY = "ppccr_home_algorithm_counter_v1";
 const HOME_ALGO_STAGE1_SUBMIT_URL =
   "https://us-central1-ppccr-2026.cloudfunctions.net/submitAlgorithmStage1";
-const HOME_ALGO_UPDATE_STAGE_URL =
-  "https://us-central1-ppccr-2026.cloudfunctions.net/updateParticipantStage";
 
 const HOME_ALGO_OUTCOME = Object.freeze({
   AGE_EXCLUDED: "AGE_EXCLUDED",
@@ -324,6 +322,13 @@ const HOME_ALGO_STEP4_FIELDS = Object.freeze({
 });
 
 let homeAlgorithmState = null;
+let interviewState = {
+  step1: {},
+  step2: {},
+  step3: {},
+  step4: {},
+  status: "pending",
+};
 
 /* ----------------------------- Helpers ----------------------------- */
 
@@ -2001,10 +2006,13 @@ function renderHomeAlgorithmStep1State() {
 
   homeAlgorithmState.step1Stop.hidden = true;
   homeAlgorithmState.step1Ok.hidden = true;
+  homeAlgorithmState.step1Confirm.hidden = true;
+  homeAlgorithmState.step1Edit.hidden = true;
   homeAlgorithmState.step1Finish.hidden = true;
   homeAlgorithmState.step1Continue.hidden = true;
 
   if (!wasConfirmed) {
+    homeAlgorithmState.step1Confirm.hidden = false;
     setHomeAlgorithmFeedback(
       homeAlgorithmState.step1Feedback,
       "Completá los datos para confirmar el Paso 1.",
@@ -2015,7 +2023,8 @@ function renderHomeAlgorithmStep1State() {
 
   if (includedByAge) {
     homeAlgorithmState.step1Ok.hidden = false;
-    homeAlgorithmState.step1Continue.hidden = homeAlgorithmState.maxUnlockedStep !== ALGORITHM_HOME.steps.AGE;
+    homeAlgorithmState.step1Edit.hidden = false;
+    homeAlgorithmState.step1Continue.hidden = false;
     setHomeAlgorithmFeedback(
       homeAlgorithmState.step1Feedback,
       "Cumple criterio por edad. Podés continuar al Paso 2.",
@@ -2025,10 +2034,11 @@ function renderHomeAlgorithmStep1State() {
   }
 
   homeAlgorithmState.step1Stop.hidden = false;
-  homeAlgorithmState.step1Finish.hidden = homeAlgorithmState.finalized;
+  homeAlgorithmState.step1Edit.hidden = false;
+  homeAlgorithmState.step1Finish.hidden = false;
   setHomeAlgorithmFeedback(
     homeAlgorithmState.step1Feedback,
-    "No incluye por edad. Finalizá la entrevista para emitir el resumen.",
+    "No incluye por edad. Podés editar o finalizar entrevista.",
     "danger",
   );
 }
@@ -2038,10 +2048,15 @@ function renderHomeAlgorithmStep2State() {
 
   homeAlgorithmState.step2Stop.hidden = true;
   homeAlgorithmState.step2Ok.hidden = true;
+  homeAlgorithmState.step2Evaluate.hidden = true;
+  homeAlgorithmState.step2Edit.hidden = true;
   homeAlgorithmState.step2Finish.hidden = true;
   homeAlgorithmState.step2Continue.hidden = true;
+  homeAlgorithmState.step2Back.hidden = true;
 
   if (!homeAlgorithmState.step2Reviewed) {
+    homeAlgorithmState.step2Evaluate.hidden = false;
+    homeAlgorithmState.step2Back.hidden = false;
     setHomeAlgorithmFeedback(
       homeAlgorithmState.step2Feedback,
       "Sin criterios marcados. Si continúa así, avanzará al Paso 3.",
@@ -2052,17 +2067,21 @@ function renderHomeAlgorithmStep2State() {
 
   if (homeAlgorithmState.interview.step2.hasExclusion) {
     homeAlgorithmState.step2Stop.hidden = false;
-    homeAlgorithmState.step2Finish.hidden = homeAlgorithmState.finalized;
+    homeAlgorithmState.step2Edit.hidden = false;
+    homeAlgorithmState.step2Finish.hidden = false;
+    homeAlgorithmState.step2Back.hidden = false;
     setHomeAlgorithmFeedback(
       homeAlgorithmState.step2Feedback,
-      "Se detectó al menos un criterio de vigilancia activa.",
+      "Se detectó al menos un criterio de vigilancia activa. Podés editar o finalizar.",
       "danger",
     );
     return;
   }
 
   homeAlgorithmState.step2Ok.hidden = false;
-  homeAlgorithmState.step2Continue.hidden = homeAlgorithmState.maxUnlockedStep !== ALGORITHM_HOME.steps.VIGILANCE;
+  homeAlgorithmState.step2Edit.hidden = false;
+  homeAlgorithmState.step2Continue.hidden = false;
+  homeAlgorithmState.step2Back.hidden = false;
   setHomeAlgorithmFeedback(
     homeAlgorithmState.step2Feedback,
     "Paso 2 sin exclusiones. Podés continuar al Paso 3.",
@@ -2075,10 +2094,15 @@ function renderHomeAlgorithmStep3State() {
 
   homeAlgorithmState.step3Stop.hidden = true;
   homeAlgorithmState.step3Ok.hidden = true;
+  homeAlgorithmState.step3Evaluate.hidden = true;
+  homeAlgorithmState.step3Edit.hidden = true;
   homeAlgorithmState.step3Finish.hidden = true;
   homeAlgorithmState.step3Continue.hidden = true;
+  homeAlgorithmState.step3Back.hidden = true;
 
   if (!homeAlgorithmState.step3Reviewed) {
+    homeAlgorithmState.step3Evaluate.hidden = false;
+    homeAlgorithmState.step3Back.hidden = false;
     setHomeAlgorithmFeedback(
       homeAlgorithmState.step3Feedback,
       "Si no se marca ningún criterio, avanzará a Paso 4 como candidato FIT.",
@@ -2089,17 +2113,21 @@ function renderHomeAlgorithmStep3State() {
 
   if (homeAlgorithmState.interview.step3.hasHighRisk) {
     homeAlgorithmState.step3Stop.hidden = false;
-    homeAlgorithmState.step3Finish.hidden = homeAlgorithmState.finalized;
+    homeAlgorithmState.step3Edit.hidden = false;
+    homeAlgorithmState.step3Finish.hidden = false;
+    homeAlgorithmState.step3Back.hidden = false;
     setHomeAlgorithmFeedback(
       homeAlgorithmState.step3Feedback,
-      "Se detectó al menos un criterio de riesgo elevado.",
+      "Se detectó al menos un criterio de riesgo elevado. Podés editar o finalizar.",
       "danger",
     );
     return;
   }
 
   homeAlgorithmState.step3Ok.hidden = false;
-  homeAlgorithmState.step3Continue.hidden = homeAlgorithmState.maxUnlockedStep !== ALGORITHM_HOME.steps.RISK;
+  homeAlgorithmState.step3Edit.hidden = false;
+  homeAlgorithmState.step3Continue.hidden = false;
+  homeAlgorithmState.step3Back.hidden = false;
   setHomeAlgorithmFeedback(
     homeAlgorithmState.step3Feedback,
     "Riesgo promedio confirmado. Continuá al Paso 4.",
@@ -2107,18 +2135,27 @@ function renderHomeAlgorithmStep3State() {
   );
 }
 
+function renderHomeAlgorithmStep4State() {
+  if (!homeAlgorithmState) return;
+  homeAlgorithmState.step4Back.hidden = false;
+  homeAlgorithmState.step4Edit.hidden = false;
+}
+
 function renderHomeAlgorithmStepLocks() {
   if (!homeAlgorithmState) return;
 
   const lockStep1 =
     homeAlgorithmState.finalized ||
-    homeAlgorithmState.currentStep !== ALGORITHM_HOME.steps.AGE;
+    homeAlgorithmState.currentStep !== ALGORITHM_HOME.steps.AGE ||
+    homeAlgorithmState.step1Confirmed;
   const lockStep2 =
     homeAlgorithmState.finalized ||
-    homeAlgorithmState.currentStep !== ALGORITHM_HOME.steps.VIGILANCE;
+    homeAlgorithmState.currentStep !== ALGORITHM_HOME.steps.VIGILANCE ||
+    homeAlgorithmState.step2Reviewed;
   const lockStep3 =
     homeAlgorithmState.finalized ||
-    homeAlgorithmState.currentStep !== ALGORITHM_HOME.steps.RISK;
+    homeAlgorithmState.currentStep !== ALGORITHM_HOME.steps.RISK ||
+    homeAlgorithmState.step3Reviewed;
   const lockStep4 =
     homeAlgorithmState.finalized ||
     homeAlgorithmState.currentStep !== ALGORITHM_HOME.steps.DECISION;
@@ -2155,6 +2192,7 @@ function renderHomeAlgorithm() {
   renderHomeAlgorithmStep1State();
   renderHomeAlgorithmStep2State();
   renderHomeAlgorithmStep3State();
+  renderHomeAlgorithmStep4State();
   renderHomeAlgorithmStepLocks();
 }
 
@@ -2262,16 +2300,150 @@ function getHomeAlgorithmStep1Values() {
   };
 }
 
-async function submitHomeAlgorithmStage1(values = {}) {
+function getHomeAlgorithmParticipantId() {
+  if (!homeAlgorithmState) return "";
+  return String(
+    homeAlgorithmState.participantInput?.value ||
+      homeAlgorithmState.interview.participantNumber ||
+      "",
+  ).trim();
+}
+
+function resetInterviewState() {
+  interviewState = {
+    step1: {},
+    step2: {},
+    step3: {},
+    step4: {},
+    status: "pending",
+  };
+}
+
+function syncInterviewStateFromInterview({ status = interviewState.status } = {}) {
+  if (!homeAlgorithmState) return;
+
+  interviewState = {
+    step1: {
+      age: homeAlgorithmState.interview.step1.age ?? null,
+      sex: homeAlgorithmState.interview.step1.sex || "",
+      sexOtherDetail: homeAlgorithmState.interview.step1.sexOtherDetail || "",
+      includedByAge: Boolean(homeAlgorithmState.interview.step1.includedByAge),
+      stationId: homeAlgorithmState.interview.stationId || "",
+      stationName: homeAlgorithmState.interview.stationName || "",
+      deviceTimestamp: homeAlgorithmState.interview.deviceTimestamp || "",
+    },
+    step2: {
+      exclusions: Array.isArray(homeAlgorithmState.interview.step2.exclusions)
+        ? [...homeAlgorithmState.interview.step2.exclusions]
+        : [],
+      hasExclusion: Boolean(homeAlgorithmState.interview.step2.hasExclusion),
+    },
+    step3: {
+      riskFlags: Array.isArray(homeAlgorithmState.interview.step3.riskFlags)
+        ? [...homeAlgorithmState.interview.step3.riskFlags]
+        : [],
+      hasHighRisk: Boolean(homeAlgorithmState.interview.step3.hasHighRisk),
+    },
+    step4: {
+      fullName: homeAlgorithmState.interview.step4.fullName || "",
+      documentId: homeAlgorithmState.interview.step4.documentId || "",
+      email: homeAlgorithmState.interview.step4.email || "",
+      phone: homeAlgorithmState.interview.step4.phone || "",
+    },
+    status,
+  };
+}
+
+function clearInterviewAfterStep1() {
+  if (!homeAlgorithmState) return;
+  homeAlgorithmState.step2Reviewed = false;
+  homeAlgorithmState.step3Reviewed = false;
+  homeAlgorithmState.interview.step2 = { exclusions: [], hasExclusion: false };
+  homeAlgorithmState.interview.step3 = { riskFlags: [], hasHighRisk: false };
+  homeAlgorithmState.interview.step4 = {
+    fullName: "",
+    documentId: "",
+    email: "",
+    phone: "",
+  };
+  homeAlgorithmState.step2Checks.forEach((input) => {
+    input.checked = false;
+  });
+  homeAlgorithmState.step3Checks.forEach((input) => {
+    input.checked = false;
+  });
+  homeAlgorithmState.fullNameInput.value = "";
+  homeAlgorithmState.documentIdInput.value = "";
+  homeAlgorithmState.emailInput.value = "";
+  homeAlgorithmState.phoneInput.value = "";
+  syncInterviewStateFromInterview();
+}
+
+function clearInterviewAfterStep2() {
+  if (!homeAlgorithmState) return;
+  homeAlgorithmState.step3Reviewed = false;
+  homeAlgorithmState.interview.step3 = { riskFlags: [], hasHighRisk: false };
+  homeAlgorithmState.interview.step4 = {
+    fullName: "",
+    documentId: "",
+    email: "",
+    phone: "",
+  };
+  homeAlgorithmState.step3Checks.forEach((input) => {
+    input.checked = false;
+  });
+  homeAlgorithmState.fullNameInput.value = "";
+  homeAlgorithmState.documentIdInput.value = "";
+  homeAlgorithmState.emailInput.value = "";
+  homeAlgorithmState.phoneInput.value = "";
+  syncInterviewStateFromInterview();
+}
+
+function clearInterviewAfterStep3() {
+  if (!homeAlgorithmState) return;
+  homeAlgorithmState.interview.step4 = {
+    fullName: "",
+    documentId: "",
+    email: "",
+    phone: "",
+  };
+  homeAlgorithmState.fullNameInput.value = "";
+  homeAlgorithmState.documentIdInput.value = "";
+  homeAlgorithmState.emailInput.value = "";
+  homeAlgorithmState.phoneInput.value = "";
+  syncInterviewStateFromInterview();
+}
+
+function getFinalResultLabel(outcome) {
+  if (outcome === HOME_ALGO_OUTCOME.AGE_EXCLUDED) return "Excluido por edad";
+  if (outcome === HOME_ALGO_OUTCOME.ACTIVE_SURVEILLANCE_EXCLUDED) return "Excluido Paso 2";
+  if (outcome === HOME_ALGO_OUTCOME.HIGH_RISK_REFERRAL) return "Excluido Paso 3";
+  if (outcome === HOME_ALGO_OUTCOME.FIT_CANDIDATE) return "Candidato a Test FIT";
+  return getHomeAlgorithmOutcomeText(outcome);
+}
+
+async function saveHomeAlgorithmInterview(finalResult) {
+  const participantId = getHomeAlgorithmParticipantId();
+  if (!participantId) {
+    return { ok: false, error: new Error("participantId vacío.") };
+  }
+
+  syncInterviewStateFromInterview({ status: "submitting" });
+
   const payload = {
-    participantId: String(values.participantId || "").trim(),
-    age: values.age,
-    sex: values.sex,
-    stationId: values.stationId,
-    timestamp: String(values.timestamp || new Date().toISOString()),
+    participantId,
+    age: interviewState.step1.age,
+    sex: interviewState.step1.sex,
+    stationId: interviewState.step1.stationId,
+    step1Data: interviewState.step1,
+    step2Data: interviewState.step2,
+    step3Data: interviewState.step3,
+    step4Data: interviewState.step4,
+    finalResult: String(finalResult || "").trim(),
+    timestamp: new Date().toISOString(),
   };
 
-  console.log("🟡 Enviando Paso 1 al backend:", payload);
+  console.log("🟡 Enviando entrevista final:", payload);
 
   try {
     const response = await fetch(HOME_ALGO_STAGE1_SUBMIT_URL, {
@@ -2292,67 +2464,41 @@ async function submitHomeAlgorithmStage1(values = {}) {
       parsedBody = rawBody;
     }
 
-    console.log("🟢 Respuesta submitAlgorithmStage1:", {
+    console.log("🟢 Respuesta guardado final:", {
       ok: response.ok,
       status: response.status,
       body: parsedBody,
     });
-  } catch (error) {
-    console.error("❌ Error enviando Paso 1 a submitAlgorithmStage1:", error);
-  }
-}
 
-function getHomeAlgorithmParticipantId() {
-  if (!homeAlgorithmState) return "";
-  return String(
-    homeAlgorithmState.participantInput?.value ||
-      homeAlgorithmState.interview.participantNumber ||
-      "",
-  ).trim();
-}
-
-async function updateHomeAlgorithmStage(stage, data = {}) {
-  const participantId = getHomeAlgorithmParticipantId();
-  if (!participantId) {
-    console.error("❌ updateParticipantStage omitido: participantId vacío.");
-    return;
-  }
-
-  const payload = {
-    participantId,
-    stage,
-    data,
-  };
-
-  console.log("🟡 Enviando updateParticipantStage:", payload);
-
-  try {
-    const response = await fetch(HOME_ALGO_UPDATE_STAGE_URL, {
-      method: "POST",
-      mode: "cors",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const rawBody = await response.text();
-    let parsedBody = rawBody;
-    try {
-      parsedBody = rawBody ? JSON.parse(rawBody) : {};
-    } catch (_error) {
-      parsedBody = rawBody;
+    if (!response.ok) {
+      const message =
+        (parsedBody && typeof parsedBody === "object" && parsedBody.message) ||
+        `HTTP ${response.status}`;
+      interviewState.status = "error";
+      return { ok: false, error: new Error(String(message)) };
     }
 
-    console.log("🟢 Respuesta updateParticipantStage:", {
-      ok: response.ok,
-      status: response.status,
-      body: parsedBody,
-    });
+    interviewState.status = "saved";
+    return { ok: true, body: parsedBody };
   } catch (error) {
-    console.error("❌ Error enviando updateParticipantStage:", error);
+    interviewState.status = "error";
+    console.error("❌ Error guardando entrevista final:", error);
+    return { ok: false, error };
   }
+}
+
+async function finalizeAndPersistHomeInterview(outcome, finalStep, feedbackElement) {
+  const finalResult = getFinalResultLabel(outcome);
+  const result = await saveHomeAlgorithmInterview(finalResult);
+  if (!result.ok) {
+    const message =
+      result.error instanceof Error ? result.error.message : "No se pudo guardar la entrevista.";
+    if (feedbackElement) {
+      setHomeAlgorithmFeedback(feedbackElement, `Error al guardar: ${message}`, "danger");
+    }
+    return;
+  }
+  finalizeHomeAlgorithmInterview(outcome, finalStep);
 }
 
 function onHomeAlgorithmConfirmStep1() {
@@ -2372,11 +2518,6 @@ function onHomeAlgorithmConfirmStep1() {
   const confirmedAt = new Date();
   const confirmedAtIso = confirmedAt.toISOString();
   const confirmedAtDisplay = formatHomeAlgorithmDeviceTimestamp(confirmedAtIso, "");
-  const participantId = String(
-    homeAlgorithmState.participantInput?.value ||
-      homeAlgorithmState.interview.participantNumber ||
-      "",
-  ).trim();
 
   homeAlgorithmState.interview.stationId = result.values.stationId;
   homeAlgorithmState.interview.stationName = result.values.stationName;
@@ -2386,13 +2527,7 @@ function onHomeAlgorithmConfirmStep1() {
   homeAlgorithmState.interview.step1.sexOtherDetail =
     result.values.sex === HOME_ALGO_SEX.OTHER ? result.values.sexOtherDetail : "";
   homeAlgorithmState.interview.step1.includedByAge = result.values.age >= ALGORITHM_HOME.minAge;
-  void submitHomeAlgorithmStage1({
-    participantId,
-    age: result.values.age,
-    sex: result.values.sex,
-    stationId: result.values.stationId,
-    timestamp: confirmedAtIso,
-  });
+  syncInterviewStateFromInterview({ status: "pending" });
 
   if (homeAlgorithmState.deviceTimeInput) {
     homeAlgorithmState.deviceTimeInput.value = confirmedAtDisplay;
@@ -2402,16 +2537,7 @@ function onHomeAlgorithmConfirmStep1() {
   homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.AGE;
 
   if (!homeAlgorithmState.interview.step1.includedByAge) {
-    homeAlgorithmState.step2Reviewed = false;
-    homeAlgorithmState.step3Reviewed = false;
-    homeAlgorithmState.interview.step2 = { exclusions: [], hasExclusion: false };
-    homeAlgorithmState.interview.step3 = { riskFlags: [], hasHighRisk: false };
-    homeAlgorithmState.interview.step4 = {
-      fullName: "",
-      documentId: "",
-      email: "",
-      phone: "",
-    };
+    clearInterviewAfterStep1();
   }
 
   setHomeAlgorithmStationInputs();
@@ -2419,11 +2545,15 @@ function onHomeAlgorithmConfirmStep1() {
   persistHomeAlgorithmDraft({ message: "Paso 1 confirmado y guardado en borrador local." });
 }
 
-function onHomeAlgorithmFinishStep1() {
+async function onHomeAlgorithmFinishStep1() {
   if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
   if (!homeAlgorithmState.step1Confirmed) return;
   if (homeAlgorithmState.interview.step1.includedByAge) return;
-  finalizeHomeAlgorithmInterview(HOME_ALGO_OUTCOME.AGE_EXCLUDED, ALGORITHM_HOME.steps.AGE);
+  await finalizeAndPersistHomeInterview(
+    HOME_ALGO_OUTCOME.AGE_EXCLUDED,
+    ALGORITHM_HOME.steps.AGE,
+    homeAlgorithmState.step1Feedback,
+  );
 }
 
 function onHomeAlgorithmContinueStep1() {
@@ -2439,6 +2569,19 @@ function onHomeAlgorithmContinueStep1() {
 
   renderHomeAlgorithm();
   persistHomeAlgorithmDraft({ message: "Paso 1 completado. Continuá con Paso 2." });
+}
+
+function onHomeAlgorithmEditStep1() {
+  if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
+
+  homeAlgorithmState.step1Confirmed = false;
+  homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.AGE;
+  homeAlgorithmState.maxUnlockedStep = ALGORITHM_HOME.steps.AGE;
+  homeAlgorithmState.interview.deviceTimestamp = "";
+  clearInterviewAfterStep1();
+
+  renderHomeAlgorithm();
+  persistHomeAlgorithmDraft({ message: "Paso 1 habilitado para edición." });
 }
 
 function onHomeAlgorithmStep2Changed() {
@@ -2457,10 +2600,11 @@ function onHomeAlgorithmStep2Changed() {
     ALGORITHM_HOME.steps.VIGILANCE,
   );
   homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.VIGILANCE;
+  clearInterviewAfterStep2();
 
   setHomeAlgorithmFeedback(
     homeAlgorithmState.step2Feedback,
-    "Cambios detectados. Presioná Evaluar paso 2.",
+    "Cambios detectados. Presioná Confirmar paso 2.",
     "neutral",
   );
   renderHomeAlgorithm();
@@ -2478,28 +2622,21 @@ function onHomeAlgorithmEvaluateStep2() {
   homeAlgorithmState.interview.step2.exclusions = exclusions;
   homeAlgorithmState.interview.step2.hasExclusion = exclusions.length > 0;
   homeAlgorithmState.step2Reviewed = true;
-
-  const exclusionItems = getHomeAlgorithmCodeItems(
-    exclusions,
-    homeAlgorithmState.step2Labels,
-  );
-  void updateHomeAlgorithmStage(2, {
-    hasExclusion: homeAlgorithmState.interview.step2.hasExclusion,
-    exclusions: exclusionItems,
-  });
+  syncInterviewStateFromInterview({ status: "pending" });
 
   renderHomeAlgorithm();
   persistHomeAlgorithmDraft({ message: "Paso 2 evaluado y guardado en borrador local." });
 }
 
-function onHomeAlgorithmFinishStep2() {
+async function onHomeAlgorithmFinishStep2() {
   if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
   if (!homeAlgorithmState.step2Reviewed) return;
   if (!homeAlgorithmState.interview.step2.hasExclusion) return;
 
-  finalizeHomeAlgorithmInterview(
+  await finalizeAndPersistHomeInterview(
     HOME_ALGO_OUTCOME.ACTIVE_SURVEILLANCE_EXCLUDED,
     ALGORITHM_HOME.steps.VIGILANCE,
+    homeAlgorithmState.step2Feedback,
   );
 }
 
@@ -2518,6 +2655,24 @@ function onHomeAlgorithmContinueStep2() {
   persistHomeAlgorithmDraft({ message: "Paso 2 completado. Continuá con Paso 3." });
 }
 
+function onHomeAlgorithmEditStep2() {
+  if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
+  homeAlgorithmState.step2Reviewed = false;
+  homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.VIGILANCE;
+  homeAlgorithmState.maxUnlockedStep = Math.min(
+    homeAlgorithmState.maxUnlockedStep,
+    ALGORITHM_HOME.steps.VIGILANCE,
+  );
+  clearInterviewAfterStep2();
+  renderHomeAlgorithm();
+  persistHomeAlgorithmDraft({ message: "Paso 2 habilitado para edición." });
+}
+
+function onHomeAlgorithmBackToStep1() {
+  if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
+  goToHomeAlgorithmStep(ALGORITHM_HOME.steps.AGE);
+}
+
 function onHomeAlgorithmStep3Changed() {
   if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
 
@@ -2533,10 +2688,11 @@ function onHomeAlgorithmStep3Changed() {
     ALGORITHM_HOME.steps.RISK,
   );
   homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.RISK;
+  clearInterviewAfterStep3();
 
   setHomeAlgorithmFeedback(
     homeAlgorithmState.step3Feedback,
-    "Cambios detectados. Presioná Evaluar paso 3.",
+    "Cambios detectados. Presioná Confirmar paso 3.",
     "neutral",
   );
   renderHomeAlgorithm();
@@ -2554,28 +2710,21 @@ function onHomeAlgorithmEvaluateStep3() {
   homeAlgorithmState.interview.step3.riskFlags = riskFlags;
   homeAlgorithmState.interview.step3.hasHighRisk = riskFlags.length > 0;
   homeAlgorithmState.step3Reviewed = true;
-
-  const riskItems = getHomeAlgorithmCodeItems(
-    riskFlags,
-    homeAlgorithmState.step3Labels,
-  );
-  void updateHomeAlgorithmStage(3, {
-    hasHighRisk: homeAlgorithmState.interview.step3.hasHighRisk,
-    riskFlags: riskItems,
-  });
+  syncInterviewStateFromInterview({ status: "pending" });
 
   renderHomeAlgorithm();
   persistHomeAlgorithmDraft({ message: "Paso 3 evaluado y guardado en borrador local." });
 }
 
-function onHomeAlgorithmFinishStep3() {
+async function onHomeAlgorithmFinishStep3() {
   if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
   if (!homeAlgorithmState.step3Reviewed) return;
   if (!homeAlgorithmState.interview.step3.hasHighRisk) return;
 
-  finalizeHomeAlgorithmInterview(
+  await finalizeAndPersistHomeInterview(
     HOME_ALGO_OUTCOME.HIGH_RISK_REFERRAL,
     ALGORITHM_HOME.steps.RISK,
+    homeAlgorithmState.step3Feedback,
   );
 }
 
@@ -2592,6 +2741,24 @@ function onHomeAlgorithmContinueStep3() {
 
   renderHomeAlgorithm();
   persistHomeAlgorithmDraft({ message: "Paso 3 completado. Continuá con Paso 4." });
+}
+
+function onHomeAlgorithmEditStep3() {
+  if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
+  homeAlgorithmState.step3Reviewed = false;
+  homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.RISK;
+  homeAlgorithmState.maxUnlockedStep = Math.min(
+    homeAlgorithmState.maxUnlockedStep,
+    ALGORITHM_HOME.steps.RISK,
+  );
+  clearInterviewAfterStep3();
+  renderHomeAlgorithm();
+  persistHomeAlgorithmDraft({ message: "Paso 3 habilitado para edición." });
+}
+
+function onHomeAlgorithmBackToStep2() {
+  if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
+  goToHomeAlgorithmStep(ALGORITHM_HOME.steps.VIGILANCE);
 }
 
 function getHomeAlgorithmStep4Values() {
@@ -2659,10 +2826,11 @@ function onHomeAlgorithmStep4InputChanged() {
     "neutral",
   );
 
+  syncInterviewStateFromInterview({ status: "pending" });
   persistHomeAlgorithmDraft();
 }
 
-function onHomeAlgorithmFinishStep4() {
+async function onHomeAlgorithmFinishStep4() {
   if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
 
   clearHomeAlgorithmAllFieldErrors();
@@ -2679,16 +2847,24 @@ function onHomeAlgorithmFinishStep4() {
     email: result.values.email,
     phone: result.values.phone,
   };
+  syncInterviewStateFromInterview({ status: "pending" });
+  await finalizeAndPersistHomeInterview(
+    HOME_ALGO_OUTCOME.FIT_CANDIDATE,
+    ALGORITHM_HOME.steps.DECISION,
+    homeAlgorithmState.step4Feedback,
+  );
+}
 
-  void updateHomeAlgorithmStage(4, {
-    finalResult: getHomeAlgorithmOutcomeText(HOME_ALGO_OUTCOME.FIT_CANDIDATE),
-    fullName: result.values.fullName,
-    documentId: result.values.documentId,
-    email: result.values.email,
-    phone: result.values.phone,
-  });
+function onHomeAlgorithmEditStep4() {
+  if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
+  homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.DECISION;
+  homeAlgorithmState.fullNameInput.focus();
+  renderHomeAlgorithm();
+}
 
-  finalizeHomeAlgorithmInterview(HOME_ALGO_OUTCOME.FIT_CANDIDATE, ALGORITHM_HOME.steps.DECISION);
+function onHomeAlgorithmBackToStep3() {
+  if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
+  goToHomeAlgorithmStep(ALGORITHM_HOME.steps.RISK);
 }
 
 function fillHomeAlgorithmModal() {
@@ -2744,6 +2920,7 @@ function enableHomeAlgorithmEditingFromModal() {
     finalStep,
   );
 
+  syncInterviewStateFromInterview({ status: "pending" });
   closeHomeAlgorithmModal();
   renderHomeAlgorithm();
   persistHomeAlgorithmDraft({ message: "Modo edición habilitado para ajustar la entrevista." });
@@ -2771,6 +2948,7 @@ function finalizeHomeAlgorithmInterview(outcome, finalStep) {
     homeAlgorithmState.step3Reviewed = true;
   }
 
+  syncInterviewStateFromInterview({ status: "saved" });
   renderHomeAlgorithm();
   persistHomeAlgorithmDraft({
     message: `Entrevista finalizada: ${getHomeAlgorithmOutcomeText(outcome)}`,
@@ -2824,6 +3002,7 @@ function restartHomeAlgorithm({ confirmRestart = true } = {}) {
   homeAlgorithmState.finalized = false;
   homeAlgorithmState.finalStep = 0;
 
+  resetInterviewState();
   clearHomeAlgorithmAllFieldErrors();
   hydrateHomeAlgorithmFormFromInterview();
   renderHomeAlgorithm();
@@ -2850,6 +3029,7 @@ function initHomeAlgorithm() {
   const step1Stop = $("#home-algo-step1-stop");
   const step1Ok = $("#home-algo-step1-ok");
   const step1Confirm = $("#btn-confirm-step1");
+  const step1Edit = $("#home-algo-step1-edit");
   const step1Finish = $("#home-algo-step1-finish");
   const step1Continue = $("#home-algo-step1-continue");
 
@@ -2858,22 +3038,28 @@ function initHomeAlgorithm() {
   const step2Stop = $("#home-algo-step2-stop");
   const step2Ok = $("#home-algo-step2-ok");
   const step2Evaluate = $("#home-algo-step2-evaluate");
+  const step2Edit = $("#home-algo-step2-edit");
   const step2Finish = $("#home-algo-step2-finish");
   const step2Continue = $("#home-algo-step2-continue");
+  const step2Back = $("#home-algo-step2-back");
 
   const step3Checks = Array.from(root.querySelectorAll("[data-home-algo-step3-code]"));
   const step3Feedback = $("#home-algo-step3-feedback");
   const step3Stop = $("#home-algo-step3-stop");
   const step3Ok = $("#home-algo-step3-ok");
   const step3Evaluate = $("#home-algo-step3-evaluate");
+  const step3Edit = $("#home-algo-step3-edit");
   const step3Finish = $("#home-algo-step3-finish");
   const step3Continue = $("#home-algo-step3-continue");
+  const step3Back = $("#home-algo-step3-back");
 
   const fullNameInput = $("#home-algo-full-name");
   const documentIdInput = $("#home-algo-document-id");
   const emailInput = $("#home-algo-email");
   const phoneInput = $("#home-algo-phone");
   const step4Feedback = $("#home-algo-step4-feedback");
+  const step4Edit = $("#home-algo-step4-edit");
+  const step4Back = $("#home-algo-step4-back");
   const step4Finish = $("#home-algo-step4-finish");
 
   const statusChip = $("#home-algo-status-chip");
@@ -2901,6 +3087,7 @@ function initHomeAlgorithm() {
     !step1Stop ||
     !step1Ok ||
     !step1Confirm ||
+    !step1Edit ||
     !step1Finish ||
     !step1Continue ||
     step2Checks.length === 0 ||
@@ -2908,20 +3095,26 @@ function initHomeAlgorithm() {
     !step2Stop ||
     !step2Ok ||
     !step2Evaluate ||
+    !step2Edit ||
     !step2Finish ||
     !step2Continue ||
+    !step2Back ||
     step3Checks.length === 0 ||
     !step3Feedback ||
     !step3Stop ||
     !step3Ok ||
     !step3Evaluate ||
+    !step3Edit ||
     !step3Finish ||
     !step3Continue ||
+    !step3Back ||
     !fullNameInput ||
     !documentIdInput ||
     !emailInput ||
     !phoneInput ||
     !step4Feedback ||
+    !step4Edit ||
+    !step4Back ||
     !step4Finish ||
     !statusChip ||
     !restartBtn ||
@@ -2967,6 +3160,7 @@ function initHomeAlgorithm() {
     step1Stop,
     step1Ok,
     step1Confirm,
+    step1Edit,
     step1Finish,
     step1Continue,
 
@@ -2975,22 +3169,28 @@ function initHomeAlgorithm() {
     step2Stop,
     step2Ok,
     step2Evaluate,
+    step2Edit,
     step2Finish,
     step2Continue,
+    step2Back,
 
     step3Checks,
     step3Feedback,
     step3Stop,
     step3Ok,
     step3Evaluate,
+    step3Edit,
     step3Finish,
     step3Continue,
+    step3Back,
 
     fullNameInput,
     documentIdInput,
     emailInput,
     phoneInput,
     step4Feedback,
+    step4Edit,
+    step4Back,
     step4Finish,
 
     statusChip,
@@ -3032,6 +3232,10 @@ function initHomeAlgorithm() {
     );
   }
 
+  syncInterviewStateFromInterview({
+    status: homeAlgorithmState.finalized ? "saved" : "pending",
+  });
+
   hydrateHomeAlgorithmFormFromInterview();
   renderHomeAlgorithm();
 
@@ -3068,6 +3272,7 @@ function initHomeAlgorithm() {
     homeAlgorithmState.maxUnlockedStep = ALGORITHM_HOME.steps.AGE;
     homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.AGE;
     setHomeAlgorithmStationInputs();
+    syncInterviewStateFromInterview({ status: "pending" });
     renderHomeAlgorithm();
     persistHomeAlgorithmDraft();
   });
@@ -3091,6 +3296,7 @@ function initHomeAlgorithm() {
         focus: homeAlgorithmState.interview.step1.sex === HOME_ALGO_SEX.OTHER,
       });
       setHomeAlgorithmStationInputs();
+      syncInterviewStateFromInterview({ status: "pending" });
       renderHomeAlgorithm();
       persistHomeAlgorithmDraft();
     });
@@ -3111,11 +3317,13 @@ function initHomeAlgorithm() {
     homeAlgorithmState.maxUnlockedStep = ALGORITHM_HOME.steps.AGE;
     homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.AGE;
     setHomeAlgorithmStationInputs();
+    syncInterviewStateFromInterview({ status: "pending" });
     renderHomeAlgorithm();
     persistHomeAlgorithmDraft();
   });
 
   homeAlgorithmState.step1Confirm.addEventListener("click", onHomeAlgorithmConfirmStep1);
+  homeAlgorithmState.step1Edit.addEventListener("click", onHomeAlgorithmEditStep1);
   homeAlgorithmState.step1Finish.addEventListener("click", onHomeAlgorithmFinishStep1);
   homeAlgorithmState.step1Continue.addEventListener("click", onHomeAlgorithmContinueStep1);
 
@@ -3123,15 +3331,19 @@ function initHomeAlgorithm() {
     input.addEventListener("change", onHomeAlgorithmStep2Changed);
   });
   homeAlgorithmState.step2Evaluate.addEventListener("click", onHomeAlgorithmEvaluateStep2);
+  homeAlgorithmState.step2Edit.addEventListener("click", onHomeAlgorithmEditStep2);
   homeAlgorithmState.step2Finish.addEventListener("click", onHomeAlgorithmFinishStep2);
   homeAlgorithmState.step2Continue.addEventListener("click", onHomeAlgorithmContinueStep2);
+  homeAlgorithmState.step2Back.addEventListener("click", onHomeAlgorithmBackToStep1);
 
   homeAlgorithmState.step3Checks.forEach((input) => {
     input.addEventListener("change", onHomeAlgorithmStep3Changed);
   });
   homeAlgorithmState.step3Evaluate.addEventListener("click", onHomeAlgorithmEvaluateStep3);
+  homeAlgorithmState.step3Edit.addEventListener("click", onHomeAlgorithmEditStep3);
   homeAlgorithmState.step3Finish.addEventListener("click", onHomeAlgorithmFinishStep3);
   homeAlgorithmState.step3Continue.addEventListener("click", onHomeAlgorithmContinueStep3);
+  homeAlgorithmState.step3Back.addEventListener("click", onHomeAlgorithmBackToStep2);
 
   [
     homeAlgorithmState.fullNameInput,
@@ -3141,6 +3353,8 @@ function initHomeAlgorithm() {
   ].forEach((input) => {
     input.addEventListener("input", onHomeAlgorithmStep4InputChanged);
   });
+  homeAlgorithmState.step4Edit.addEventListener("click", onHomeAlgorithmEditStep4);
+  homeAlgorithmState.step4Back.addEventListener("click", onHomeAlgorithmBackToStep3);
   homeAlgorithmState.step4Finish.addEventListener("click", onHomeAlgorithmFinishStep4);
 
   homeAlgorithmState.restartBtn.addEventListener("click", () => {
