@@ -3136,8 +3136,11 @@ function mountHomeAlgorithmRestartAction() {
   const actions = visiblePanel?.querySelector(".home-algo__actions");
   if (!actions) return;
 
-  if (homeAlgorithmState.restartBtn.parentElement !== actions) {
-    actions.prepend(homeAlgorithmState.restartBtn);
+  if (
+    homeAlgorithmState.restartBtn.parentElement !== actions ||
+    actions.lastElementChild !== homeAlgorithmState.restartBtn
+  ) {
+    actions.append(homeAlgorithmState.restartBtn);
   }
   homeAlgorithmState.restartBtn.hidden = false;
 }

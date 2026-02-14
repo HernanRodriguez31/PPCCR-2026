@@ -8010,7 +8010,7 @@ body.page-home .ppccr-modal .home-algo__actions {
 }
 
 body.page-home .ppccr-modal .home-algo__actions #home-algo-restart {
-  margin-right: auto;
+  margin-left: auto;
 }
 
 body.page-home .ppccr-modal .home-algo__modal {
@@ -8131,7 +8131,7 @@ body.ppccr-modal-open {
   }
 
   body.page-home .ppccr-modal .home-algo__actions #home-algo-restart {
-    margin-right: 0;
+    margin-left: 0;
   }
 
   body.page-home .home-algo-complete__actions {
