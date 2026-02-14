@@ -8718,6 +8718,11 @@ body.ppccr-modal-open {
   overscroll-behavior: none;
 }
 
+/* Oculta el HUD de estado en la fila del título del modal de algoritmo */
+body.page-home .ppccr-modal.modal--interview .modal-status-hud {
+  display: none !important;
+}
+
 @media (max-width: 980px) {
   body.page-home .ppccr-modal.modal--interview {
     padding: 12px;
