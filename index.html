@@ -179,11 +179,14 @@
                   Centro operativo de accesos y ejecución
                 </p>
                 <p class="hero-text" id="hero-text">
-                  Gestioná en un solo lugar guías, registro por rol,
-                  indicadores y cronograma. Todo el contenido se administra de
-                  forma centralizada desde el portal institucional.
+                  Gestioná en un solo lugar guías, registro por rol, indicadores
+                  y cronograma. Todo el contenido se administra de forma
+                  centralizada desde el portal institucional.
                 </p>
-                <ul class="hero-highlights" aria-label="Puntos clave operativos">
+                <ul
+                  class="hero-highlights"
+                  aria-label="Puntos clave operativos"
+                >
                   <li>Acceso inmediato a guías y protocolos vigentes.</li>
                   <li>Registro organizado por perfil operativo.</li>
                   <li>Seguimiento continuo con KPIs y cronograma.</li>
@@ -206,7 +209,10 @@
             </div>
 
             <div class="hero-right" aria-label="Resumen del sitio">
-              <article class="hero-action-card" aria-label="Nueva Evaluación Clínica">
+              <article
+                class="hero-action-card"
+                aria-label="Nueva Evaluación Clínica"
+              >
                 <div class="hero-action-card__copy">
                   <h3 class="hero-action-card__title">Entrevista inicial</h3>
                   <p class="hero-action-card__subtitle">
@@ -220,7 +226,11 @@
                   data-open-algo="true"
                 >
                   <span class="hero-action-card__icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 24 24"
+                      focusable="false"
+                      aria-hidden="true"
+                    >
                       <circle cx="12" cy="12" r="9"></circle>
                       <path d="M10 8.6v6.8l5-3.4z"></path>
                     </svg>
@@ -244,7 +254,9 @@
                   aria-label="Ir a sección Registro"
                 >
                   <h3 class="mini-panel__title">Registro</h3>
-                  <p class="mini-panel__text">Formularios por rol y trazabilidad</p>
+                  <p class="mini-panel__text">
+                    Formularios por rol y trazabilidad
+                  </p>
                 </a>
                 <a
                   class="mini-panel mini-panel--link"
@@ -252,7 +264,9 @@
                   aria-label="Ir a sección KPIs"
                 >
                   <h3 class="mini-panel__title">KPIs</h3>
-                  <p class="mini-panel__text">Indicadores y reporte en tiempo real</p>
+                  <p class="mini-panel__text">
+                    Indicadores y reporte en tiempo real
+                  </p>
                 </a>
                 <a
                   class="mini-panel mini-panel--link"
@@ -300,7 +314,9 @@
       >
         <div class="container">
           <header class="section-header">
-            <h2 class="section-title" id="algoritmo-title">Entrevista Inicial</h2>
+            <h2 class="section-title" id="algoritmo-title">
+              Entrevista Inicial
+            </h2>
             <p class="section-subtitle">
               Flujo asistido de evaluación inicial con validaciones por paso.
             </p>
@@ -308,7 +324,9 @@
 
           <article class="algo-teaser" aria-label="Acceso al algoritmo">
             <div class="algo-teaser__content">
-              <h3 class="algo-teaser__title">Determinación de Candidato a Test FIT</h3>
+              <h3 class="algo-teaser__title">
+                Determinación de Candidato a Test FIT
+              </h3>
               <p class="algo-teaser__text">
                 Algoritmo de triaje automatizado para criterios de inclusión
                 FIT.
@@ -334,872 +352,912 @@
           </article>
 
           <div id="ppccr-algo-source" hidden>
-          <article
-            class="home-algo"
-            id="home-algo"
-            aria-label="Algoritmo operativo"
-          >
-            <div class="interview-top">
-              <div class="home-algo__topbar">
-                <p class="home-algo__status-chip" id="home-algo-status-chip">
-                  Entrevista en curso
-                </p>
+            <article
+              class="home-algo"
+              id="home-algo"
+              aria-label="Algoritmo operativo"
+            >
+              <div class="interview-top">
+                <div class="home-algo__topbar">
+                  <p class="home-algo__status-chip" id="home-algo-status-chip">
+                    Entrevista en curso
+                  </p>
+                </div>
+
+                <nav aria-label="Etapas del algoritmo">
+                  <ol class="home-algo__stepper" id="home-algo-stepper">
+                    <li class="home-algo__stepper-item">
+                      <button
+                        type="button"
+                        class="home-algo__stepper-button is-current"
+                        data-home-algo-step-target="1"
+                        aria-controls="home-algo-step-1"
+                      >
+                        <span
+                          class="home-algo__stepper-index"
+                          aria-hidden="true"
+                          >1</span
+                        >
+                        <span class="home-algo__stepper-label"
+                          >Criterio por edad</span
+                        >
+                      </button>
+                    </li>
+                    <li class="home-algo__stepper-item">
+                      <button
+                        type="button"
+                        class="home-algo__stepper-button"
+                        data-home-algo-step-target="2"
+                        aria-controls="home-algo-step-2"
+                      >
+                        <span
+                          class="home-algo__stepper-index"
+                          aria-hidden="true"
+                          >2</span
+                        >
+                        <span class="home-algo__stepper-label"
+                          >Seguimiento vigente</span
+                        >
+                      </button>
+                    </li>
+                    <li class="home-algo__stepper-item">
+                      <button
+                        type="button"
+                        class="home-algo__stepper-button"
+                        data-home-algo-step-target="3"
+                        aria-controls="home-algo-step-3"
+                      >
+                        <span
+                          class="home-algo__stepper-index"
+                          aria-hidden="true"
+                          >3</span
+                        >
+                        <span class="home-algo__stepper-label"
+                          >Riesgo elevado</span
+                        >
+                      </button>
+                    </li>
+                    <li class="home-algo__stepper-item">
+                      <button
+                        type="button"
+                        class="home-algo__stepper-button"
+                        data-home-algo-step-target="4"
+                        aria-controls="home-algo-step-4"
+                      >
+                        <span
+                          class="home-algo__stepper-index"
+                          aria-hidden="true"
+                          >4</span
+                        >
+                        <span class="home-algo__stepper-label"
+                          >Datos de contacto</span
+                        >
+                      </button>
+                    </li>
+                  </ol>
+                </nav>
               </div>
 
-              <nav aria-label="Etapas del algoritmo">
-                <ol class="home-algo__stepper" id="home-algo-stepper">
-                  <li class="home-algo__stepper-item">
-                    <button
-                      type="button"
-                      class="home-algo__stepper-button is-current"
-                      data-home-algo-step-target="1"
-                      aria-controls="home-algo-step-1"
-                    >
-                      <span class="home-algo__stepper-index" aria-hidden="true"
-                        >1</span
+              <main class="interview-body" id="interviewScroll">
+                <p
+                  class="home-algo__flow-status"
+                  id="home-algo-flow-status"
+                  aria-live="polite"
+                >
+                  Completá los datos para continuar.
+                </p>
+
+                <section
+                  class="home-algo__panel"
+                  id="home-algo-step-1"
+                  data-home-algo-step-panel="1"
+                  aria-labelledby="home-algo-step1-title"
+                >
+                  <h3 class="home-algo__panel-title" id="home-algo-step1-title">
+                    Paso 1: Criterio por edad
+                  </h3>
+                  <p class="home-algo__panel-copy">
+                    Confirmá los datos obligatorios. Si edad es menor a 45, la
+                    entrevista finaliza en este paso.
+                  </p>
+
+                  <div class="home-algo__grid">
+                    <div class="home-algo__field">
+                      <label class="home-algo__label" for="home-algo-station"
+                        >Estación saludable</label
                       >
-                      <span class="home-algo__stepper-label">Criterio por edad</span>
-                    </button>
-                  </li>
-                  <li class="home-algo__stepper-item">
-                    <button
-                      type="button"
-                      class="home-algo__stepper-button"
-                      data-home-algo-step-target="2"
-                      aria-controls="home-algo-step-2"
-                    >
-                      <span class="home-algo__stepper-index" aria-hidden="true"
-                        >2</span
-                      >
-                      <span class="home-algo__stepper-label">Seguimiento vigente</span>
-                    </button>
-                  </li>
-                  <li class="home-algo__stepper-item">
-                    <button
-                      type="button"
-                      class="home-algo__stepper-button"
-                      data-home-algo-step-target="3"
-                      aria-controls="home-algo-step-3"
-                    >
-                      <span class="home-algo__stepper-index" aria-hidden="true"
-                        >3</span
-                      >
-                      <span class="home-algo__stepper-label">Riesgo elevado</span>
-                    </button>
-                  </li>
-                  <li class="home-algo__stepper-item">
-                    <button
-                      type="button"
-                      class="home-algo__stepper-button"
-                      data-home-algo-step-target="4"
-                      aria-controls="home-algo-step-4"
-                    >
-                      <span class="home-algo__stepper-index" aria-hidden="true"
-                        >4</span
-                      >
-                      <span class="home-algo__stepper-label"
-                        >Datos de contacto</span
-                      >
-                    </button>
-                  </li>
-                </ol>
-              </nav>
-            </div>
-
-            <main class="interview-body" id="interviewScroll">
-              <p
-                class="home-algo__flow-status"
-                id="home-algo-flow-status"
-                aria-live="polite"
-              >
-                Completá los datos para continuar.
-              </p>
-
-            <section
-              class="home-algo__panel"
-              id="home-algo-step-1"
-              data-home-algo-step-panel="1"
-              aria-labelledby="home-algo-step1-title"
-            >
-              <h3 class="home-algo__panel-title" id="home-algo-step1-title">
-                Paso 1: Criterio por edad
-              </h3>
-              <p class="home-algo__panel-copy">
-                Confirmá los datos obligatorios. Si edad es menor a 45, la
-                entrevista finaliza en este paso.
-              </p>
-
-              <div class="home-algo__grid">
-                <div class="home-algo__field">
-                  <label class="home-algo__label" for="home-algo-station"
-                    >Estación saludable</label
-                  >
-                  <input
-                    class="home-algo__input"
-                    id="home-algo-station"
-                    name="home-algo-station"
-                    type="text"
-                    autocomplete="off"
-                    placeholder="Se completa automáticamente"
-                    readonly
-                    aria-readonly="true"
-                    aria-describedby="home-algo-step1-required"
-                    required
-                  />
-                </div>
-
-                <div class="home-algo__field">
-                  <label class="home-algo__label" for="home-algo-participant"
-                    >Número de participante</label
-                  >
-                  <input
-                    class="home-algo__input"
-                    id="home-algo-participant"
-                    name="home-algo-participant"
-                    type="text"
-                    maxlength="16"
-                    autocomplete="off"
-                    placeholder="Placeholder local"
-                    readonly
-                    aria-readonly="true"
-                    aria-describedby="home-algo-step1-required"
-                    required
-                  />
-                </div>
-
-                <div class="home-algo__field">
-                  <label class="home-algo__label" for="home-algo-device-time"
-                    >Fecha y hora</label
-                  >
-                  <input
-                    class="home-algo__input"
-                    id="home-algo-device-time"
-                    name="home-algo-device-time"
-                    type="text"
-                    autocomplete="off"
-                    placeholder="Parametro automático"
-                    readonly
-                    aria-readonly="true"
-                  />
-                </div>
-
-                <div class="home-algo__field">
-                  <label class="home-algo__label" for="home-algo-age"
-                    >Edad</label
-                  >
-                  <input
-                    class="home-algo__input"
-                    id="home-algo-age"
-                    name="home-algo-age"
-                    type="number"
-                    min="0"
-                    max="120"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    placeholder="45"
-                    aria-describedby="home-algo-step1-required"
-                    required
-                  />
-                </div>
-
-                <fieldset class="home-algo__field home-algo__field--full">
-                  <legend class="home-algo__label">Sexo</legend>
-                  <div
-                    id="home-algo-sex-switch"
-                    class="home-algo__sex-switch"
-                    aria-describedby="home-algo-step1-required"
-                  >
-                    <div class="home-algo__sex-option">
                       <input
-                        class="home-algo__sex-radio"
-                        type="radio"
-                        name="home-algo-sex"
-                        id="home-algo-sex-m"
-                        value="M"
+                        class="home-algo__input"
+                        id="home-algo-station"
+                        name="home-algo-station"
+                        type="text"
+                        autocomplete="off"
+                        placeholder="Se completa automáticamente"
+                        readonly
+                        aria-readonly="true"
+                        aria-describedby="home-algo-step1-required"
+                        required
                       />
-                      <label
-                        class="home-algo__sex-label home-algo__sex-label--m"
-                        for="home-algo-sex-m"
-                      >
-                        M
-                      </label>
                     </div>
-                    <div class="home-algo__sex-option">
+
+                    <div class="home-algo__field">
+                      <label
+                        class="home-algo__label"
+                        for="home-algo-participant"
+                        >Número de participante</label
+                      >
                       <input
-                        class="home-algo__sex-radio"
-                        type="radio"
-                        name="home-algo-sex"
-                        id="home-algo-sex-f"
-                        value="F"
+                        class="home-algo__input"
+                        id="home-algo-participant"
+                        name="home-algo-participant"
+                        type="text"
+                        maxlength="16"
+                        autocomplete="off"
+                        placeholder="Placeholder local"
+                        readonly
+                        aria-readonly="true"
+                        aria-describedby="home-algo-step1-required"
+                        required
                       />
-                      <label
-                        class="home-algo__sex-label home-algo__sex-label--f"
-                        for="home-algo-sex-f"
-                      >
-                        F
-                      </label>
                     </div>
-                    <div class="home-algo__sex-option">
+
+                    <div class="home-algo__field">
+                      <label
+                        class="home-algo__label"
+                        for="home-algo-device-time"
+                        >Fecha y hora</label
+                      >
                       <input
-                        class="home-algo__sex-radio"
-                        type="radio"
-                        name="home-algo-sex"
-                        id="home-algo-sex-other"
-                        value="OTRO"
+                        class="home-algo__input"
+                        id="home-algo-device-time"
+                        name="home-algo-device-time"
+                        type="text"
+                        autocomplete="off"
+                        placeholder="Parametro automático"
+                        readonly
+                        aria-readonly="true"
                       />
-                      <label
-                        class="home-algo__sex-label home-algo__sex-label--other"
-                        for="home-algo-sex-other"
-                      >
-                        Otro
-                      </label>
                     </div>
+
+                    <div class="home-algo__field">
+                      <label class="home-algo__label" for="home-algo-age"
+                        >Edad</label
+                      >
+                      <input
+                        class="home-algo__input"
+                        id="home-algo-age"
+                        name="home-algo-age"
+                        type="number"
+                        min="0"
+                        max="120"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        placeholder="45"
+                        aria-describedby="home-algo-step1-required"
+                        required
+                      />
+                    </div>
+
+                    <fieldset class="home-algo__field home-algo__field--full">
+                      <legend class="home-algo__label">Sexo</legend>
+                      <div
+                        id="home-algo-sex-switch"
+                        class="home-algo__sex-switch"
+                        aria-describedby="home-algo-step1-required"
+                      >
+                        <div class="home-algo__sex-option">
+                          <input
+                            class="home-algo__sex-radio"
+                            type="radio"
+                            name="home-algo-sex"
+                            id="home-algo-sex-m"
+                            value="M"
+                          />
+                          <label
+                            class="home-algo__sex-label home-algo__sex-label--m"
+                            for="home-algo-sex-m"
+                          >
+                            M
+                          </label>
+                        </div>
+                        <div class="home-algo__sex-option">
+                          <input
+                            class="home-algo__sex-radio"
+                            type="radio"
+                            name="home-algo-sex"
+                            id="home-algo-sex-f"
+                            value="F"
+                          />
+                          <label
+                            class="home-algo__sex-label home-algo__sex-label--f"
+                            for="home-algo-sex-f"
+                          >
+                            F
+                          </label>
+                        </div>
+                        <div class="home-algo__sex-option">
+                          <input
+                            class="home-algo__sex-radio"
+                            type="radio"
+                            name="home-algo-sex"
+                            id="home-algo-sex-other"
+                            value="OTRO"
+                          />
+                          <label
+                            class="home-algo__sex-label home-algo__sex-label--other"
+                            for="home-algo-sex-other"
+                          >
+                            Otro
+                          </label>
+                        </div>
+                      </div>
+                      <div
+                        class="home-algo__sex-other"
+                        id="home-algo-sex-other-wrap"
+                        hidden
+                      >
+                        <label
+                          class="home-algo__label home-algo__label--subtle"
+                          for="home-algo-sex-other-text"
+                        >
+                          Especificar otro sexo
+                        </label>
+                        <input
+                          class="home-algo__input"
+                          id="home-algo-sex-other-text"
+                          name="home-algo-sex-other-text"
+                          type="text"
+                          autocomplete="off"
+                          placeholder="Ej: No binario"
+                        />
+                      </div>
+                    </fieldset>
                   </div>
-                  <div
-                    class="home-algo__sex-other"
-                    id="home-algo-sex-other-wrap"
+
+                  <p
+                    class="home-algo__required-note"
+                    id="home-algo-step1-required"
+                  >
+                    Edad y sexo son obligatorios para confirmar Paso 1.
+                  </p>
+
+                  <p
+                    class="home-algo__feedback"
+                    id="home-algo-step1-feedback"
+                    aria-live="polite"
+                  >
+                    Completá los datos para confirmar el Paso 1.
+                  </p>
+
+                  <article
+                    class="home-algo__alert home-algo__alert--danger"
+                    id="home-algo-step1-stop"
+                    role="alert"
                     hidden
                   >
-                    <label
-                      class="home-algo__label home-algo__label--subtle"
-                      for="home-algo-sex-other-text"
+                    <h4 class="home-algo__alert-title">
+                      Resultado: No incluye por edad
+                    </h4>
+                    <p class="home-algo__alert-text">
+                      Edad menor a 45 años. Se cierra la entrevista en este
+                      punto.
+                    </p>
+                  </article>
+
+                  <article
+                    class="home-algo__alert home-algo__alert--success"
+                    id="home-algo-step1-ok"
+                    role="status"
+                    hidden
+                  >
+                    <h4 class="home-algo__alert-title">Criterio cumplido</h4>
+                    <p class="home-algo__alert-text">
+                      Edad igual o mayor a 45 años. Se habilita el Paso 2.
+                    </p>
+                  </article>
+
+                  <div class="home-algo__actions" data-home-algo-actions="1">
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      id="btn-confirm-step1"
                     >
-                      Especificar otro sexo
-                    </label>
-                    <input
-                      class="home-algo__input"
-                      id="home-algo-sex-other-text"
-                      name="home-algo-sex-other-text"
-                      type="text"
-                      autocomplete="off"
-                      placeholder="Ej: No binario"
-                    />
+                      Confirmar paso 1
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary"
+                      id="home-algo-step1-edit"
+                      hidden
+                    >
+                      Editar Paso 1
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-danger"
+                      id="home-algo-step1-finish"
+                      hidden
+                    >
+                      Finalizar entrevista
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-success text-white px-4 fw-bold"
+                      id="home-algo-step1-continue"
+                      hidden
+                    >
+                      Continuar a paso 2
+                      <i
+                        class="fa-solid fa-arrow-right ms-2"
+                        aria-hidden="true"
+                      ></i>
+                    </button>
                   </div>
-                </fieldset>
-              </div>
+                </section>
 
-              <p class="home-algo__required-note" id="home-algo-step1-required">
-                Edad y sexo son obligatorios para confirmar Paso 1.
-              </p>
-
-              <p
-                class="home-algo__feedback"
-                id="home-algo-step1-feedback"
-                aria-live="polite"
-              >
-                Completá los datos para confirmar el Paso 1.
-              </p>
-
-              <article
-                class="home-algo__alert home-algo__alert--danger"
-                id="home-algo-step1-stop"
-                role="alert"
-                hidden
-              >
-                <h4 class="home-algo__alert-title">
-                  Resultado: No incluye por edad
-                </h4>
-                <p class="home-algo__alert-text">
-                  Edad menor a 45 años. Se cierra la entrevista en este punto.
-                </p>
-              </article>
-
-              <article
-                class="home-algo__alert home-algo__alert--success"
-                id="home-algo-step1-ok"
-                role="status"
-                hidden
-              >
-                <h4 class="home-algo__alert-title">Criterio cumplido</h4>
-                <p class="home-algo__alert-text">
-                  Edad igual o mayor a 45 años. Se habilita el Paso 2.
-                </p>
-              </article>
-
-              <div class="home-algo__actions" data-home-algo-actions="1">
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  id="btn-confirm-step1"
+                <section
+                  class="home-algo__panel"
+                  id="home-algo-step-2"
+                  data-home-algo-step-panel="2"
+                  aria-labelledby="home-algo-step2-title"
+                  hidden
                 >
-                  Confirmar paso 1
-                </button>
+                  <h3 class="home-algo__panel-title" id="home-algo-step2-title">
+                    Paso 2: Criterios de seguimiento vigente
+                  </h3>
+                  <p class="home-algo__panel-copy">
+                    Marcá si aplica alguno de los siguientes criterios. Con un
+                    solo criterio marcado, no corresponde entregar FIT.
+                  </p>
+
+                  <fieldset class="home-algo__group">
+                    <legend class="home-algo__group-title">
+                      Criterios de seguimiento vigente
+                    </legend>
+                    <div class="home-algo__checklist">
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step2-colonoscopy-normal-10y"
+                          data-home-algo-step2-code="COLONOSCOPY_NORMAL_10Y"
+                        />
+                        <span
+                          >Estudio colorrectal normal en los últimos 10
+                          años</span
+                        >
+                      </label>
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step2-adenoma-low-5y"
+                          data-home-algo-step2-code="LOW_GRADE_ADENOMA_SURVEILLANCE_5Y"
+                        />
+                        <span
+                          >Estudio colorrectal con adenomas bajo grado con
+                          vigilancia vigente (últimos 5 años)</span
+                        >
+                      </label>
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step2-adenoma-high-3y"
+                          data-home-algo-step2-code="HIGH_RISK_ADENOMA_SURVEILLANCE_3Y"
+                        />
+                        <span
+                          >Estudio colorrectal con adenomas de alto riesgo con
+                          vigilancia vigente (últimos 3 años)</span
+                        >
+                      </label>
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step2-polyps-control-6m"
+                          data-home-algo-step2-code="LARGE_POLYP_INCOMPLETE_RESECTION_6M"
+                        />
+                        <span
+                          >Estudio colorrectal con pólipos grandes o resección
+                          incompleta con control pendiente/reciente (últimos 6
+                          meses)</span
+                        >
+                      </label>
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step2-fit-last-12m"
+                          data-home-algo-step2-code="FIT_LAST_12M"
+                        />
+                        <span>Test FIT realizado en el último año</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <p
+                    class="home-algo__feedback"
+                    id="home-algo-step2-feedback"
+                    aria-live="polite"
+                  >
+                    Sin criterios marcados. Si continúa así, avanzará al Paso 3.
+                  </p>
+
+                  <article
+                    class="home-algo__alert home-algo__alert--danger"
+                    id="home-algo-step2-stop"
+                    role="alert"
+                    hidden
+                  >
+                    <h4 class="home-algo__alert-title">
+                      Resultado: Criterio de seguimiento vigente
+                    </h4>
+                    <p class="home-algo__alert-text">
+                      No se considera candidato a campaña de screening
+                      poblacional. En estos casos la recomendación es que la
+                      persona realice una consulta médica. No entregar FIT.
+                    </p>
+                  </article>
+
+                  <article
+                    class="home-algo__alert home-algo__alert--success"
+                    id="home-algo-step2-ok"
+                    role="status"
+                    hidden
+                  >
+                    <h4 class="home-algo__alert-title">
+                      Paso 2 sin exclusiones
+                    </h4>
+                    <p class="home-algo__alert-text">
+                      No se marcaron criterios de seguimiento vigente. Se
+                      habilita el Paso 3.
+                    </p>
+                  </article>
+
+                  <div class="home-algo__actions" data-home-algo-actions="2">
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      id="home-algo-step2-evaluate"
+                    >
+                      Confirmar paso 2
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary"
+                      id="home-algo-step2-edit"
+                      hidden
+                    >
+                      Editar Paso 2
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-danger"
+                      id="home-algo-step2-finish"
+                      hidden
+                    >
+                      Finalizar entrevista
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-success text-white px-4 fw-bold"
+                      id="home-algo-step2-continue"
+                      hidden
+                    >
+                      Continuar a paso 3
+                      <i
+                        class="fa-solid fa-arrow-right ms-2"
+                        aria-hidden="true"
+                      ></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost"
+                      id="home-algo-step2-back"
+                      hidden
+                    >
+                      Volver al paso anterior
+                    </button>
+                  </div>
+                </section>
+
+                <section
+                  class="home-algo__panel"
+                  id="home-algo-step-3"
+                  data-home-algo-step-panel="3"
+                  aria-labelledby="home-algo-step3-title"
+                  hidden
+                >
+                  <h3 class="home-algo__panel-title" id="home-algo-step3-title">
+                    Paso 3: Criterios de riesgo elevado.
+                  </h3>
+                  <p class="home-algo__panel-copy">
+                    La presencia de alguno de estos factores define mayor
+                    riesgo, por lo que no se considera candidato a campaña de
+                    screening poblacional. En estos casos la recomendación es
+                    que la persona realice una consulta médica.
+                  </p>
+
+                  <fieldset class="home-algo__group">
+                    <legend class="home-algo__group-title">
+                      A) Antecedentes heredofamiliares
+                    </legend>
+                    <div class="home-algo__checklist">
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step3-family-crc-adenoma"
+                          data-home-algo-step3-code="FAMILY_HISTORY_CRC_OR_ADENOMA"
+                        />
+                        <span
+                          >Familiar de 1.º o 2.º grado con Cáncer Colorrectal o
+                          Adenoma</span
+                        >
+                      </label>
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step3-hereditary-syndrome"
+                          data-home-algo-step3-code="HEREDITARY_SYNDROMES_FAP_LYNCH"
+                        />
+                        <span>Síndromes hereditarios (FAP, Lynch)</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <fieldset class="home-algo__group">
+                    <legend class="home-algo__group-title">
+                      B) Antecedentes personales
+                    </legend>
+                    <div class="home-algo__checklist">
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step3-ibd"
+                          data-home-algo-step3-code="IBD_CU_CROHN"
+                        />
+                        <span
+                          >Enfermedad inflamatoria intestinal (CU / Crohn)</span
+                        >
+                      </label>
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step3-adenomatous-polyps"
+                          data-home-algo-step3-code="ADENOMATOUS_POLYPS_MULTIPLE_LARGE"
+                        />
+                        <span
+                          >Pólipos adenomatosos previos (múltiples o
+                          grandes)</span
+                        >
+                      </label>
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step3-prior-crc"
+                          data-home-algo-step3-code="PRIOR_CRC"
+                        />
+                        <span>Cáncer colorrectal previo</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <fieldset class="home-algo__group">
+                    <legend class="home-algo__group-title">
+                      C) Signos y síntomas de alerta
+                    </legend>
+                    <div class="home-algo__checklist">
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step3-fatigue-anemia"
+                          data-home-algo-step3-code="FATIGUE_ANEMIA_SUSPECT"
+                        />
+                        <span
+                          >Debilidad o fatiga marcada (sospecha de anemia)</span
+                        >
+                      </label>
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step3-persistent-pain"
+                          data-home-algo-step3-code="PERSISTENT_ABDOMINAL_PAIN"
+                        />
+                        <span>Dolor o calambres abdominales persistentes</span>
+                      </label>
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step3-rectal-bleeding"
+                          data-home-algo-step3-code="RECTAL_BLEEDING"
+                        />
+                        <span
+                          >Sangrado rectal (heces oscuras, mezcladas o
+                          goteo)</span
+                        >
+                      </label>
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step3-bowel-change"
+                          data-home-algo-step3-code="PERSISTENT_BOWEL_HABIT_CHANGE"
+                        />
+                        <span
+                          >Cambio del hábito evacuatorio persistente
+                          (diarrea/estreñimiento)</span
+                        >
+                      </label>
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step3-thin-stool"
+                          data-home-algo-step3-code="THIN_RIBBON_STOOLS"
+                        />
+                        <span>Heces estrechas o acintadas</span>
+                      </label>
+                      <label class="home-algo__check">
+                        <input
+                          type="checkbox"
+                          id="home-algo-step3-weight-loss"
+                          data-home-algo-step3-code="UNINTENDED_WEIGHT_LOSS"
+                        />
+                        <span>Pérdida de peso no intencionada</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <p
+                    class="home-algo__feedback"
+                    id="home-algo-step3-feedback"
+                    aria-live="polite"
+                  >
+                    Si no se marca ningún criterio, avanzará a Paso 4 como
+                    candidato FIT.
+                  </p>
+
+                  <article
+                    class="home-algo__alert home-algo__alert--danger"
+                    id="home-algo-step3-stop"
+                    role="alert"
+                    hidden
+                  >
+                    <h4 class="home-algo__alert-title">
+                      Resultado: Riesgo elevado
+                    </h4>
+                    <p class="home-algo__alert-text">
+                      No se considera candidato a campaña de screening
+                      poblacional. En estos casos la recomendación es que la
+                      persona realice una consulta médica. No entregar FIT.
+                    </p>
+                  </article>
+
+                  <article
+                    class="home-algo__alert home-algo__alert--success"
+                    id="home-algo-step3-ok"
+                    role="status"
+                    hidden
+                  >
+                    <h4 class="home-algo__alert-title">
+                      Riesgo promedio confirmado
+                    </h4>
+                    <p class="home-algo__alert-text">
+                      Sin criterios de riesgo elevado. Continuar al Paso 4 para
+                      cargar datos de contacto.
+                    </p>
+                  </article>
+
+                  <div class="home-algo__actions" data-home-algo-actions="3">
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      id="home-algo-step3-evaluate"
+                    >
+                      Confirmar paso 3
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary"
+                      id="home-algo-step3-edit"
+                      hidden
+                    >
+                      Editar Paso 3
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-danger"
+                      id="home-algo-step3-finish"
+                      hidden
+                    >
+                      Finalizar entrevista
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-success text-white px-4 fw-bold"
+                      id="home-algo-step3-continue"
+                      hidden
+                    >
+                      Continuar a paso 4
+                      <i
+                        class="fa-solid fa-arrow-right ms-2"
+                        aria-hidden="true"
+                      ></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost"
+                      id="home-algo-step3-back"
+                      hidden
+                    >
+                      Volver al paso anterior
+                    </button>
+                  </div>
+                </section>
+
+                <section
+                  class="home-algo__panel"
+                  id="home-algo-step-4"
+                  data-home-algo-step-panel="4"
+                  aria-labelledby="home-algo-step4-title"
+                  hidden
+                >
+                  <h3 class="home-algo__panel-title" id="home-algo-step4-title">
+                    Paso 4: Datos de contacto (candidato FIT)
+                  </h3>
+                  <p class="home-algo__panel-copy">
+                    Este paso sólo se habilita si Paso 2 y Paso 3 no tienen
+                    criterios marcados.
+                  </p>
+
+                  <div class="home-algo__grid home-algo__grid--step4">
+                    <div class="home-algo__field home-algo__field--full">
+                      <label class="home-algo__label" for="home-algo-full-name"
+                        >Apellido y nombre</label
+                      >
+                      <input
+                        class="home-algo__input"
+                        id="home-algo-full-name"
+                        name="home-algo-full-name"
+                        type="text"
+                        autocomplete="name"
+                        required
+                      />
+                    </div>
+                    <div class="home-algo__field">
+                      <label
+                        class="home-algo__label"
+                        for="home-algo-document-id"
+                        >Documento</label
+                      >
+                      <input
+                        class="home-algo__input"
+                        id="home-algo-document-id"
+                        name="home-algo-document-id"
+                        type="text"
+                        autocomplete="off"
+                        required
+                      />
+                    </div>
+                    <div class="home-algo__field">
+                      <label class="home-algo__label" for="home-algo-email"
+                        >Email</label
+                      >
+                      <input
+                        class="home-algo__input"
+                        id="home-algo-email"
+                        name="home-algo-email"
+                        type="email"
+                        autocomplete="email"
+                        required
+                      />
+                    </div>
+                    <div class="home-algo__field">
+                      <label class="home-algo__label" for="home-algo-phone"
+                        >Celular</label
+                      >
+                      <input
+                        class="home-algo__input"
+                        id="home-algo-phone"
+                        name="home-algo-phone"
+                        type="tel"
+                        autocomplete="tel"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <p
+                    class="home-algo__feedback"
+                    id="home-algo-step4-feedback"
+                    aria-live="polite"
+                  >
+                    Completá los datos de contacto para cerrar como candidato
+                    FIT.
+                  </p>
+
+                  <div class="home-algo__actions" data-home-algo-actions="4">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      id="home-algo-step4-edit"
+                    >
+                      Editar datos
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost"
+                      id="home-algo-step4-back"
+                    >
+                      Volver al paso anterior
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      id="home-algo-step4-finish"
+                    >
+                      Finalizar y Guardar Candidato
+                    </button>
+                  </div>
+                </section>
+              </main>
+
+              <footer class="interview-footer">
+                <div id="home-algo-actions"></div>
                 <button
                   type="button"
                   class="btn btn-outline-secondary"
-                  id="home-algo-step1-edit"
+                  id="home-algo-restart"
                   hidden
                 >
-                  Editar Paso 1
+                  Reiniciar entrevista
                 </button>
-                <button
-                  type="button"
-                  class="btn btn-danger"
-                  id="home-algo-step1-finish"
-                  hidden
-                >
-                  Finalizar entrevista
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-success text-white px-4 fw-bold"
-                  id="home-algo-step1-continue"
-                  hidden
-                >
-                  Continuar a paso 2
-                  <i class="fa-solid fa-arrow-right ms-2" aria-hidden="true"></i>
-                </button>
-              </div>
-            </section>
+              </footer>
+            </article>
 
-            <section
-              class="home-algo__panel"
-              id="home-algo-step-2"
-              data-home-algo-step-panel="2"
-              aria-labelledby="home-algo-step2-title"
-              hidden
-            >
-              <h3 class="home-algo__panel-title" id="home-algo-step2-title">
-                Paso 2: Criterios de seguimiento vigente
-              </h3>
-              <p class="home-algo__panel-copy">
-                Marcá si aplica alguno de los siguientes criterios. Con un solo
-                criterio marcado, no corresponde entregar FIT.
-              </p>
-
-              <fieldset class="home-algo__group">
-                <legend class="home-algo__group-title">
-                  Criterios de seguimiento vigente
-                </legend>
-                <div class="home-algo__checklist">
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step2-colonoscopy-normal-10y"
-                      data-home-algo-step2-code="COLONOSCOPY_NORMAL_10Y"
-                    />
-                    <span
-                      >Estudio colorrectal normal en los últimos 10 años</span
-                    >
-                  </label>
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step2-adenoma-low-5y"
-                      data-home-algo-step2-code="LOW_GRADE_ADENOMA_SURVEILLANCE_5Y"
-                    />
-                    <span
-                      >Estudio colorrectal con adenomas bajo grado con vigilancia
-                      vigente (últimos 5 años)</span
-                    >
-                  </label>
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step2-adenoma-high-3y"
-                      data-home-algo-step2-code="HIGH_RISK_ADENOMA_SURVEILLANCE_3Y"
-                    />
-                    <span
-                      >Estudio colorrectal con adenomas de alto riesgo con vigilancia
-                      vigente (últimos 3 años)</span
-                    >
-                  </label>
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step2-polyps-control-6m"
-                      data-home-algo-step2-code="LARGE_POLYP_INCOMPLETE_RESECTION_6M"
-                    />
-                    <span
-                      >Estudio colorrectal con pólipos grandes o resección incompleta
-                      con control pendiente/reciente (últimos 6 meses)</span
-                    >
-                  </label>
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step2-fit-last-12m"
-                      data-home-algo-step2-code="FIT_LAST_12M"
-                    />
-                    <span>Test FIT realizado en el último año</span>
-                  </label>
-                </div>
-              </fieldset>
-
-              <p
-                class="home-algo__feedback"
-                id="home-algo-step2-feedback"
-                aria-live="polite"
-              >
-                Sin criterios marcados. Si continúa así, avanzará al Paso 3.
-              </p>
-
-              <article
-                class="home-algo__alert home-algo__alert--danger"
-                id="home-algo-step2-stop"
-                role="alert"
-                hidden
-              >
-                <h4 class="home-algo__alert-title">
-                  Resultado: Criterio de seguimiento vigente
-                </h4>
-                <p class="home-algo__alert-text">
-                  No se considera candidato a campaña de screening poblacional.
-                  En estos casos la recomendación es que la persona realice una
-                  consulta médica. No entregar FIT.
-                </p>
-              </article>
-
-              <article
-                class="home-algo__alert home-algo__alert--success"
-                id="home-algo-step2-ok"
-                role="status"
-                hidden
-              >
-                <h4 class="home-algo__alert-title">
-                  Paso 2 sin exclusiones
-                </h4>
-                <p class="home-algo__alert-text">
-                  No se marcaron criterios de seguimiento vigente. Se habilita el
-                  Paso 3.
-                </p>
-              </article>
-
-              <div class="home-algo__actions" data-home-algo-actions="2">
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  id="home-algo-step2-evaluate"
-                >
-                  Confirmar paso 2
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-outline-secondary"
-                  id="home-algo-step2-edit"
-                  hidden
-                >
-                  Editar Paso 2
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-danger"
-                  id="home-algo-step2-finish"
-                  hidden
-                >
-                  Finalizar entrevista
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-success text-white px-4 fw-bold"
-                  id="home-algo-step2-continue"
-                  hidden
-                >
-                  Continuar a paso 3
-                  <i class="fa-solid fa-arrow-right ms-2" aria-hidden="true"></i>
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-ghost"
-                  id="home-algo-step2-back"
-                  hidden
-                >
-                  Volver al paso anterior
-                </button>
-              </div>
-            </section>
-
-            <section
-              class="home-algo__panel"
-              id="home-algo-step-3"
-              data-home-algo-step-panel="3"
-              aria-labelledby="home-algo-step3-title"
-              hidden
-            >
-              <h3 class="home-algo__panel-title" id="home-algo-step3-title">
-                Paso 3: Criterios de riesgo elevado.
-              </h3>
-              <p class="home-algo__panel-copy">
-                La presencia de alguno de estos factores define mayor riesgo,
-                por lo que no se considera candidato a campaña de screening
-                poblacional. En estos casos la recomendación es que la persona
-                realice una consulta médica.
-              </p>
-
-              <fieldset class="home-algo__group">
-                <legend class="home-algo__group-title">
-                  A) Antecedentes heredofamiliares
-                </legend>
-                <div class="home-algo__checklist">
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step3-family-crc-adenoma"
-                      data-home-algo-step3-code="FAMILY_HISTORY_CRC_OR_ADENOMA"
-                    />
-                    <span
-                      >Familiar de 1.º o 2.º grado con Cáncer Colorrectal o
-                      Adenoma</span
-                    >
-                  </label>
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step3-hereditary-syndrome"
-                      data-home-algo-step3-code="HEREDITARY_SYNDROMES_FAP_LYNCH"
-                    />
-                    <span>Síndromes hereditarios (FAP, Lynch)</span>
-                  </label>
-                </div>
-              </fieldset>
-
-              <fieldset class="home-algo__group">
-                <legend class="home-algo__group-title">
-                  B) Antecedentes personales
-                </legend>
-                <div class="home-algo__checklist">
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step3-ibd"
-                      data-home-algo-step3-code="IBD_CU_CROHN"
-                    />
-                    <span
-                      >Enfermedad inflamatoria intestinal (CU / Crohn)</span
-                    >
-                  </label>
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step3-adenomatous-polyps"
-                      data-home-algo-step3-code="ADENOMATOUS_POLYPS_MULTIPLE_LARGE"
-                    />
-                    <span>Pólipos adenomatosos previos (múltiples o grandes)</span>
-                  </label>
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step3-prior-crc"
-                      data-home-algo-step3-code="PRIOR_CRC"
-                    />
-                    <span>Cáncer colorrectal previo</span>
-                  </label>
-                </div>
-              </fieldset>
-
-              <fieldset class="home-algo__group">
-                <legend class="home-algo__group-title">
-                  C) Signos y síntomas de alerta
-                </legend>
-                <div class="home-algo__checklist">
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step3-fatigue-anemia"
-                      data-home-algo-step3-code="FATIGUE_ANEMIA_SUSPECT"
-                    />
-                    <span
-                      >Debilidad o fatiga marcada (sospecha de anemia)</span
-                    >
-                  </label>
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step3-persistent-pain"
-                      data-home-algo-step3-code="PERSISTENT_ABDOMINAL_PAIN"
-                    />
-                    <span>Dolor o calambres abdominales persistentes</span>
-                  </label>
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step3-rectal-bleeding"
-                      data-home-algo-step3-code="RECTAL_BLEEDING"
-                    />
-                    <span
-                      >Sangrado rectal (heces oscuras, mezcladas o goteo)</span
-                    >
-                  </label>
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step3-bowel-change"
-                      data-home-algo-step3-code="PERSISTENT_BOWEL_HABIT_CHANGE"
-                    />
-                    <span
-                      >Cambio del hábito evacuatorio persistente
-                      (diarrea/estreñimiento)</span
-                    >
-                  </label>
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step3-thin-stool"
-                      data-home-algo-step3-code="THIN_RIBBON_STOOLS"
-                    />
-                    <span>Heces estrechas o acintadas</span>
-                  </label>
-                  <label class="home-algo__check">
-                    <input
-                      type="checkbox"
-                      id="home-algo-step3-weight-loss"
-                      data-home-algo-step3-code="UNINTENDED_WEIGHT_LOSS"
-                    />
-                    <span>Pérdida de peso no intencionada</span>
-                  </label>
-                </div>
-              </fieldset>
-
-              <p
-                class="home-algo__feedback"
-                id="home-algo-step3-feedback"
-                aria-live="polite"
-              >
-                Si no se marca ningún criterio, avanzará a Paso 4 como candidato
-                FIT.
-              </p>
-
-              <article
-                class="home-algo__alert home-algo__alert--danger"
-                id="home-algo-step3-stop"
-                role="alert"
-                hidden
-              >
-                <h4 class="home-algo__alert-title">
-                  Resultado: Riesgo elevado
-                </h4>
-                <p class="home-algo__alert-text">
-                  No se considera candidato a campaña de screening poblacional.
-                  En estos casos la recomendación es que la persona realice una
-                  consulta médica. No entregar FIT.
-                </p>
-              </article>
-
-              <article
-                class="home-algo__alert home-algo__alert--success"
-                id="home-algo-step3-ok"
-                role="status"
-                hidden
-              >
-                <h4 class="home-algo__alert-title">
-                  Riesgo promedio confirmado
-                </h4>
-                <p class="home-algo__alert-text">
-                  Sin criterios de riesgo elevado. Continuar al Paso 4 para
-                  cargar datos de contacto.
-                </p>
-              </article>
-
-              <div class="home-algo__actions" data-home-algo-actions="3">
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  id="home-algo-step3-evaluate"
-                >
-                  Confirmar paso 3
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-outline-secondary"
-                  id="home-algo-step3-edit"
-                  hidden
-                >
-                  Editar Paso 3
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-danger"
-                  id="home-algo-step3-finish"
-                  hidden
-                >
-                  Finalizar entrevista
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-success text-white px-4 fw-bold"
-                  id="home-algo-step3-continue"
-                  hidden
-                >
-                  Continuar a paso 4
-                  <i class="fa-solid fa-arrow-right ms-2" aria-hidden="true"></i>
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-ghost"
-                  id="home-algo-step3-back"
-                  hidden
-                >
-                  Volver al paso anterior
-                </button>
-              </div>
-            </section>
-
-            <section
-              class="home-algo__panel"
-              id="home-algo-step-4"
-              data-home-algo-step-panel="4"
-              aria-labelledby="home-algo-step4-title"
-              hidden
-            >
-              <h3 class="home-algo__panel-title" id="home-algo-step4-title">
-                Paso 4: Datos de contacto (candidato FIT)
-              </h3>
-              <p class="home-algo__panel-copy">
-                Este paso sólo se habilita si Paso 2 y Paso 3 no tienen
-                criterios marcados.
-              </p>
-
-              <div class="home-algo__grid home-algo__grid--step4">
-                <div class="home-algo__field home-algo__field--full">
-                  <label class="home-algo__label" for="home-algo-full-name"
-                    >Apellido y nombre</label
-                  >
-                  <input
-                    class="home-algo__input"
-                    id="home-algo-full-name"
-                    name="home-algo-full-name"
-                    type="text"
-                    autocomplete="name"
-                    required
-                  />
-                </div>
-                <div class="home-algo__field">
-                  <label class="home-algo__label" for="home-algo-document-id"
-                    >Documento</label
-                  >
-                  <input
-                    class="home-algo__input"
-                    id="home-algo-document-id"
-                    name="home-algo-document-id"
-                    type="text"
-                    autocomplete="off"
-                    required
-                  />
-                </div>
-                <div class="home-algo__field">
-                  <label class="home-algo__label" for="home-algo-email"
-                    >Email</label
-                  >
-                  <input
-                    class="home-algo__input"
-                    id="home-algo-email"
-                    name="home-algo-email"
-                    type="email"
-                    autocomplete="email"
-                    required
-                  />
-                </div>
-                <div class="home-algo__field">
-                  <label class="home-algo__label" for="home-algo-phone"
-                    >Celular</label
-                  >
-                  <input
-                    class="home-algo__input"
-                    id="home-algo-phone"
-                    name="home-algo-phone"
-                    type="tel"
-                    autocomplete="tel"
-                    required
-                  />
-                </div>
-              </div>
-
-              <p
-                class="home-algo__feedback"
-                id="home-algo-step4-feedback"
-                aria-live="polite"
-              >
-                Completá los datos de contacto para cerrar como candidato FIT.
-              </p>
-
-              <div class="home-algo__actions" data-home-algo-actions="4">
-                <button
-                  type="button"
-                  class="btn btn-secondary"
-                  id="home-algo-step4-edit"
-                >
-                  Editar datos
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-ghost"
-                  id="home-algo-step4-back"
-                >
-                  Volver al paso anterior
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  id="home-algo-step4-finish"
-                >
-                  Finalizar y Guardar Candidato
-                </button>
-              </div>
-            </section>
-            </main>
-
-            <footer class="interview-footer">
-              <div id="home-algo-actions"></div>
-              <button
-                type="button"
-                class="btn btn-outline-secondary"
-                id="home-algo-restart"
-                hidden
-              >
-                Reiniciar entrevista
-              </button>
-            </footer>
-
-          </article>
-
-          <div
-            class="home-algo__modal"
-            id="home-algo-finish-modal"
-            hidden
-            aria-hidden="true"
-          >
             <div
-              class="home-algo__modal-backdrop"
-              data-home-algo-close-modal="true"
-            ></div>
-            <div
-              class="home-algo__modal-card"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="home-algo-modal-title"
-              tabindex="-1"
+              class="home-algo__modal"
+              id="home-algo-finish-modal"
+              hidden
+              aria-hidden="true"
             >
-              <h3 class="home-algo__modal-title" id="home-algo-modal-title">
-                Entrevista finalizada
-              </h3>
-              <p class="home-algo__modal-outcome" id="home-algo-modal-outcome">
-                -
-              </p>
-              <p class="home-algo__modal-text" id="home-algo-modal-text">
-                -
-              </p>
-              <pre
-                class="home-algo__modal-summary"
-                id="home-algo-modal-summary"
-              ></pre>
-              <div class="home-algo__modal-actions">
-                <button
-                  type="button"
-                  class="btn btn-secondary"
-                  id="home-algo-modal-edit"
+              <div
+                class="home-algo__modal-backdrop"
+                data-home-algo-close-modal="true"
+              ></div>
+              <div
+                class="home-algo__modal-card"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="home-algo-modal-title"
+                tabindex="-1"
+              >
+                <h3 class="home-algo__modal-title" id="home-algo-modal-title">
+                  Entrevista finalizada
+                </h3>
+                <p
+                  class="home-algo__modal-outcome"
+                  id="home-algo-modal-outcome"
                 >
-                  Editar Algoritmo
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  id="home-algo-modal-finalize"
-                >
-                  Finalizar
-                </button>
+                  -
+                </p>
+                <p class="home-algo__modal-text" id="home-algo-modal-text">-</p>
+                <pre
+                  class="home-algo__modal-summary"
+                  id="home-algo-modal-summary"
+                ></pre>
+                <div class="home-algo__modal-actions">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    id="home-algo-modal-edit"
+                  >
+                    Editar Algoritmo
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    id="home-algo-modal-finalize"
+                  >
+                    Finalizar
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
           </div>
         </div>
       </section>
@@ -1534,7 +1592,11 @@
           <div class="ppccr-modal__titlewrap">
             <h2 id="ppccr-algo-modal-title">Entrevista Inicial</h2>
           </div>
-          <div id="modal-status-hud" class="modal-status-hud" aria-live="polite"></div>
+          <div
+            id="modal-status-hud"
+            class="modal-status-hud"
+            aria-live="polite"
+          ></div>
           <button
             type="button"
             class="ppccr-modal__close"
@@ -1596,6 +1658,5 @@
         </div>
       </div>
     </noscript>
-
   </body>
 </html>
