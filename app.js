@@ -325,6 +325,19 @@ const HOME_ALGO_CONTINUE_BUTTON_CLASS = "btn btn-success text-white px-4 fw-bold
 const HOME_ALGO_EDIT_BUTTON_CLASS = "btn btn-outline-secondary";
 
 let homeAlgorithmState = null;
+let homeAlgorithmFlowModalState = {
+  modal: null,
+  card: null,
+  body: null,
+  source: null,
+  lastFocused: null,
+  escListenerBound: false,
+  openListenerBound: false,
+  captureListenerBound: false,
+  autoCloseTimerId: 0,
+  deviceClockTimerId: 0,
+  previewDeviceTimestamp: "",
+};
 let interviewState = {
   step1: {},
   step2: {},
@@ -1884,9 +1897,19 @@ function setHomeAlgorithmStationInputs() {
   }
 
   if (homeAlgorithmState.deviceTimeInput) {
-    homeAlgorithmState.deviceTimeInput.value = homeAlgorithmState.interview.deviceTimestamp
-      ? formatHomeAlgorithmDeviceTimestamp(homeAlgorithmState.interview.deviceTimestamp, "")
-      : "";
+    if (homeAlgorithmState.interview.deviceTimestamp) {
+      homeAlgorithmState.deviceTimeInput.value = formatHomeAlgorithmDeviceTimestamp(
+        homeAlgorithmState.interview.deviceTimestamp,
+        "",
+      );
+    } else if (homeAlgorithmFlowModalState.previewDeviceTimestamp && isAlgoFlowModalOpen()) {
+      homeAlgorithmState.deviceTimeInput.value = formatHomeAlgorithmDeviceTimestamp(
+        homeAlgorithmFlowModalState.previewDeviceTimestamp,
+        "",
+      );
+    } else {
+      homeAlgorithmState.deviceTimeInput.value = "";
+    }
   }
 }
 
@@ -2628,6 +2651,7 @@ function onHomeAlgorithmConfirmStep1() {
   const confirmedAt = new Date();
   const confirmedAtIso = confirmedAt.toISOString();
   const confirmedAtDisplay = formatHomeAlgorithmDeviceTimestamp(confirmedAtIso, "");
+  stopAlgoFlowDeviceClockPreview();
 
   homeAlgorithmState.interview.stationId = result.values.stationId;
   homeAlgorithmState.interview.stationName = result.values.stationName;
@@ -2685,6 +2709,7 @@ function onHomeAlgorithmContinueStep1() {
 function onHomeAlgorithmEditStep1() {
   if (!homeAlgorithmState || homeAlgorithmState.finalized) return;
 
+  clearAlgoFlowModalAutoCloseTimer();
   homeAlgorithmState.step1Confirmed = false;
   homeAlgorithmState.currentStep = ALGORITHM_HOME.steps.AGE;
   homeAlgorithmState.maxUnlockedStep = ALGORITHM_HOME.steps.AGE;
@@ -2692,6 +2717,7 @@ function onHomeAlgorithmEditStep1() {
   clearInterviewAfterStep1();
 
   renderHomeAlgorithm();
+  startAlgoFlowDeviceClockPreview();
   persistHomeAlgorithmDraft({ message: "Paso 1 habilitado para edición." });
 }
 
@@ -2981,6 +3007,288 @@ function onHomeAlgorithmBackToStep3() {
   goToHomeAlgorithmStep(ALGORITHM_HOME.steps.RISK);
 }
 
+/* ----------------------------- Home Algorithm Flow Modal ----------------------------- */
+
+function syncHomeAlgorithmFlowModalElements() {
+  homeAlgorithmFlowModalState.modal = $("#ppccr-algo-modal");
+  homeAlgorithmFlowModalState.card = $(".ppccr-modal__card", homeAlgorithmFlowModalState.modal || document);
+  homeAlgorithmFlowModalState.body = $("#ppccr-algo-modal-content");
+  homeAlgorithmFlowModalState.source = $("#ppccr-algo-source");
+}
+
+function mountHomeAlgorithmInFlowModal() {
+  syncHomeAlgorithmFlowModalElements();
+  if (!homeAlgorithmFlowModalState.source || !homeAlgorithmFlowModalState.body) return;
+
+  while (homeAlgorithmFlowModalState.source.firstChild) {
+    homeAlgorithmFlowModalState.body.appendChild(homeAlgorithmFlowModalState.source.firstChild);
+  }
+}
+
+function isAlgoFlowModalOpen() {
+  syncHomeAlgorithmFlowModalElements();
+  return Boolean(homeAlgorithmFlowModalState.modal && !homeAlgorithmFlowModalState.modal.hidden);
+}
+
+function clearAlgoFlowModalAutoCloseTimer() {
+  if (homeAlgorithmFlowModalState.autoCloseTimerId) {
+    window.clearTimeout(homeAlgorithmFlowModalState.autoCloseTimerId);
+    homeAlgorithmFlowModalState.autoCloseTimerId = 0;
+  }
+}
+
+function scheduleAlgoFlowModalAutoClose() {
+  clearAlgoFlowModalAutoCloseTimer();
+  if (!isAlgoFlowModalOpen()) return;
+  homeAlgorithmFlowModalState.autoCloseTimerId = window.setTimeout(() => {
+    closeAlgoFlowModal({ force: true });
+  }, 2000);
+}
+
+function updateAlgoFlowDeviceClockPreview() {
+  if (!homeAlgorithmState?.deviceTimeInput) return;
+  if (!isAlgoFlowModalOpen()) return;
+  if (homeAlgorithmState?.interview?.deviceTimestamp) return;
+
+  const nowIso = new Date().toISOString();
+  homeAlgorithmFlowModalState.previewDeviceTimestamp = nowIso;
+  homeAlgorithmState.deviceTimeInput.value = formatHomeAlgorithmDeviceTimestamp(nowIso, "");
+}
+
+function stopAlgoFlowDeviceClockPreview() {
+  if (homeAlgorithmFlowModalState.deviceClockTimerId) {
+    window.clearInterval(homeAlgorithmFlowModalState.deviceClockTimerId);
+    homeAlgorithmFlowModalState.deviceClockTimerId = 0;
+  }
+  homeAlgorithmFlowModalState.previewDeviceTimestamp = "";
+}
+
+function startAlgoFlowDeviceClockPreview() {
+  stopAlgoFlowDeviceClockPreview();
+  if (!homeAlgorithmState || homeAlgorithmState.interview.deviceTimestamp) return;
+  if (!isAlgoFlowModalOpen()) return;
+
+  updateAlgoFlowDeviceClockPreview();
+  homeAlgorithmFlowModalState.deviceClockTimerId = window.setInterval(() => {
+    updateAlgoFlowDeviceClockPreview();
+  }, 1000);
+}
+
+function getAlgoFlowFocusableElements() {
+  if (!homeAlgorithmFlowModalState.modal) return [];
+  const selectors =
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  const candidates = Array.from(homeAlgorithmFlowModalState.modal.querySelectorAll(selectors));
+  return candidates.filter((element) => {
+    if (!(element instanceof HTMLElement)) return false;
+    if (element.hidden) return false;
+    if (element.getAttribute("aria-hidden") === "true") return false;
+    const style = window.getComputedStyle(element);
+    return style.visibility !== "hidden" && style.display !== "none";
+  });
+}
+
+function trapAlgoFlowModalFocus(event) {
+  if (!isAlgoFlowModalOpen()) return;
+  if (event.key !== "Tab") return;
+
+  const focusables = getAlgoFlowFocusableElements();
+  if (focusables.length === 0) {
+    event.preventDefault();
+    return;
+  }
+
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  const active = document.activeElement;
+
+  if (event.shiftKey && active === first) {
+    event.preventDefault();
+    last.focus();
+    return;
+  }
+
+  if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function focusAlgoFlowStep1Input() {
+  const ageInput = $("#home-algo-step1-age") || $("#home-algo-age");
+  if (ageInput && typeof ageInput.focus === "function") {
+    ageInput.focus();
+  }
+}
+
+function hasAlgoFlowModalMeaningfulDataFallback() {
+  if (!homeAlgorithmState) return false;
+
+  if (Number(homeAlgorithmState.currentStep || ALGORITHM_HOME.steps.AGE) > ALGORITHM_HOME.steps.AGE) {
+    return true;
+  }
+
+  const ageFilled = String(homeAlgorithmState.ageInput?.value || "").trim().length > 0;
+  if (ageFilled) return true;
+
+  const hasSex = homeAlgorithmState.sexRadios.some((radio) => radio.checked);
+  if (hasSex) return true;
+
+  const hasMarkedChecks =
+    homeAlgorithmState.step2Checks.some((input) => input.checked) ||
+    homeAlgorithmState.step3Checks.some((input) => input.checked);
+
+  return hasMarkedChecks;
+}
+
+function shouldConfirmCloseAlgoFlowModal() {
+  if (typeof homeAlgorithmHasMeaningfulData === "function") {
+    try {
+      return homeAlgorithmHasMeaningfulData();
+    } catch (_error) {
+      return hasAlgoFlowModalMeaningfulDataFallback();
+    }
+  }
+  return hasAlgoFlowModalMeaningfulDataFallback();
+}
+
+function openAlgoFlowModal(opener = null) {
+  mountHomeAlgorithmInFlowModal();
+  syncHomeAlgorithmFlowModalElements();
+  if (!homeAlgorithmFlowModalState.modal) return;
+
+  clearAlgoFlowModalAutoCloseTimer();
+  stopAlgoFlowDeviceClockPreview();
+
+  const activeElement = document.activeElement;
+  homeAlgorithmFlowModalState.lastFocused =
+    opener instanceof HTMLElement
+      ? opener
+      : activeElement instanceof HTMLElement
+        ? activeElement
+        : null;
+
+  if (typeof restartHomeAlgorithm === "function") {
+    restartHomeAlgorithm({ confirmRestart: false });
+  }
+  if (typeof goToHomeAlgorithmStep === "function") {
+    goToHomeAlgorithmStep(ALGORITHM_HOME.steps.AGE);
+  }
+
+  homeAlgorithmFlowModalState.modal.hidden = false;
+  homeAlgorithmFlowModalState.modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("ppccr-modal-open");
+  document.documentElement.classList.add("ppccr-modal-open");
+
+  startAlgoFlowDeviceClockPreview();
+  focusAlgoFlowStep1Input();
+}
+
+function closeAlgoFlowModal({ force = false } = {}) {
+  syncHomeAlgorithmFlowModalElements();
+  if (!homeAlgorithmFlowModalState.modal) return false;
+  if (homeAlgorithmFlowModalState.modal.hidden) return true;
+
+  if (!force && shouldConfirmCloseAlgoFlowModal()) {
+    const allowClose = window.confirm(
+      "Hay una entrevista en curso. ¿Cerrar y descartar cambios?",
+    );
+    if (!allowClose) return false;
+  }
+
+  clearAlgoFlowModalAutoCloseTimer();
+  stopAlgoFlowDeviceClockPreview();
+
+  homeAlgorithmFlowModalState.modal.hidden = true;
+  homeAlgorithmFlowModalState.modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("ppccr-modal-open");
+  document.documentElement.classList.remove("ppccr-modal-open");
+
+  if (typeof closeHomeAlgorithmModal === "function") {
+    closeHomeAlgorithmModal();
+  }
+  if (typeof restartHomeAlgorithm === "function") {
+    restartHomeAlgorithm({ confirmRestart: false });
+  }
+
+  const targetToRestore = homeAlgorithmFlowModalState.lastFocused;
+  homeAlgorithmFlowModalState.lastFocused = null;
+  if (targetToRestore && typeof targetToRestore.focus === "function") {
+    targetToRestore.focus();
+  }
+
+  return true;
+}
+
+function onAlgoFlowModalCaptureClick(event) {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+
+  const opener = target.closest('[data-open-algo="true"]');
+  if (opener) {
+    event.preventDefault();
+    event.stopPropagation();
+    openAlgoFlowModal(opener);
+    return;
+  }
+
+  const anchorOpener = target.closest('a[href="#algoritmo"], a[href="#algoritmo-section"]');
+  if (anchorOpener) {
+    event.preventDefault();
+    event.stopPropagation();
+    openAlgoFlowModal(anchorOpener);
+    return;
+  }
+
+  if (!isAlgoFlowModalOpen()) return;
+
+  const closer = target.closest("[data-algo-close='true']");
+  if (closer && homeAlgorithmFlowModalState.modal?.contains(closer)) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeAlgoFlowModal();
+  }
+}
+
+function onAlgoFlowModalCaptureKeydown(event) {
+  if (!isAlgoFlowModalOpen()) return;
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    closeAlgoFlowModal();
+    return;
+  }
+
+  trapAlgoFlowModalFocus(event);
+}
+
+function setupAlgoFlowModalLifecycle() {
+  mountHomeAlgorithmInFlowModal();
+  syncHomeAlgorithmFlowModalElements();
+  if (!homeAlgorithmFlowModalState.modal) return;
+
+  if (!homeAlgorithmFlowModalState.openListenerBound) {
+    document.querySelectorAll('[data-open-algo="true"]').forEach((trigger) => {
+      trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        openAlgoFlowModal(event.currentTarget);
+      });
+    });
+    homeAlgorithmFlowModalState.openListenerBound = true;
+  }
+
+  if (!homeAlgorithmFlowModalState.captureListenerBound) {
+    document.addEventListener("click", onAlgoFlowModalCaptureClick, true);
+    homeAlgorithmFlowModalState.captureListenerBound = true;
+  }
+
+  if (!homeAlgorithmFlowModalState.escListenerBound) {
+    document.addEventListener("keydown", onAlgoFlowModalCaptureKeydown, true);
+    homeAlgorithmFlowModalState.escListenerBound = true;
+  }
+}
+
 function fillHomeAlgorithmModal() {
   if (!homeAlgorithmState) return;
   const outcome = homeAlgorithmState.interview.outcome;
@@ -3010,6 +3318,7 @@ function openHomeAlgorithmModal() {
   homeAlgorithmState.modal.hidden = false;
   homeAlgorithmState.modal.setAttribute("aria-hidden", "false");
   homeAlgorithmState.modalDialog.focus();
+  scheduleAlgoFlowModalAutoClose();
 }
 
 function closeHomeAlgorithmModal() {
@@ -3020,6 +3329,7 @@ function closeHomeAlgorithmModal() {
 
 function enableHomeAlgorithmEditingFromModal() {
   if (!homeAlgorithmState) return;
+  clearAlgoFlowModalAutoCloseTimer();
 
   const finalStep =
     Number.isFinite(homeAlgorithmState.finalStep) && homeAlgorithmState.finalStep > 0
@@ -3099,6 +3409,8 @@ function restartHomeAlgorithm({ confirmRestart = true } = {}) {
     if (!allow) return;
   }
 
+  clearAlgoFlowModalAutoCloseTimer();
+  stopAlgoFlowDeviceClockPreview();
   closeHomeAlgorithmModal();
 
   const station = resolveHomeAlgorithmStationFromBridge();
@@ -4142,6 +4454,7 @@ function init() {
   renderGuides();
   renderRoles();
   initHomeAlgorithm();
+  setupAlgoFlowModalLifecycle();
   renderTimelinePlaceholder();
   renderEmbeds();
 
