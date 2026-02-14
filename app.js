@@ -1634,6 +1634,38 @@ function setHomeAlgorithmButtonLoading(
   button.disabled = false;
 }
 
+function scrollHomeAlgorithmFlowStatusIntoView(step) {
+  if (!homeAlgorithmState?.flowStatus) return;
+
+  const targetStep = Number(step);
+  if (
+    Number.isFinite(targetStep) &&
+    Number(homeAlgorithmState.currentStep || 0) !== targetStep
+  ) {
+    return;
+  }
+
+  const scrollContainer = getHomeAlgorithmScrollContainer();
+  if (!(scrollContainer instanceof HTMLElement)) return;
+  if (!scrollContainer.contains(homeAlgorithmState.flowStatus)) return;
+
+  const behavior = userPrefersReducedMotion() ? "auto" : "smooth";
+  window.requestAnimationFrame(() => {
+    if (!homeAlgorithmState?.flowStatus) return;
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const statusRect = homeAlgorithmState.flowStatus.getBoundingClientRect();
+    const nextTop = Math.max(
+      0,
+      scrollContainer.scrollTop + (statusRect.top - containerRect.top) - 10,
+    );
+
+    scrollContainer.scrollTo({ top: nextTop, behavior });
+    window.setTimeout(() => {
+      refreshHomeAlgorithmOverflowHints();
+    }, 220);
+  });
+}
+
 function updateHomeAlgorithmPanelOverflowHints(panel) {
   if (!(panel instanceof HTMLElement)) return;
 
@@ -3043,6 +3075,7 @@ function onHomeAlgorithmEvaluateStep3() {
   syncInterviewStateFromInterview({ status: "pending" });
 
   renderHomeAlgorithm();
+  scrollHomeAlgorithmFlowStatusIntoView(ALGORITHM_HOME.steps.RISK);
   persistHomeAlgorithmDraft({ message: "Paso 3 evaluado y guardado en borrador local." });
 }
 
