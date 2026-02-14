@@ -4722,18 +4722,39 @@ function setupHeaderScrollState() {
   if (!header) return;
 
   const scrolledClass = CONFIG.ui.headerScrolledClass;
-  const threshold = 24;
+  const enterThreshold = 72;
+  const exitThreshold = 28;
   const mobileSolidQuery = window.matchMedia("(max-width: 520px)");
   let ticking = false;
+  let isScrolled = header.classList.contains(scrolledClass);
 
-  const syncState = () => {
+  const shouldApplyScrolledState = () => {
+    const y = Math.max(0, Number(window.scrollY) || 0);
+    if (isScrolled) return y > exitThreshold;
+    return y > enterThreshold;
+  };
+
+  const syncState = ({ forceOffset = false } = {}) => {
     if (mobileSolidQuery.matches) {
-      header.classList.remove(scrolledClass);
+      if (isScrolled || header.classList.contains(scrolledClass)) {
+        header.classList.remove(scrolledClass);
+        isScrolled = false;
+        setHeaderOffset();
+      } else if (forceOffset) {
+        setHeaderOffset();
+      }
       return;
     }
 
-    header.classList.toggle(scrolledClass, window.scrollY > threshold);
-    setHeaderOffset();
+    const shouldScrolled = shouldApplyScrolledState();
+    if (shouldScrolled !== isScrolled) {
+      isScrolled = shouldScrolled;
+      header.classList.toggle(scrolledClass, shouldScrolled);
+      setHeaderOffset();
+      return;
+    }
+
+    if (forceOffset) setHeaderOffset();
   };
 
   const onScroll = () => {
@@ -4745,26 +4766,30 @@ function setupHeaderScrollState() {
     });
   };
 
-  syncState();
+  syncState({ forceOffset: true });
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener(
     "resize",
     debounce(() => {
-      syncState();
+      syncState({ forceOffset: true });
     }, 150),
   );
   window.addEventListener(
     "load",
     () => {
-      syncState();
+      syncState({ forceOffset: true });
     },
     { once: true },
   );
 
   if (typeof mobileSolidQuery.addEventListener === "function") {
-    mobileSolidQuery.addEventListener("change", syncState);
+    mobileSolidQuery.addEventListener("change", () => {
+      syncState({ forceOffset: true });
+    });
   } else if (typeof mobileSolidQuery.addListener === "function") {
-    mobileSolidQuery.addListener(syncState);
+    mobileSolidQuery.addListener(() => {
+      syncState({ forceOffset: true });
+    });
   }
 }
 

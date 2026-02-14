@@ -27,6 +27,15 @@
     { id: "admin", name: "Administrador" },
   ];
 
+  const STATION_AVATAR_META = Object.freeze({
+    saavedra: Object.freeze({ badge: "PS", top: "#2f8ff6", bottom: "#0f5fa6" }),
+    aristobulo: Object.freeze({ badge: "AV", top: "#2d84ea", bottom: "#0b3a66" }),
+    rivadavia: Object.freeze({ badge: "PR", top: "#3493f8", bottom: "#105eaa" }),
+    chacabuco: Object.freeze({ badge: "PC", top: "#2e87ee", bottom: "#0f548f" }),
+    admin: Object.freeze({ badge: "AD", top: "#357cca", bottom: "#17457a" }),
+    fallback: Object.freeze({ badge: "ES", top: "#2d85ea", bottom: "#0f5fa6" }),
+  });
+
   /** @type {Map<string, {id: string, name: string}>} */
   const STATION_BY_ID = new Map();
   /** @type {Map<string, {id: string, name: string}>} */
@@ -331,17 +340,55 @@
    * @param {{id: string, name: string}} station
    * @returns {string}
    */
-  function getStationTileLabelMarkup(station) {
-    if (station.id === "aristobulo") {
-      return `
-        <span class="station-tile__label">
-          <span class="station-tile__line">Aristóbulo</span>
-          <span class="station-tile__line">del Valle</span>
-        </span>
-      `;
-    }
+  function getStationAvatarSrc(station) {
+    const visual = STATION_AVATAR_META[station.id] || STATION_AVATAR_META.fallback;
+    const badge = visual.badge;
+    const top = visual.top;
+    const bottom = visual.bottom;
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="${top}" />
+            <stop offset="100%" stop-color="${bottom}" />
+          </linearGradient>
+        </defs>
+        <rect width="220" height="220" rx="110" fill="url(#g)" />
+        <circle cx="110" cy="92" r="49" fill="rgba(255,255,255,0.14)" />
+        <path d="M110 148c21-18 33-35 33-53 0-18-15-33-33-33s-33 15-33 33c0 18 12 35 33 53Z" fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="110" cy="94" r="12" fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="9"/>
+        <text x="110" y="188" text-anchor="middle" font-family="Avenir Next, Segoe UI, Arial, sans-serif" font-size="44" font-weight="800" letter-spacing="1.2" fill="#ffffff">${badge}</text>
+      </svg>
+    `;
 
-    return `<span class="station-tile__label"><span class="station-tile__line">${station.name}</span></span>`;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  }
+
+  /**
+   * @param {{id: string, name: string}} station
+   * @returns {string}
+   */
+  function getStationTileLabelMarkup(station) {
+    return `
+      <span class="station-card__check" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <circle cx="12" cy="12" r="11" fill="#0f5fa6"></circle>
+          <path d="m7.2 12.4 3.2 3.3 6.4-6.6" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </span>
+      <span class="station-card__content">
+        <span class="station-card__avatarWrap" aria-hidden="true">
+          <img
+            class="station-card__avatar"
+            src="${getStationAvatarSrc(station)}"
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+        </span>
+        <span class="station-card__name">${station.name}</span>
+      </span>
+    `;
   }
 
   /**
@@ -355,7 +402,7 @@
       (station) => `
         <button
           type="button"
-          class="auth-station auth-tile station-tile"
+          class="auth-station auth-tile station-tile station-card"
           data-station-id="${station.id}"
           data-station="${station.id}"
           data-station-name="${station.name}"
@@ -386,11 +433,11 @@
             <div class="auth-brand__copy pp-modal__brandText">
               <span id="authKicker" class="auth-brand__kicker pp-modal__kicker">Inicio de sesión</span>
               <h1 id="authTitle" class="auth-brand__title pp-modal__programTitle">Programa de Prevención de Cáncer Colorrectal</h1>
-              <p id="authHint" class="auth-brand__subtitle pp-modal__hint">Seleccioná la estación saludable</p>
+              <h3 id="authHint" class="auth-brand__subtitle pp-modal__hint">Seleccioná estación e ingresá la clave institucional</h3>
             </div>
           </div>
           <div id="authSectionTitleWrap" class="pp-modal__sectionTitle" hidden>
-            <span id="authSectionKicker" class="pp-modal__sectionKicker">Selecciona</span>
+            <span id="authSectionKicker" class="pp-modal__sectionKicker">Estación activa</span>
             <h2 id="stationSectionTitle" class="pp-modal__sectionHeading">Estación saludable</h2>
           </div>
         </header>
@@ -413,7 +460,7 @@
                 class="auth-input"
                 type="password"
                 inputmode="text"
-                placeholder="Ingrese clave de acceso"
+                placeholder="Ingresá la clave institucional"
                 autocomplete="current-password"
                 disabled
               />
@@ -436,7 +483,7 @@
                 </svg>
               </button>
             </div>
-            <p id="authFieldHelp" class="auth-helper">Seleccione una estación antes de ingresar la clave.</p>
+            <p id="authFieldHelp" class="auth-helper">Seleccioná una estación antes de ingresar la clave.</p>
             <p id="authError" class="auth-error" aria-live="polite" hidden>Clave incorrecta.</p>
           </div>
 
@@ -1043,7 +1090,7 @@
 
     setPasswordVisibility(false);
     clearAuthError();
-    setFieldHelp("Seleccione una estación antes de ingresar la clave.");
+    setFieldHelp("Seleccioná una estación antes de ingresar la clave.");
   }
 
   /**
@@ -1078,10 +1125,10 @@
         kicker.hidden = true;
       }
       if (title) title.textContent = "Programa de Prevención de Cáncer Colorrectal";
-      if (hint) hint.textContent = "Seleccioná la estación activa para esta sesión";
+      if (hint) hint.textContent = "Actualizá la estación activa para esta sesión";
       if (sectionTitleWrap) sectionTitleWrap.hidden = false;
-      if (sectionKicker) sectionKicker.textContent = "Selecciona";
-      if (sectionHeading) sectionHeading.textContent = "Estación saludable";
+      if (sectionKicker) sectionKicker.textContent = "Estación activa";
+      if (sectionHeading) sectionHeading.textContent = "Cambiar estación saludable";
 
       if (field) {
         field.hidden = true;
@@ -1100,7 +1147,7 @@
       const stationToSelect = currentStation ? currentStation.id : STATIONS[0].id;
       selectStation(stationToSelect, { focusInput: false });
       setFieldHelp(
-        "Seleccioná una estación y aplicá cambios. No se requiere clave en este modo.",
+        "Seleccioná una estación y aplicá los cambios. Este modo no requiere clave.",
       );
       syncPrimaryActionState();
       return;
@@ -1111,7 +1158,7 @@
       kicker.textContent = "Inicio de sesión";
     }
     if (title) title.textContent = "Programa de Prevención de Cáncer Colorrectal";
-    if (hint) hint.textContent = "Seleccioná la estación saludable";
+    if (hint) hint.textContent = "Seleccioná estación e ingresá la clave institucional";
     if (sectionTitleWrap) sectionTitleWrap.hidden = true;
 
     if (field) {
@@ -1136,7 +1183,7 @@
         input.disabled = true;
         input.value = "";
       }
-      setFieldHelp("Seleccione una estación antes de ingresar la clave.");
+      setFieldHelp("Seleccioná una estación antes de ingresar la clave.");
       syncPrimaryActionState();
     }
   }
@@ -1250,8 +1297,8 @@
     if (!station) {
       const { stations, grid } = getAuthControls();
       if (grid) grid.classList.add("is-error");
-      showAuthError("Seleccione una estación saludable.");
-      setFieldHelp("Seleccione una estación antes de continuar.", true);
+      showAuthError("Seleccioná una estación saludable.");
+      setFieldHelp("Seleccioná una estación antes de continuar.", true);
       const firstStation = stations[0];
       if (firstStation) firstStation.focus();
       return;
