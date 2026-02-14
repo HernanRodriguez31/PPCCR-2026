@@ -295,7 +295,7 @@ const HOME_ALGO_OUTCOME = Object.freeze({
 const HOME_ALGO_OUTCOME_TEXT = Object.freeze({
   [HOME_ALGO_OUTCOME.AGE_EXCLUDED]: "No incluye (<45)",
   [HOME_ALGO_OUTCOME.ACTIVE_SURVEILLANCE_EXCLUDED]:
-    "Exclusión por vigilancia activa. No se considera candidato a campaña de screening poblacional. En estos casos la recomendación es que la persona realice una consulta médica. No entregar FIT.",
+    "Seguimiento vigente. No se considera candidato a campaña de screening poblacional. En estos casos la recomendación es que la persona realice una consulta médica. No entregar FIT.",
   [HOME_ALGO_OUTCOME.HIGH_RISK_REFERRAL]:
     "Riesgo elevado. No se considera candidato a campaña de screening poblacional. En estos casos la recomendación es que la persona realice una consulta médica. No entregar FIT.",
   [HOME_ALGO_OUTCOME.FIT_CANDIDATE]: "Candidato a Test FIT",
@@ -1735,7 +1735,7 @@ function buildHomeAlgorithmModalReason(outcome, interview, labelMaps) {
       labelMaps?.step2 || new Map(),
     );
     if (items.length === 0) {
-      return "Motivo de exclusión: vigilancia activa.";
+      return "Motivo: seguimiento vigente.";
     }
     return `Motivo de exclusión: ${items.join(" | ")}`;
   }
@@ -1787,7 +1787,7 @@ function buildHomeAlgorithmSummaryText(interview, labelMaps, { includeJson = fal
     `Sexo: ${getHomeAlgorithmSexDisplay(interview?.step1)}`,
     `Incluye por edad: ${interview?.step1?.includedByAge ? "Sí" : "No"}`,
     "",
-    "Paso 2 - Vigilancia activa",
+    "Paso 2 - Seguimiento vigente",
     `Tiene exclusión: ${interview?.step2?.hasExclusion ? "Sí" : "No"}`,
     "Criterios marcados:",
     step2Lines,
