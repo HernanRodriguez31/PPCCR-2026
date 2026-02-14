@@ -833,21 +833,54 @@ export const submitAlgorithmStage1 = onRequest(
     try {
       sheets = await appendToGoogleSheets(stage1Record);
 
-      if (sheets.status === "saved" && typeof sheets.row === "number") {
-        const { sheetId, sheetTab } = getSheetsConfig();
-        await persistSheetIntegrationRow({
-          recordId: allocation.recordId,
-          row: sheets.row,
-          sheetId,
-          sheetTab,
-        });
+      // Sheets BLOQUEANTE: si no guardó, esto es error real.
+      if (sheets.status !== "saved" || typeof sheets.row !== "number") {
+        const cfg = getSheetsConfig();
+        const hint =
+          sheets.status === "not_configured"
+            ? `Sheets no configurado. Revisar secrets: PPCCR_STAGE1_SHEET_ID / PPCCR_STAGE1_SHEET_TAB / PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL / PPCCR_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY. sheetId="${cfg.sheetId}", tab="${cfg.sheetTab}", email="${cfg.serviceAccountEmail}"`
+            : `Sheets status inesperado: ${sheets.status}`;
+        throw new Error(hint);
       }
+
+      // Persistimos el row para poder actualizarlo en pasos 2/3/4.
+      const { sheetId, sheetTab } = getSheetsConfig();
+      await persistSheetIntegrationRow({
+        recordId: allocation.recordId,
+        row: sheets.row,
+        sheetId,
+        sheetTab,
+      });
     } catch (error) {
-      logger.error("No se pudo guardar Etapa 1 en Google Sheets.", error);
-      sheets = {
-        status: "error",
-        message: "No se pudo guardar en Google Sheets.",
-      };
+      const errMsg = error instanceof Error ? error.message : String(error);
+
+      logger.error("Etapa 1: fallo escritura en Google Sheets.", {
+        recordId: allocation.recordId,
+        participantNumber: allocation.participantNumber,
+        stationId: station.stationId,
+        error: errMsg,
+      });
+
+      // 500 REAL (Firestore ya quedó guardado, pero Sheets es obligatorio)
+      res.status(500).json({
+        ok: false,
+        message: "Etapa 1 guardada en Firestore, pero falló Google Sheets.",
+        participantNumber: allocation.participantNumber,
+        participantSequence: allocation.participantSequence,
+        stationId: station.stationId,
+        stationCode: station.stationCode,
+        outcome,
+        nextStep: ageMeetsInclusion ? 2 : 1,
+        firestore: {
+          status: "saved",
+          id: allocation.recordId,
+        },
+        sheets: {
+          status: "error",
+          message: errMsg,
+        },
+      });
+      return;
     }
 
     const firestore = {
