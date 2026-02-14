@@ -2561,7 +2561,24 @@ async function finalizeAndPersistHomeInterview(
     }
     return;
   }
-  finalizeHomeAlgorithmInterview(outcome, finalStep);
+
+  if (feedbackElement) {
+    setHomeAlgorithmFeedback(
+      feedbackElement,
+      "Paciente guardado correctamente. Preparando nueva entrevista...",
+      "success",
+    );
+  }
+
+  window.alert("✅ Paciente guardado correctamente en la Base de Datos.");
+  restartHomeAlgorithm({ confirmRestart: false });
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({
+    top: 0,
+    left: 0,
+    behavior: reduceMotion ? "auto" : "smooth",
+  });
 }
 
 function onHomeAlgorithmConfirmStep1() {
