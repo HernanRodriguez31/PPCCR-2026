@@ -205,29 +205,30 @@
             </div>
 
             <div class="hero-right" aria-label="Resumen del sitio">
-              <div class="mini-panels">
-                <article class="mini-panel mini-panel--primary" aria-label="Entrevista Inicial">
-                  <div class="mini-panel__header">
-                    <h3 class="mini-panel__title">Entrevista Inicial</h3>
-                    <span class="mini-panel__badge">4 pasos</span>
-                  </div>
-                  <p class="mini-panel__text">
-                    Entrevista guiada en 4 pasos. Registrá el resultado y guardá automáticamente.
+              <article class="hero-action-card" aria-label="Nueva Evaluación Clínica">
+                <div class="hero-action-card__copy">
+                  <h3 class="hero-action-card__title">Nueva Evaluación Clínica</h3>
+                  <p class="hero-action-card__subtitle">
+                    Protocolo de inclusión PPCCR 2026
                   </p>
-                  <ul class="mini-panel__meta">
-                    <li>Duración estimada: 1–2 min</li>
-                    <li>Guardado automático por paso</li>
-                    <li>Cierre asistido</li>
-                  </ul>
-                  <button
-                    id="startInterviewBtn"
-                    class="btn btn-primary mini-panel__cta"
-                    type="button"
-                    data-open-algo="true"
-                  >
-                    Iniciar entrevista
-                  </button>
-                </article>
+                </div>
+                <button
+                  id="startInterviewBtn"
+                  class="btn hero-action-card__btn"
+                  type="button"
+                  data-open-algo="true"
+                >
+                  <span class="hero-action-card__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9"></circle>
+                      <path d="M10 8.6v6.8l5-3.4z"></path>
+                    </svg>
+                  </span>
+                  <span>INICIAR PROTOCOLO</span>
+                </button>
+              </article>
+
+              <div class="mini-panels">
                 <a
                   class="mini-panel mini-panel--link"
                   href="#guias"
@@ -1523,9 +1524,9 @@
       <div class="ppccr-modal__card" role="document">
         <header class="ppccr-modal__header">
           <div class="ppccr-modal__titlewrap">
-            <h2 id="ppccr-algo-modal-title">Entrevista y Algoritmo Inicial</h2>
-            <p class="ppccr-modal__subtitle">Entrevista en 4 pasos</p>
+            <h2 id="ppccr-algo-modal-title">Entrevista Inicial</h2>
           </div>
+          <div id="modal-status-hud" class="modal-status-hud" aria-live="polite"></div>
           <button
             type="button"
             class="ppccr-modal__close"

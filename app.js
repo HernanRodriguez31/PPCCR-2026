@@ -1537,6 +1537,77 @@ function setHomeAlgorithmFeedback(element, message, tone = "neutral") {
   homeAlgorithmState.flowStatus.dataset.tone = tone;
 }
 
+function setHomeAlgorithmStatusHud({ tone = "neutral", text = "" } = {}) {
+  const hud = homeAlgorithmState?.statusHud;
+  if (!hud) return;
+
+  const normalizedTone = tone === "success" || tone === "danger" ? tone : "neutral";
+  const normalizedText = String(text || "").trim();
+
+  hud.textContent = "";
+  hud.dataset.state = normalizedTone;
+
+  if (!normalizedText) {
+    hud.hidden = true;
+    hud.setAttribute("aria-hidden", "true");
+    return;
+  }
+
+  const pill = document.createElement("span");
+  pill.className = "modal-status-hud__pill";
+  pill.textContent = normalizedText;
+
+  hud.hidden = false;
+  hud.setAttribute("aria-hidden", "false");
+  hud.append(pill);
+}
+
+function renderHomeAlgorithmHeaderHud() {
+  if (!homeAlgorithmState) return;
+
+  if (homeAlgorithmState.finalized && homeAlgorithmState.interview.outcome) {
+    if (homeAlgorithmState.interview.outcome === HOME_ALGO_OUTCOME.FIT_CANDIDATE) {
+      setHomeAlgorithmStatusHud({ tone: "success", text: "✅ APTO FIT" });
+      return;
+    }
+    if (homeAlgorithmState.interview.outcome === HOME_ALGO_OUTCOME.HIGH_RISK_REFERRAL) {
+      setHomeAlgorithmStatusHud({ tone: "danger", text: "⛔ RIESGO ELEVADO" });
+      return;
+    }
+    setHomeAlgorithmStatusHud({ tone: "danger", text: "⛔ CRITERIO DE EXCLUSIÓN" });
+    return;
+  }
+
+  if (homeAlgorithmState.step3Reviewed) {
+    if (homeAlgorithmState.interview.step3.hasHighRisk) {
+      setHomeAlgorithmStatusHud({ tone: "danger", text: "⛔ RIESGO ELEVADO" });
+      return;
+    }
+    setHomeAlgorithmStatusHud({ tone: "success", text: "✅ APTO FIT" });
+    return;
+  }
+
+  if (homeAlgorithmState.step2Reviewed) {
+    if (homeAlgorithmState.interview.step2.hasExclusion) {
+      setHomeAlgorithmStatusHud({ tone: "danger", text: "⛔ CRITERIO DE EXCLUSIÓN" });
+      return;
+    }
+    setHomeAlgorithmStatusHud({ tone: "success", text: "✅ APTO FIT" });
+    return;
+  }
+
+  if (homeAlgorithmState.step1Confirmed) {
+    if (homeAlgorithmState.interview.step1.includedByAge) {
+      setHomeAlgorithmStatusHud({ tone: "success", text: "✅ APTO FIT" });
+      return;
+    }
+    setHomeAlgorithmStatusHud({ tone: "danger", text: "⛔ CRITERIO DE EXCLUSIÓN" });
+    return;
+  }
+
+  setHomeAlgorithmStatusHud({ tone: "neutral", text: "" });
+}
+
 function setHomeAlgorithmButtonLoading(
   button,
   { loading = false, label = "Guardando..." } = {},
@@ -2159,7 +2230,6 @@ function renderHomeAlgorithmStep1State() {
   }
 
   if (includedByAge) {
-    homeAlgorithmState.step1Ok.hidden = false;
     homeAlgorithmState.step1Edit.hidden = false;
     homeAlgorithmState.step1Continue.hidden = false;
     setHomeAlgorithmFeedback(
@@ -2170,7 +2240,6 @@ function renderHomeAlgorithmStep1State() {
     return;
   }
 
-  homeAlgorithmState.step1Stop.hidden = false;
   homeAlgorithmState.step1Edit.hidden = false;
   homeAlgorithmState.step1Finish.hidden = false;
   setHomeAlgorithmFeedback(
@@ -2203,7 +2272,6 @@ function renderHomeAlgorithmStep2State() {
   }
 
   if (homeAlgorithmState.interview.step2.hasExclusion) {
-    homeAlgorithmState.step2Stop.hidden = false;
     homeAlgorithmState.step2Edit.hidden = false;
     homeAlgorithmState.step2Finish.hidden = false;
     homeAlgorithmState.step2Back.hidden = false;
@@ -2215,7 +2283,6 @@ function renderHomeAlgorithmStep2State() {
     return;
   }
 
-  homeAlgorithmState.step2Ok.hidden = false;
   homeAlgorithmState.step2Edit.hidden = false;
   homeAlgorithmState.step2Continue.hidden = false;
   homeAlgorithmState.step2Back.hidden = false;
@@ -2249,7 +2316,6 @@ function renderHomeAlgorithmStep3State() {
   }
 
   if (homeAlgorithmState.interview.step3.hasHighRisk) {
-    homeAlgorithmState.step3Stop.hidden = false;
     homeAlgorithmState.step3Edit.hidden = false;
     homeAlgorithmState.step3Finish.hidden = false;
     homeAlgorithmState.step3Back.hidden = false;
@@ -2261,7 +2327,6 @@ function renderHomeAlgorithmStep3State() {
     return;
   }
 
-  homeAlgorithmState.step3Ok.hidden = false;
   homeAlgorithmState.step3Edit.hidden = false;
   homeAlgorithmState.step3Continue.hidden = false;
   homeAlgorithmState.step3Back.hidden = false;
@@ -2374,6 +2439,7 @@ function renderHomeAlgorithm() {
   renderHomeAlgorithmStep2State();
   renderHomeAlgorithmStep3State();
   renderHomeAlgorithmStep4State();
+  renderHomeAlgorithmHeaderHud();
   renderHomeAlgorithmStepLocks();
   mountHomeAlgorithmStepActionsFooter();
   mountHomeAlgorithmFlowStatus();
@@ -3906,6 +3972,7 @@ function initHomeAlgorithm() {
   const step4Finish = $("#home-algo-step4-finish");
 
   const statusChip = $("#home-algo-status-chip");
+  const statusHud = $("#modal-status-hud");
   const flowStatus = $("#home-algo-flow-status");
   const restartBtn = $("#home-algo-restart");
 
@@ -4045,6 +4112,7 @@ function initHomeAlgorithm() {
     step4Finish,
 
     statusChip,
+    statusHud,
     flowStatus,
     restartBtn,
 
