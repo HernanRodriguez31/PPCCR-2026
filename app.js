@@ -46,7 +46,7 @@ const CONFIG = {
         key: "algoritmoRiesgo",
         title: "Algoritmo / Criterios de riesgo",
         meta: "Ir a sección",
-        url: "#algoritmo",
+        url: "#algoritmo-section",
       },
       {
         key: "rolesResponsabilidades",
