@@ -2308,6 +2308,32 @@ body.page-home #guias.section {
   height: clamp(520px, 72vh, 760px);
 }
 
+/* KPI desktop edge refinement: evita corte óptico en vértices del reporte */
+@media (min-width: 769px) {
+  .page-home #kpis .embed-shell--looker {
+    padding: 3px;
+    border-radius: 16px;
+    border-color: rgba(13, 79, 145, 0.16);
+    background: linear-gradient(
+      180deg,
+      rgba(249, 253, 255, 0.98),
+      rgba(237, 246, 255, 0.95)
+    );
+  }
+
+  .page-home #kpis #looker-iframe,
+  .page-home #kpis .embed-shell--looker .embed-iframe {
+    border-radius: 0;
+    background: #ffffff;
+  }
+
+  .page-home #kpis .embed-shell--looker .embed-skeleton,
+  .page-home #kpis .embed-shell--looker .embed-fallback--overlay {
+    inset: 3px;
+    border-radius: 11px;
+  }
+}
+
 @supports (height: 100dvh) {
   .embed-shell--looker {
     height: clamp(680px, 82dvh, 860px);
@@ -10747,5 +10773,49 @@ body.page-home .ppccr-modal.modal--interview .modal-status-hud {
     flex: 1 1 0;
     border-radius: 12px;
     font-size: 0.9rem;
+  }
+}
+
+/* KPI dashboard frameless shell:
+   el contenedor no compite con el borde nativo del reporte */
+body.page-home #kpis .embed-card {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.page-home #kpis .embed-shell--looker {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+body.page-home #kpis #looker-iframe,
+body.page-home #kpis .embed-shell--looker .embed-iframe {
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+body.page-home #kpis .embed-shell--looker .embed-skeleton,
+body.page-home #kpis .embed-shell--looker .embed-fallback--overlay {
+  inset: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* KPI desktop: mostrar un poco más de contenido inferior del reporte */
+@media (min-width: 769px) {
+  body.page-home #kpis .embed-shell--looker {
+    height: clamp(754px, 85.4vh, 938px) !important;
+    overflow: hidden !important;
+  }
+
+  body.page-home #kpis #looker-iframe,
+  body.page-home #kpis .embed-shell--looker .embed-iframe {
+    -webkit-clip-path: inset(0 0 18px 0);
+    clip-path: inset(0 0 18px 0);
   }
 }
