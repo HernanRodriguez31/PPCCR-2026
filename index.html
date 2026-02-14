@@ -17,6 +17,143 @@
     <script src="/host-guard.js"></script>
     <link rel="icon" href="assets/favicon.png" />
     <link rel="stylesheet" href="styles.css" />
+    <style>
+      .hero-algo-launch {
+        margin: 1rem 0 1.35rem;
+        display: flex;
+        justify-content: center;
+      }
+
+      .hero-algo-launch__btn {
+        width: min(100%, 24rem);
+        min-height: 58px;
+        padding: 0.9rem 1.5rem;
+        font-size: 1.08rem;
+        font-weight: 800;
+        box-shadow: 0 18px 32px rgba(8, 38, 74, 0.24);
+      }
+
+      .algo-teaser {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 22px;
+        border-radius: 20px;
+        border: 1px solid rgba(15, 95, 166, 0.2);
+        background:
+          radial-gradient(circle at 12% -20%, rgba(79, 184, 255, 0.16), transparent 40%),
+          linear-gradient(162deg, rgba(255, 255, 255, 0.98), rgba(233, 246, 255, 0.9));
+        box-shadow:
+          0 22px 48px rgba(2, 6, 23, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 0.88);
+        text-align: center;
+      }
+
+      .algo-teaser__title {
+        margin: 0;
+        color: var(--blue-950);
+        font-size: clamp(1.12rem, 2.2vw, 1.3rem);
+      }
+
+      .algo-teaser__text {
+        margin: 10px 0 0;
+        color: var(--muted);
+      }
+
+      .algo-teaser__actions {
+        margin-top: 16px;
+        display: flex;
+        justify-content: center;
+      }
+
+      .ppccr-modal[hidden] {
+        display: none !important;
+      }
+
+      .ppccr-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: grid;
+        place-items: center;
+        padding: clamp(8px, 2vw, 20px);
+      }
+
+      .ppccr-modal__backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(3, 13, 29, 0.62);
+      }
+
+      .ppccr-modal__card {
+        position: relative;
+        z-index: 1;
+        width: min(1120px, 100%);
+        max-height: calc(100vh - (2 * clamp(8px, 2vw, 20px)));
+        border-radius: 20px;
+        border: 1px solid rgba(15, 95, 166, 0.2);
+        background: linear-gradient(165deg, rgba(255, 255, 255, 0.99), rgba(237, 247, 255, 0.95));
+        box-shadow:
+          0 30px 56px rgba(2, 6, 23, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .ppccr-modal__header {
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(15, 95, 166, 0.14);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .ppccr-modal__header h2 {
+        margin: 0;
+        color: var(--blue-950);
+        font-size: clamp(1.06rem, 1.4vw, 1.25rem);
+      }
+
+      .ppccr-modal__close {
+        width: 40px;
+        height: 40px;
+        border: 1px solid rgba(15, 95, 166, 0.28);
+        border-radius: 50%;
+        background: #fff;
+        color: var(--blue-900);
+        font-size: 1.4rem;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      .ppccr-modal__body {
+        padding: clamp(0.75rem, 2vw, 1.25rem);
+        overflow: auto;
+      }
+
+      #ppccr-algo-modal .home-algo {
+        margin: 0;
+      }
+
+      #ppccr-algo-modal .home-algo__modal {
+        z-index: 130;
+      }
+
+      body.ppccr-modal-open {
+        overflow: hidden;
+      }
+
+      @media (max-width: 760px) {
+        .hero-algo-launch__btn {
+          width: 100%;
+        }
+
+        .ppccr-modal__header {
+          padding: 12px;
+        }
+      }
+    </style>
     <script src="/app.js" defer></script>
     <script src="/auth-gate.js" defer></script>
   </head>
@@ -184,6 +321,17 @@
                 tu navegador.
               </p>
 
+              <div class="hero-algo-launch">
+                <button
+                  type="button"
+                  class="btn btn-primary hero-algo-launch__btn"
+                  id="ppccr-open-algo"
+                  data-open-algo="true"
+                >
+                  Iniciar nuevo protocolo
+                </button>
+              </div>
+
               <div
                 class="hero-cta"
                 role="group"
@@ -280,11 +428,29 @@
               Algoritmo Dinámico de Inclusión
             </h2>
             <p class="section-subtitle">
-              Flujo operativo cerrado en 4 pasos con validación clínica y
-              cierre de entrevista.
+              Flujo operativo cerrado en 4 pasos con validación clínica y cierre
+              de entrevista, ahora disponible en modal.
             </p>
           </header>
 
+          <article class="algo-teaser" aria-label="Acceso al algoritmo">
+            <h3 class="algo-teaser__title">Iniciar protocolo de inclusión</h3>
+            <p class="algo-teaser__text">
+              Abrí el algoritmo en modo focal para completar la entrevista sin
+              distracciones.
+            </p>
+            <div class="algo-teaser__actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-open-algo="true"
+              >
+                Abrir algoritmo
+              </button>
+            </div>
+          </article>
+
+          <div id="ppccr-algo-source" hidden>
           <article
             class="home-algo"
             id="home-algo"
@@ -626,7 +792,7 @@
                       data-home-algo-step2-code="COLONOSCOPY_NORMAL_10Y"
                     />
                     <span
-                      >Colonoscopía normal en los últimos 10 años</span
+                      >Estudio colorrectal normal en los últimos 10 años</span
                     >
                   </label>
                   <label class="home-algo__check">
@@ -636,7 +802,7 @@
                       data-home-algo-step2-code="LOW_GRADE_ADENOMA_SURVEILLANCE_5Y"
                     />
                     <span
-                      >Colonoscopía con adenomas bajo grado con vigilancia
+                      >Estudio colorrectal con adenomas bajo grado con vigilancia
                       vigente (últimos 5 años)</span
                     >
                   </label>
@@ -647,7 +813,7 @@
                       data-home-algo-step2-code="HIGH_RISK_ADENOMA_SURVEILLANCE_3Y"
                     />
                     <span
-                      >Colonoscopía con adenomas de alto riesgo con vigilancia
+                      >Estudio colorrectal con adenomas de alto riesgo con vigilancia
                       vigente (últimos 3 años)</span
                     >
                   </label>
@@ -658,7 +824,7 @@
                       data-home-algo-step2-code="LARGE_POLYP_INCOMPLETE_RESECTION_6M"
                     />
                     <span
-                      >Colonoscopía con pólipos grandes o resección incompleta
+                      >Estudio colorrectal con pólipos grandes o resección incompleta
                       con control pendiente/reciente (últimos 6 meses)</span
                     >
                   </label>
@@ -1134,6 +1300,7 @@
               </div>
             </div>
           </div>
+          </div>
         </div>
       </section>
       <!-- REGISTRO -->
@@ -1450,6 +1617,102 @@
       </div>
       <div id="telefsStage" class="telefs__stage"></div>
     </div>
+
+    <div
+      id="ppccr-algo-modal"
+      class="ppccr-modal"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ppccr-algo-modal-title"
+    >
+      <div class="ppccr-modal__backdrop" data-algo-close="true"></div>
+      <div class="ppccr-modal__card" role="document">
+        <header class="ppccr-modal__header">
+          <h2 id="ppccr-algo-modal-title">Algoritmo de Inclusión</h2>
+          <button
+            type="button"
+            class="ppccr-modal__close"
+            aria-label="Cerrar"
+            data-algo-close="true"
+          >
+            ×
+          </button>
+        </header>
+        <div class="ppccr-modal__body" id="ppccr-algo-modal-content"></div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const source = document.getElementById("ppccr-algo-source");
+        const flowModal = document.getElementById("ppccr-algo-modal");
+        const flowModalBody = document.getElementById("ppccr-algo-modal-content");
+        if (!source || !flowModal || !flowModalBody) return;
+
+        while (source.firstChild) {
+          flowModalBody.appendChild(source.firstChild);
+        }
+
+        const finishModal = document.getElementById("home-algo-finish-modal");
+        const openers = Array.from(
+          document.querySelectorAll("[data-open-algo='true']"),
+        );
+
+        const closeFlowModal = () => {
+          flowModal.hidden = true;
+          document.body.classList.remove("ppccr-modal-open");
+          if (finishModal && !finishModal.hidden) {
+            finishModal.hidden = true;
+            finishModal.setAttribute("aria-hidden", "true");
+          }
+        };
+
+        const resetHomeAlgorithm = () => {
+          if (typeof restartHomeAlgorithm === "function") {
+            restartHomeAlgorithm({ confirmRestart: false });
+            return;
+          }
+          const fallbackRestartButton = document.getElementById("home-algo-restart");
+          if (fallbackRestartButton) {
+            fallbackRestartButton.click();
+          }
+        };
+
+        const openFlowModal = () => {
+          resetHomeAlgorithm();
+          flowModal.hidden = false;
+          document.body.classList.add("ppccr-modal-open");
+          const closeButton = flowModal.querySelector(".ppccr-modal__close");
+          if (closeButton instanceof HTMLElement) {
+            closeButton.focus();
+          }
+        };
+
+        openers.forEach((opener) => {
+          opener.addEventListener("click", (event) => {
+            event.preventDefault();
+            openFlowModal();
+          });
+        });
+
+        flowModal.addEventListener("click", (event) => {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+          const shouldClose = target.closest("[data-algo-close='true']");
+          if (shouldClose) {
+            closeFlowModal();
+          }
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (flowModal.hidden || event.key !== "Escape") return;
+          if (finishModal && !finishModal.hidden) return;
+          event.preventDefault();
+          closeFlowModal();
+        });
+      })();
+    </script>
 
     <noscript>
       <div class="noscript">
