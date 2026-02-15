@@ -8747,6 +8747,7 @@ html.telefs-open {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  cursor: pointer;
   overflow: hidden;
   isolation: isolate;
   transition: box-shadow 180ms ease;
