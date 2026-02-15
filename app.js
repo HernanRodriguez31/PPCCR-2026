@@ -1141,8 +1141,10 @@ function renderEmbeds() {
       lookerHint.textContent = "";
       lookerHint.hidden = true;
     }
-    lookerFullscreenBtn.removeAttribute("aria-disabled");
-    lookerFullscreenBtn.disabled = false;
+    if (lookerFullscreenBtn) {
+      lookerFullscreenBtn.removeAttribute("aria-disabled");
+      lookerFullscreenBtn.disabled = false;
+    }
   } else {
     lookerIframe.removeAttribute("src");
     clearEmbedTimeout(lookerWrap);
@@ -1153,8 +1155,10 @@ function renderEmbeds() {
       lookerHint.hidden = false;
       lookerHint.textContent = "Falta configurar URL de embed.";
     }
-    lookerFullscreenBtn.setAttribute("aria-disabled", "true");
-    lookerFullscreenBtn.disabled = true;
+    if (lookerFullscreenBtn) {
+      lookerFullscreenBtn.setAttribute("aria-disabled", "true");
+      lookerFullscreenBtn.disabled = true;
+    }
   }
 
   // Calendar
