@@ -317,9 +317,18 @@ const HOME_ALGO_SEX = Object.freeze({
 const HOME_ALGO_STEP4_FIELDS = Object.freeze({
   fullName: "fullName",
   documentId: "documentId",
+  kitNumber: "kitNumber",
   email: "email",
   phone: "phone",
 });
+
+const HOME_ALGO_REQUIRED_STEP4_FIELDS = Object.freeze([
+  HOME_ALGO_STEP4_FIELDS.fullName,
+  HOME_ALGO_STEP4_FIELDS.documentId,
+  HOME_ALGO_STEP4_FIELDS.kitNumber,
+  HOME_ALGO_STEP4_FIELDS.email,
+  HOME_ALGO_STEP4_FIELDS.phone,
+]);
 
 const HOME_ALGO_PRIMARY_BUTTON_CLASS = "btn btn-primary";
 const HOME_ALGO_SECONDARY_BUTTON_CLASS = "btn btn-outline-secondary";
@@ -357,6 +366,10 @@ let interviewState = {
 /* ----------------------------- Helpers ----------------------------- */
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
+
+function getRequiredElement(id, ctx = document) {
+  return $(`#${id}`, ctx);
+}
 
 function userPrefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1359,7 +1372,7 @@ function createHomeAlgorithmInterviewSkeleton(stationDetail = {}) {
     step1: { age: null, sex: "", sexOtherDetail: "", includedByAge: false },
     step2: { exclusions: [], hasExclusion: false },
     step3: { riskFlags: [], hasHighRisk: false },
-    step4: { fullName: "", documentId: "", email: "", phone: "" },
+    step4: { fullName: "", documentId: "", kitNumber: "", email: "", phone: "" },
     outcome: "",
   };
 }
@@ -1446,6 +1459,9 @@ function normalizeHomeAlgorithmInterview(rawInterview, stationDetail = {}) {
 
   normalized.step4.fullName = String(source?.step4?.fullName || "").trim();
   normalized.step4.documentId = String(source?.step4?.documentId || "").trim();
+  normalized.step4.kitNumber = String(source?.step4?.kitNumber || "")
+    .trim()
+    .replace(/\s+/g, "");
   normalized.step4.email = String(source?.step4?.email || "").trim();
   normalized.step4.phone = String(source?.step4?.phone || "").trim();
 
@@ -1836,6 +1852,7 @@ function buildHomeAlgorithmSummaryText(interview, labelMaps, { includeJson = fal
     "Paso 4 - Datos de contacto",
     `Apellido y nombre: ${interview?.step4?.fullName || "-"}`,
     `Documento: ${interview?.step4?.documentId || "-"}`,
+    `Número de kit FIT: ${interview?.step4?.kitNumber || "-"}`,
     `Email: ${interview?.step4?.email || "-"}`,
     `Celular: ${interview?.step4?.phone || "-"}`,
   ];
@@ -1890,6 +1907,16 @@ function clearHomeAlgorithmFieldError(field) {
     return;
   }
 
+  if (field === HOME_ALGO_STEP4_FIELDS.kitNumber && homeAlgorithmState.kitNumberInput) {
+    homeAlgorithmState.kitNumberInput.classList.remove("is-invalid");
+    homeAlgorithmState.kitNumberInput.removeAttribute("aria-invalid");
+    if (homeAlgorithmState.kitNumberError) {
+      homeAlgorithmState.kitNumberError.textContent = "";
+      homeAlgorithmState.kitNumberError.hidden = true;
+    }
+    return;
+  }
+
   if (field === HOME_ALGO_STEP4_FIELDS.email && homeAlgorithmState.emailInput) {
     homeAlgorithmState.emailInput.classList.remove("is-invalid");
     homeAlgorithmState.emailInput.removeAttribute("aria-invalid");
@@ -1909,8 +1936,12 @@ function clearHomeAlgorithmAllFieldErrors() {
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP1_FIELDS.sexOther);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.fullName);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.documentId);
+  clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.kitNumber);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.email);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.phone);
+  if (homeAlgorithmState) {
+    homeAlgorithmState.step4FieldErrors = {};
+  }
 }
 
 function markHomeAlgorithmFieldError(field) {
@@ -1951,6 +1982,19 @@ function markHomeAlgorithmFieldError(field) {
   if (field === HOME_ALGO_STEP4_FIELDS.documentId && homeAlgorithmState.documentIdInput) {
     homeAlgorithmState.documentIdInput.classList.add("is-invalid");
     homeAlgorithmState.documentIdInput.setAttribute("aria-invalid", "true");
+    return;
+  }
+
+  if (field === HOME_ALGO_STEP4_FIELDS.kitNumber && homeAlgorithmState.kitNumberInput) {
+    homeAlgorithmState.kitNumberInput.classList.add("is-invalid");
+    homeAlgorithmState.kitNumberInput.setAttribute("aria-invalid", "true");
+    if (homeAlgorithmState.kitNumberError) {
+      const message =
+        homeAlgorithmState.step4FieldErrors?.[HOME_ALGO_STEP4_FIELDS.kitNumber] ||
+        "Ingresá el número de kit FIT.";
+      homeAlgorithmState.kitNumberError.textContent = message;
+      homeAlgorithmState.kitNumberError.hidden = false;
+    }
     return;
   }
 
@@ -2001,6 +2045,11 @@ function focusHomeAlgorithmField(field) {
     return;
   }
 
+  if (field === HOME_ALGO_STEP4_FIELDS.kitNumber && homeAlgorithmState.kitNumberInput) {
+    homeAlgorithmState.kitNumberInput.focus();
+    return;
+  }
+
   if (field === HOME_ALGO_STEP4_FIELDS.email && homeAlgorithmState.emailInput) {
     homeAlgorithmState.emailInput.focus();
     return;
@@ -2011,7 +2060,7 @@ function focusHomeAlgorithmField(field) {
   }
 }
 
-function applyHomeAlgorithmFieldErrors(fields, { focusFirst = false } = {}) {
+function applyHomeAlgorithmFieldErrors(fields, { focusFirst = false, errors = {} } = {}) {
   const unique = [];
   (fields || []).forEach((field) => {
     if (!field || unique.includes(field)) return;
@@ -2019,6 +2068,10 @@ function applyHomeAlgorithmFieldErrors(fields, { focusFirst = false } = {}) {
   });
 
   clearHomeAlgorithmAllFieldErrors();
+  if (homeAlgorithmState) {
+    homeAlgorithmState.step4FieldErrors =
+      errors && typeof errors === "object" ? { ...errors } : {};
+  }
   unique.forEach((field) => markHomeAlgorithmFieldError(field));
 
   if (focusFirst && unique.length > 0) {
@@ -2154,6 +2207,7 @@ function hydrateHomeAlgorithmFormFromInterview() {
 
   homeAlgorithmState.fullNameInput.value = homeAlgorithmState.interview.step4.fullName || "";
   homeAlgorithmState.documentIdInput.value = homeAlgorithmState.interview.step4.documentId || "";
+  homeAlgorithmState.kitNumberInput.value = homeAlgorithmState.interview.step4.kitNumber || "";
   homeAlgorithmState.emailInput.value = homeAlgorithmState.interview.step4.email || "";
   homeAlgorithmState.phoneInput.value = homeAlgorithmState.interview.step4.phone || "";
 }
@@ -2461,6 +2515,7 @@ function renderHomeAlgorithmStepLocks() {
 
   homeAlgorithmState.fullNameInput.disabled = lockStep4;
   homeAlgorithmState.documentIdInput.disabled = lockStep4;
+  homeAlgorithmState.kitNumberInput.disabled = lockStep4;
   homeAlgorithmState.emailInput.disabled = lockStep4;
   homeAlgorithmState.phoneInput.disabled = lockStep4;
   homeAlgorithmState.step4Finish.disabled = lockStep4;
@@ -2634,6 +2689,7 @@ function syncInterviewStateFromInterview({ status = interviewState.status } = {}
     step4: {
       fullName: homeAlgorithmState.interview.step4.fullName || "",
       documentId: homeAlgorithmState.interview.step4.documentId || "",
+      kitNumber: homeAlgorithmState.interview.step4.kitNumber || "",
       email: homeAlgorithmState.interview.step4.email || "",
       phone: homeAlgorithmState.interview.step4.phone || "",
     },
@@ -2650,6 +2706,7 @@ function clearInterviewAfterStep1() {
   homeAlgorithmState.interview.step4 = {
     fullName: "",
     documentId: "",
+    kitNumber: "",
     email: "",
     phone: "",
   };
@@ -2661,6 +2718,7 @@ function clearInterviewAfterStep1() {
   });
   homeAlgorithmState.fullNameInput.value = "";
   homeAlgorithmState.documentIdInput.value = "";
+  homeAlgorithmState.kitNumberInput.value = "";
   homeAlgorithmState.emailInput.value = "";
   homeAlgorithmState.phoneInput.value = "";
   syncInterviewStateFromInterview();
@@ -2673,6 +2731,7 @@ function clearInterviewAfterStep2() {
   homeAlgorithmState.interview.step4 = {
     fullName: "",
     documentId: "",
+    kitNumber: "",
     email: "",
     phone: "",
   };
@@ -2681,6 +2740,7 @@ function clearInterviewAfterStep2() {
   });
   homeAlgorithmState.fullNameInput.value = "";
   homeAlgorithmState.documentIdInput.value = "";
+  homeAlgorithmState.kitNumberInput.value = "";
   homeAlgorithmState.emailInput.value = "";
   homeAlgorithmState.phoneInput.value = "";
   syncInterviewStateFromInterview();
@@ -2691,11 +2751,13 @@ function clearInterviewAfterStep3() {
   homeAlgorithmState.interview.step4 = {
     fullName: "",
     documentId: "",
+    kitNumber: "",
     email: "",
     phone: "",
   };
   homeAlgorithmState.fullNameInput.value = "";
   homeAlgorithmState.documentIdInput.value = "";
+  homeAlgorithmState.kitNumberInput.value = "";
   homeAlgorithmState.emailInput.value = "";
   homeAlgorithmState.phoneInput.value = "";
   syncInterviewStateFromInterview();
@@ -2740,6 +2802,15 @@ async function saveHomeAlgorithmInterview(finalResult) {
       homeAlgorithmState.maxUnlockedStep >= ALGORITHM_HOME.steps.RISK);
   const reachedStep4 =
     homeAlgorithmState && homeAlgorithmState.maxUnlockedStep >= ALGORITHM_HOME.steps.DECISION;
+  const step4Payload = reachedStep4
+    ? {
+        fullName: interviewState.step4.fullName,
+        documentId: interviewState.step4.documentId,
+        kitNumber: interviewState.step4.kitNumber,
+        email: interviewState.step4.email,
+        phone: interviewState.step4.phone,
+      }
+    : null;
 
   const payload = {
     participantId,
@@ -2765,12 +2836,14 @@ async function saveHomeAlgorithmInterview(finalResult) {
       : null,
     step4Data: reachedStep4
       ? {
-          name: interviewState.step4.fullName,
-          dni: interviewState.step4.documentId,
-          email: interviewState.step4.email,
-          phone: interviewState.step4.phone,
+          name: step4Payload.fullName,
+          dni: step4Payload.documentId,
+          kitNumber: step4Payload.kitNumber,
+          email: step4Payload.email,
+          phone: step4Payload.phone,
         }
       : null,
+    step4: step4Payload,
   };
 
   console.log("🟡 Enviando entrevista final:", payload);
@@ -3136,23 +3209,40 @@ function getHomeAlgorithmStep4Values() {
 
   const fullName = String(homeAlgorithmState.fullNameInput.value || "").trim();
   const documentId = String(homeAlgorithmState.documentIdInput.value || "").trim();
+  const kitNumber = String(homeAlgorithmState.kitNumberInput.value || "")
+    .trim()
+    .replace(/\s+/g, "");
   const email = String(homeAlgorithmState.emailInput.value || "").trim();
   const phone = String(homeAlgorithmState.phoneInput.value || "").trim();
 
-  const invalidFields = [];
+  const errors = {};
 
-  if (!fullName) invalidFields.push(HOME_ALGO_STEP4_FIELDS.fullName);
-  if (!documentId) invalidFields.push(HOME_ALGO_STEP4_FIELDS.documentId);
+  if (!fullName) {
+    errors[HOME_ALGO_STEP4_FIELDS.fullName] = "Ingresá apellido y nombre.";
+  }
+  if (!documentId) {
+    errors[HOME_ALGO_STEP4_FIELDS.documentId] = "Ingresá el documento.";
+  }
+  if (!kitNumber) {
+    errors[HOME_ALGO_STEP4_FIELDS.kitNumber] = "Ingresá el número de kit FIT.";
+  }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!email || !emailRegex.test(email)) invalidFields.push(HOME_ALGO_STEP4_FIELDS.email);
-  if (!phone) invalidFields.push(HOME_ALGO_STEP4_FIELDS.phone);
+  if (!email || !emailRegex.test(email)) {
+    errors[HOME_ALGO_STEP4_FIELDS.email] = "Ingresá un email válido.";
+  }
+  if (!phone) {
+    errors[HOME_ALGO_STEP4_FIELDS.phone] = "Ingresá un celular.";
+  }
+
+  const invalidFields = HOME_ALGO_REQUIRED_STEP4_FIELDS.filter((field) => Boolean(errors[field]));
 
   if (invalidFields.length > 0) {
     return {
       ok: false,
       message: "Completá todos los datos de contacto obligatorios.",
       invalidFields,
+      errors,
     };
   }
 
@@ -3161,10 +3251,23 @@ function getHomeAlgorithmStep4Values() {
     values: {
       fullName,
       documentId,
+      kitNumber,
       email,
       phone,
     },
   };
+}
+
+function isHomeAlgorithmStep4Complete(step4Values = {}) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return HOME_ALGO_REQUIRED_STEP4_FIELDS.every((field) => {
+    const value = String(step4Values[field] || "").trim();
+    if (!value) return false;
+    if (field === HOME_ALGO_STEP4_FIELDS.email) {
+      return emailRegex.test(value);
+    }
+    return true;
+  });
 }
 
 function onHomeAlgorithmStep4InputChanged() {
@@ -3176,6 +3279,11 @@ function onHomeAlgorithmStep4InputChanged() {
   homeAlgorithmState.interview.step4.documentId = String(
     homeAlgorithmState.documentIdInput.value || "",
   ).trim();
+  homeAlgorithmState.interview.step4.kitNumber = String(
+    homeAlgorithmState.kitNumberInput.value || "",
+  )
+    .trim()
+    .replace(/\s+/g, "");
   homeAlgorithmState.interview.step4.email = String(
     homeAlgorithmState.emailInput.value || "",
   ).trim();
@@ -3185,12 +3293,15 @@ function onHomeAlgorithmStep4InputChanged() {
 
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.fullName);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.documentId);
+  clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.kitNumber);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.email);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.phone);
 
   setHomeAlgorithmFeedback(
     homeAlgorithmState.step4Feedback,
-    "Completá los datos de contacto para cerrar como candidato FIT.",
+    isHomeAlgorithmStep4Complete(homeAlgorithmState.interview.step4)
+      ? "Datos completos. Podés finalizar la entrevista."
+      : "Completá los datos de contacto para cerrar como candidato FIT.",
     "neutral",
   );
 
@@ -3204,7 +3315,10 @@ async function onHomeAlgorithmFinishStep4() {
   clearHomeAlgorithmAllFieldErrors();
   const result = getHomeAlgorithmStep4Values();
   if (!result.ok) {
-    applyHomeAlgorithmFieldErrors(result.invalidFields, { focusFirst: true });
+    applyHomeAlgorithmFieldErrors(result.invalidFields, {
+      focusFirst: true,
+      errors: result.errors,
+    });
     setHomeAlgorithmFeedback(homeAlgorithmState.step4Feedback, result.message, "danger");
     return;
   }
@@ -3212,6 +3326,7 @@ async function onHomeAlgorithmFinishStep4() {
   homeAlgorithmState.interview.step4 = {
     fullName: result.values.fullName,
     documentId: result.values.documentId,
+    kitNumber: result.values.kitNumber,
     email: result.values.email,
     phone: result.values.phone,
   };
@@ -3891,6 +4006,7 @@ function homeAlgorithmHasMeaningfulData() {
       i.step3.riskFlags.length > 0 ||
       i.step4.fullName ||
       i.step4.documentId ||
+      i.step4.kitNumber ||
       i.step4.email ||
       i.step4.phone,
   );
@@ -3993,6 +4109,8 @@ function initHomeAlgorithm() {
 
   const fullNameInput = $("#home-algo-full-name");
   const documentIdInput = $("#home-algo-document-id");
+  const kitNumberInput = getRequiredElement("home-algo-kit-number", root);
+  const kitNumberError = getRequiredElement("home-algo-kit-number-error", root);
   const emailInput = $("#home-algo-email");
   const phoneInput = $("#home-algo-phone");
   const step4Feedback = $("#home-algo-step4-feedback");
@@ -4050,6 +4168,8 @@ function initHomeAlgorithm() {
     !step3Back ||
     !fullNameInput ||
     !documentIdInput ||
+    !kitNumberInput ||
+    !kitNumberError ||
     !emailInput ||
     !phoneInput ||
     !step4Feedback ||
@@ -4133,8 +4253,11 @@ function initHomeAlgorithm() {
 
     fullNameInput,
     documentIdInput,
+    kitNumberInput,
+    kitNumberError,
     emailInput,
     phoneInput,
+    step4FieldErrors: {},
     step4Feedback,
     step4Edit,
     step4Back,
@@ -4316,10 +4439,12 @@ function initHomeAlgorithm() {
   [
     homeAlgorithmState.fullNameInput,
     homeAlgorithmState.documentIdInput,
+    homeAlgorithmState.kitNumberInput,
     homeAlgorithmState.emailInput,
     homeAlgorithmState.phoneInput,
   ].forEach((input) => {
     input.addEventListener("input", onHomeAlgorithmStep4InputChanged);
+    input.addEventListener("blur", onHomeAlgorithmStep4InputChanged);
   });
   homeAlgorithmState.step4Edit.addEventListener("click", onHomeAlgorithmEditStep4);
   homeAlgorithmState.step4Back.addEventListener("click", onHomeAlgorithmBackToStep3);
