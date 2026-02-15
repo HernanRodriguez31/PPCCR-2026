@@ -1,0 +1,332 @@
+.kpiDash {
+  --kpi-blue-950: #0f2a56;
+  --kpi-blue-900: #173a73;
+  --kpi-blue-700: #2457aa;
+  --kpi-blue-500: #3a79d9;
+  --kpi-blue-100: #e9f1ff;
+  --kpi-ink: #13294b;
+  --kpi-muted: #4c6287;
+  --kpi-border: #d4e1f5;
+  --kpi-surface: #f7faff;
+  --kpi-card: #ffffff;
+  --kpi-ok: #256f86;
+  --kpi-warn: #b5791d;
+  --kpi-critical: #b33f47;
+  margin-top: 1rem;
+  color: var(--kpi-ink);
+}
+
+.kpiDash__loading,
+.kpiDash__empty {
+  border: 1px solid var(--kpi-border);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff 0%, var(--kpi-surface) 100%);
+  padding: 1.4rem 1.25rem;
+}
+
+.kpiDash__loading h3,
+.kpiDash__empty h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  color: var(--kpi-blue-950);
+}
+
+.kpiDash__loading p,
+.kpiDash__empty p {
+  margin: 0.4rem 0 0;
+  color: var(--kpi-muted);
+  line-height: 1.45;
+}
+
+.kpiDash__shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.kpiDash__header {
+  background: linear-gradient(
+    140deg,
+    rgba(23, 58, 115, 0.92),
+    rgba(36, 87, 170, 0.88)
+  );
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 1.2rem 1.25rem;
+  color: #eef4ff;
+}
+
+.kpiDash__header h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  letter-spacing: 0.02em;
+}
+
+.kpiDash__header p {
+  margin: 0.38rem 0 0;
+  color: rgba(238, 244, 255, 0.9);
+  line-height: 1.45;
+}
+
+.kpiDash__cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.kpiDash__card {
+  background: var(--kpi-card);
+  border: 1px solid var(--kpi-border);
+  border-radius: 16px;
+  padding: 0.9rem 0.9rem 0.85rem;
+  min-height: 106px;
+  box-shadow: 0 8px 18px rgba(19, 41, 75, 0.06);
+}
+
+.kpiDash__cardLabel {
+  display: block;
+  font-size: 0.76rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--kpi-muted);
+}
+
+.kpiDash__cardValue {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: clamp(1.35rem, 2.25vw, 1.72rem);
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--kpi-blue-950);
+}
+
+.kpiDash__cardMeta {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--kpi-muted);
+}
+
+.kpiDash__charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 0.9rem;
+}
+
+.kpiDash__panel {
+  border: 1px solid var(--kpi-border);
+  border-radius: 18px;
+  background: var(--kpi-card);
+  padding: 0.95rem;
+}
+
+.kpiDash__panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.kpiDash__panelHeader h4 {
+  margin: 0;
+  font-size: 0.98rem;
+  color: var(--kpi-blue-950);
+}
+
+.kpiDash__panelHeader p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--kpi-muted);
+}
+
+.kpiDash__chart {
+  width: 100%;
+  min-height: 286px;
+}
+
+.kpiDash__chartFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 286px;
+  border: 1px dashed var(--kpi-border);
+  border-radius: 14px;
+  text-align: center;
+  color: var(--kpi-muted);
+  font-size: 0.9rem;
+  padding: 0.85rem;
+}
+
+.kpiDash__funnel,
+.kpiDash__stock {
+  border: 1px solid var(--kpi-border);
+  border-radius: 18px;
+  background: var(--kpi-card);
+  padding: 0.95rem;
+}
+
+.kpiDash__tableWrap {
+  overflow-x: auto;
+}
+
+.kpiDash__table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.kpiDash__table thead th {
+  text-align: left;
+  padding: 0.65rem 0.55rem;
+  font-size: 0.73rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--kpi-muted);
+  border-bottom: 1px solid var(--kpi-border);
+}
+
+.kpiDash__table tbody td {
+  padding: 0.6rem 0.55rem;
+  border-bottom: 1px solid #e9f0fb;
+  vertical-align: top;
+}
+
+.kpiDash__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.kpiDash__station {
+  color: var(--kpi-blue-950);
+  font-weight: 600;
+}
+
+.kpiDash__stage {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.kpiDash__stageValue {
+  color: var(--kpi-ink);
+  font-weight: 600;
+}
+
+.kpiDash__progress {
+  position: relative;
+  height: 7px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--kpi-blue-100);
+}
+
+.kpiDash__progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    rgba(36, 87, 170, 0.72),
+    rgba(58, 121, 217, 0.94)
+  );
+}
+
+.kpiDash__stockGrid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.7rem;
+}
+
+.kpiDash__stockItem {
+  border: 1px solid var(--kpi-border);
+  border-radius: 14px;
+  background: linear-gradient(150deg, #ffffff, #f4f8ff);
+  padding: 0.74rem;
+}
+
+.kpiDash__stockTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kpiDash__stockStation {
+  margin: 0;
+  font-weight: 600;
+  color: var(--kpi-blue-950);
+}
+
+.kpiDash__stockValue {
+  margin: 0.22rem 0 0;
+  font-size: 1.03rem;
+  font-weight: 700;
+  color: var(--kpi-ink);
+}
+
+.kpiDash__stockMeta {
+  margin: 0.2rem 0 0;
+  color: var(--kpi-muted);
+  font-size: 0.79rem;
+}
+
+.kpiDash__badge {
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  padding: 0.2rem 0.52rem;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.kpiDash__badge--ok {
+  color: var(--kpi-ok);
+  background: rgba(37, 111, 134, 0.09);
+  border-color: rgba(37, 111, 134, 0.16);
+}
+
+.kpiDash__badge--warn {
+  color: var(--kpi-warn);
+  background: rgba(181, 121, 29, 0.08);
+  border-color: rgba(181, 121, 29, 0.2);
+}
+
+.kpiDash__badge--critical {
+  color: var(--kpi-critical);
+  background: rgba(179, 63, 71, 0.08);
+  border-color: rgba(179, 63, 71, 0.2);
+}
+
+@media (max-width: 1120px) {
+  .kpiDash__cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpiDash__charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .kpiDash__cards {
+    grid-template-columns: 1fr;
+  }
+
+  .kpiDash__panel,
+  .kpiDash__funnel,
+  .kpiDash__stock,
+  .kpiDash__header {
+    padding: 0.82rem;
+  }
+
+  .kpiDash__header h3 {
+    font-size: 1rem;
+  }
+
+  .kpiDash__chart,
+  .kpiDash__chartFallback {
+    min-height: 250px;
+  }
+}

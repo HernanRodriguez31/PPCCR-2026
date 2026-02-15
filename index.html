@@ -17,7 +17,9 @@
     <script src="/host-guard.js"></script>
     <link rel="icon" href="assets/favicon.png" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="kpis-dashboard.css" />
     <script src="/app.js" defer></script>
+    <script src="/kpis-dashboard.js" defer></script>
     <script src="/auth-gate.js" defer></script>
   </head>
 
@@ -1327,7 +1329,14 @@
             <p class="section-subtitle">Visualización en tiempo real.</p>
           </header>
 
-          <div class="embed-card" aria-label="Reporte Looker Studio embebido">
+          <div id="kpi-dashboard-ppccr" class="kpiDash" data-kpi-dashboard></div>
+
+          <div
+            class="embed-card"
+            aria-label="Reporte Looker Studio embebido"
+            hidden
+            aria-hidden="true"
+          >
             <div
               class="embed-shell embed-shell--looker"
               id="looker-embed-wrap"
