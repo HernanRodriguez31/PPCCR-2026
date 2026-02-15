@@ -43,7 +43,7 @@ const SHEET_HEADERS_A_TO_G = Object.freeze([
   "Exclusion Paso 2",
 ]);
 
-const SHEET_HEADERS_A_TO_M = Object.freeze([
+const SHEET_HEADERS_A_TO_N = Object.freeze([
   "ID Participante",
   "Fecha/Hora",
   "Station ID",
@@ -57,6 +57,7 @@ const SHEET_HEADERS_A_TO_M = Object.freeze([
   "DNI",
   "Email",
   "Celular",
+  "Nro Kit FIT",
 ]);
 
 type StationDefinition = {
@@ -507,12 +508,12 @@ async function ensureSheetHeadersAtoG(
   });
 }
 
-async function ensureSheetHeadersAtoM(
+async function ensureSheetHeadersAtoN(
   sheetId: string,
   sheetTab: string,
   accessToken: string,
 ): Promise<void> {
-  const headerRange = `${sheetTab}!A1:M1`;
+  const headerRange = `${sheetTab}!A1:N1`;
   const getUrl = `${GOOGLE_SHEETS_API_BASE}/${sheetId}/values/${encodeURIComponent(headerRange)}`;
 
   const getResponse = await googleSheetsRequest<{ values?: string[][] }>({
@@ -522,7 +523,7 @@ async function ensureSheetHeadersAtoM(
   });
 
   const current = Array.isArray(getResponse?.values?.[0]) ? getResponse?.values?.[0] || [] : [];
-  const hasHeaders = SHEET_HEADERS_A_TO_M.every((header, index) => current[index] === header);
+  const hasHeaders = SHEET_HEADERS_A_TO_N.every((header, index) => current[index] === header);
   if (hasHeaders) return;
 
   const putUrl = `${GOOGLE_SHEETS_API_BASE}/${sheetId}/values/${encodeURIComponent(headerRange)}?valueInputOption=RAW`;
@@ -534,7 +535,7 @@ async function ensureSheetHeadersAtoM(
     body: {
       range: headerRange,
       majorDimension: "ROWS",
-      values: [SHEET_HEADERS_A_TO_M],
+      values: [SHEET_HEADERS_A_TO_N],
     },
   });
 }
@@ -571,7 +572,7 @@ async function appendSheetRowAtoG({
   return rowNumber;
 }
 
-async function appendSheetRowAtoM({
+async function appendSheetRowAtoN({
   sheetId,
   sheetTab,
   accessToken,
@@ -582,7 +583,11 @@ async function appendSheetRowAtoM({
   accessToken: string;
   row: Array<string | number>;
 }): Promise<number> {
-  const appendRange = `${sheetTab}!A:M`;
+  if (row.length !== 14) {
+    throw new Error(`appendSheetRowAtoN requiere 14 columnas. Recibidas: ${row.length}.`);
+  }
+
+  const appendRange = `${sheetTab}!A:N`;
   const appendUrl = `${GOOGLE_SHEETS_API_BASE}/${sheetId}/values/${encodeURIComponent(appendRange)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
 
   const appendResponse = await googleSheetsRequest<{ updates?: { updatedRange?: string } }>({
@@ -958,6 +963,7 @@ export const submitAlgorithmStage1 = onRequest(
     const step4Dni = step4Data ? String(step4Data.dni || "").trim() : "";
     const step4Email = step4Data ? String(step4Data.email || "").trim() : "";
     const step4Phone = step4Data ? String(step4Data.phone || "").trim() : "";
+    const stage4KitNumber = String(step4Data?.kitNumber || "").trim();
 
     const rowValues: Array<string | number> = [
       participantId,
@@ -973,6 +979,7 @@ export const submitAlgorithmStage1 = onRequest(
       step4Dni,
       step4Email,
       step4Phone,
+      stage4KitNumber,
     ];
 
     const stageReached =
@@ -1026,8 +1033,8 @@ export const submitAlgorithmStage1 = onRequest(
       }
 
       const accessToken = await getGoogleAccessToken(serviceAccountEmail, serviceAccountKey);
-      await ensureSheetHeadersAtoM(sheetId, sheetTab, accessToken);
-      const row = await appendSheetRowAtoM({
+      await ensureSheetHeadersAtoN(sheetId, sheetTab, accessToken);
+      const row = await appendSheetRowAtoN({
         sheetId,
         sheetTab,
         accessToken,
@@ -1160,7 +1167,7 @@ export const updateParticipantStage = onRequest(
 
     try {
       const accessToken = await getGoogleAccessToken(serviceAccountEmail, serviceAccountKey);
-      await ensureSheetHeadersAtoG(sheetId, sheetTab, accessToken);
+      await ensureSheetHeadersAtoN(sheetId, sheetTab, accessToken);
 
       const row = await findParticipantRowInColumnA({
         sheetId,
@@ -1262,12 +1269,13 @@ export const updateParticipantStage = onRequest(
       const documentId = String(data.documentId || "").trim();
       const email = String(data.email || "").trim();
       const phone = String(data.phone || "").trim();
+      const kitNumber = String(data.kitNumber || "").trim();
 
       await updateSheetRange({
         sheetId,
-        range: `${sheetTab}!I${row}:M${row}`,
+        range: `${sheetTab}!I${row}:N${row}`,
         accessToken,
-        values: [[finalResult, fullName, documentId, email, phone]],
+        values: [[finalResult, fullName, documentId, email, phone, kitNumber]],
       });
 
       res.status(200).json({
@@ -1275,7 +1283,7 @@ export const updateParticipantStage = onRequest(
         participantId,
         stage,
         row,
-        updated: ["I", "J", "K", "L", "M"],
+        updated: ["I", "J", "K", "L", "M", "N"],
       });
     } catch (error) {
       logger.error("No se pudo actualizar etapa del participante en Google Sheets.", {
