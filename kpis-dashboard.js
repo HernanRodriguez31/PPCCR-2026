@@ -6,18 +6,22 @@
 
   const GVIZ_SOURCES = {
     entrevistasPivot: {
+      label: "Entrevistas",
       gid: GID_ENTREVISTAS,
       tq: "select C, count(A) group by C pivot I",
     },
     muestrasRecibidasPorEstacion: {
+      label: "Recepción de Muestra de Test FIT",
       sheet: "Recepción de Muestra de Test FIT",
       tq: "select G, count(E) where E is not null group by G",
     },
     muestrasALabPorEstacion: {
+      label: "Entrega de Muestras de FIT a Lab",
       sheet: "Entrega de Muestras de FIT a Lab",
       tq: "select B, sum(D) where D is not null group by B",
     },
     resultadosFitPorEstacion: {
+      label: "Recepción de Resultados de FIT",
       sheet: "Recepción de Resultados de FIT",
       tq: "select C, count(A) where C is not null and F is not null group by C pivot F",
     },
@@ -69,6 +73,7 @@
 
   async function loadAllDataSources() {
     const entries = Object.entries(GVIZ_SOURCES);
+    const loadedAt = new Date().toISOString();
     const settled = await Promise.allSettled(
       entries.map(([, source]) => fetchCsv(gvizUrl(source))),
     );
@@ -93,7 +98,32 @@
       );
     });
 
-    return { matrices, status };
+    const sources = entries.map(([sourceKey, source]) => {
+      const matrix = matrices[sourceKey];
+      const rowsRead =
+        status[sourceKey] === "ok" && Array.isArray(matrix)
+          ? Math.max(0, matrix.length - 1)
+          : null;
+
+      return {
+        key: sourceKey,
+        label: source.label || sourceKey,
+        status: status[sourceKey],
+        rowsRead,
+      };
+    });
+
+    return {
+      matrices,
+      status,
+      audit: {
+        source: "Google Sheets",
+        sheetId: SHEET_ID,
+        loadedAt,
+        sources,
+        hasErrors: sources.some((source) => source.status !== "ok"),
+      },
+    };
   }
 
   function gvizUrl({ sheet, gid, tq }) {
@@ -198,6 +228,13 @@
   function buildModel(payload) {
     const matrices = payload.matrices || {};
     const status = payload.status || {};
+    const audit = payload.audit || {
+      source: "Google Sheets",
+      sheetId: SHEET_ID,
+      loadedAt: new Date().toISOString(),
+      sources: [],
+      hasErrors: true,
+    };
 
     const stationsMap = new Map();
 
@@ -224,8 +261,13 @@
 
     const stations = Array.from(stationsMap.values())
       .map((station) => {
-        const entregados = station.criterioFitKits;
-        const remanente = Math.max(0, station.stockInicial - entregados);
+        const entregados = isFiniteMetric(station.criterioFitKits)
+          ? Number(station.criterioFitKits)
+          : null;
+        const remanente =
+          isFiniteMetric(station.stockInicial) && isFiniteMetric(entregados)
+            ? Math.max(0, Number(station.stockInicial) - Number(entregados))
+            : null;
 
         return {
           station: station.station,
@@ -264,40 +306,89 @@
         return a.station.localeCompare(b.station, "es");
       });
 
+    const effectiveStatus = Object.assign({}, status);
+    if (
+      effectiveStatus.entrevistasPivot === "ok" &&
+      sumNullableField(stations, "participantesTotal") === null
+    ) {
+      effectiveStatus.entrevistasPivot = "error";
+    }
+    if (
+      effectiveStatus.resultadosFitPorEstacion === "ok" &&
+      sumNullableField(stations, "fitInformados") === null &&
+      sumNullableField(stations, "resultadosFitRecibidos") === null
+    ) {
+      effectiveStatus.resultadosFitPorEstacion = "error";
+    }
+
+    const entrevistasOk = effectiveStatus.entrevistasPivot === "ok";
+    const muestrasRecibidasOk =
+      effectiveStatus.muestrasRecibidasPorEstacion === "ok";
+    const muestrasALabOk = effectiveStatus.muestrasALabPorEstacion === "ok";
+    const resultadosOk = effectiveStatus.resultadosFitPorEstacion === "ok";
+    const auditSources = Array.isArray(audit.sources)
+      ? audit.sources.map((source) => {
+          return Object.assign({}, source, {
+            status: effectiveStatus[source.key] || source.status,
+          });
+        })
+      : [];
+    const normalizedAudit = Object.assign({}, audit, {
+      sources: auditSources,
+      hasErrors:
+        auditSources.length > 0
+          ? auditSources.some((source) => source.status !== "ok")
+          : true,
+    });
+    const stockInicialTotal = STOCK_INICIAL_POR_ESTACION * BASE_STATION_KEYS.length;
+    const entregadosTotal = entrevistasOk
+      ? sumNullableField(stations, "entregados")
+      : null;
+    const remanenteTotal =
+      entrevistasOk && isFiniteMetric(entregadosTotal)
+        ? Math.max(0, stockInicialTotal - Number(entregadosTotal))
+        : null;
+
     const totals = {
-      participantesTotal: sumField(stations, "participantesTotal"),
-      criterioFitKits: sumField(stations, "criterioFitKits"),
-      fueraDeScreening: sumField(stations, "fueraDeScreening"),
-      seguimientoVigente: sumField(stations, "seguimientoVigente"),
-      mayorRiesgo: sumField(stations, "mayorRiesgo"),
-      edadLt45: sumField(stations, "edadLt45"),
-      muestrasRecibidas:
-        status.muestrasRecibidasPorEstacion === "ok"
-          ? sumNullableField(stations, "muestrasRecibidas")
-          : null,
-      muestrasALab:
-        status.muestrasALabPorEstacion === "ok"
-          ? sumNullableField(stations, "muestrasALab")
-          : null,
-      resultadosFitRecibidos:
-        status.resultadosFitPorEstacion === "ok"
-          ? sumNullableField(stations, "resultadosFitRecibidos")
-          : null,
-      fitInformados:
-        status.resultadosFitPorEstacion === "ok"
-          ? sumNullableField(stations, "fitInformados")
-          : null,
-      resultadosFitNegativos:
-        status.resultadosFitPorEstacion === "ok"
-          ? sumNullableField(stations, "resultadosFitNegativos")
-          : null,
-      resultadosFitPositivos:
-        status.resultadosFitPorEstacion === "ok"
-          ? sumNullableField(stations, "resultadosFitPositivos")
-          : null,
-      stockInicial: STOCK_INICIAL_POR_ESTACION * BASE_STATION_KEYS.length,
-      entregados: sumField(stations, "entregados"),
-      remanente: sumField(stations, "remanente"),
+      participantesTotal: entrevistasOk
+        ? sumNullableField(stations, "participantesTotal")
+        : null,
+      criterioFitKits: entrevistasOk
+        ? sumNullableField(stations, "criterioFitKits")
+        : null,
+      fueraDeScreening: entrevistasOk
+        ? sumNullableField(stations, "fueraDeScreening")
+        : null,
+      seguimientoVigente: entrevistasOk
+        ? sumNullableField(stations, "seguimientoVigente")
+        : null,
+      mayorRiesgo: entrevistasOk
+        ? sumNullableField(stations, "mayorRiesgo")
+        : null,
+      edadLt45: entrevistasOk
+        ? sumNullableField(stations, "edadLt45")
+        : null,
+      muestrasRecibidas: muestrasRecibidasOk
+        ? sumNullableField(stations, "muestrasRecibidas")
+        : null,
+      muestrasALab: muestrasALabOk
+        ? sumNullableField(stations, "muestrasALab")
+        : null,
+      resultadosFitRecibidos: resultadosOk
+        ? sumNullableField(stations, "resultadosFitRecibidos")
+        : null,
+      fitInformados: resultadosOk
+        ? sumNullableField(stations, "fitInformados")
+        : null,
+      resultadosFitNegativos: resultadosOk
+        ? sumNullableField(stations, "resultadosFitNegativos")
+        : null,
+      resultadosFitPositivos: resultadosOk
+        ? sumNullableField(stations, "resultadosFitPositivos")
+        : null,
+      stockInicial: stockInicialTotal,
+      entregados: entregadosTotal,
+      remanente: remanenteTotal,
     };
 
     const fitFlowTotals = {
@@ -314,7 +405,9 @@
       stations,
       totals,
       fitFlowTotals,
-      sourceStatus: status,
+      sourceStatus: effectiveStatus,
+      audit: normalizedAudit,
+      integrity: validateDataIntegrity(stations, totals),
     };
   }
 
@@ -328,12 +421,12 @@
       stationsMap.set(safeKey, {
         key: safeKey,
         station: stationLabelForKey(safeKey, rawLabel),
-        participantesTotal: 0,
-        criterioFitKits: 0,
-        fueraDeScreening: 0,
-        seguimientoVigente: 0,
-        mayorRiesgo: 0,
-        edadLt45: 0,
+        participantesTotal: null,
+        criterioFitKits: null,
+        fueraDeScreening: null,
+        seguimientoVigente: null,
+        mayorRiesgo: null,
+        edadLt45: null,
         muestrasRecibidas: 0,
         muestrasALab: 0,
         resultadosFitRecibidos: 0,
@@ -357,10 +450,22 @@
     return station;
   }
 
+  function setEntrevistasMetrics(station, value) {
+    station.participantesTotal = value;
+    station.criterioFitKits = value;
+    station.fueraDeScreening = value;
+    station.seguimientoVigente = value;
+    station.mayorRiesgo = value;
+    station.edadLt45 = value;
+  }
+
   function applyEntrevistasPivot(stationsMap, matrix, status) {
-    if (status !== "ok" || !Array.isArray(matrix) || matrix.length < 2) {
+    if (status !== "ok" || !Array.isArray(matrix) || matrix.length === 0) {
+      stationsMap.forEach((station) => {
+        setEntrevistasMetrics(station, null);
+      });
       console.warn(
-        "[KPI Dashboard] entrevistasPivot no disponible o vacío. Se mostrarán 0 en segmentación.",
+        "[KPI Dashboard] entrevistasPivot no disponible o vacío. Se mostrará estado de Error al cargar.",
       );
       return;
     }
@@ -370,26 +475,25 @@
     const step2Index = findHeaderIndex(headers, ["excluido", "paso", "2"]);
     const step3Index = findHeaderIndex(headers, ["excluido", "paso", "3"]);
     const ageIndex = findHeaderIndex(headers, ["excluido", "edad"]);
+    const hasRequiredColumns =
+      fitIndex >= 0 && step2Index >= 0 && step3Index >= 0 && ageIndex >= 0;
 
-    if (fitIndex < 0) {
+    if (!hasRequiredColumns) {
+      stationsMap.forEach((station) => {
+        setEntrevistasMetrics(station, null);
+      });
       console.warn(
-        "[KPI Dashboard] entrevistasPivot sin columna 'Candidato a Test FIT'.",
+        "[KPI Dashboard] entrevistasPivot con columnas incompletas. Se mostrará estado de Error al cargar.",
       );
+      return;
     }
-    if (step2Index < 0) {
-      console.warn(
-        "[KPI Dashboard] entrevistasPivot sin columna 'Excluido Paso 2'.",
-      );
-    }
-    if (step3Index < 0) {
-      console.warn(
-        "[KPI Dashboard] entrevistasPivot sin columna 'Excluido Paso 3'.",
-      );
-    }
-    if (ageIndex < 0) {
-      console.warn(
-        "[KPI Dashboard] entrevistasPivot sin columna 'Excluido por edad'.",
-      );
+
+    stationsMap.forEach((station) => {
+      setEntrevistasMetrics(station, 0);
+    });
+
+    if (matrix.length < 2) {
+      return;
     }
 
     matrix.slice(1).forEach((row) => {
@@ -397,6 +501,10 @@
       const station = ensureStation(stationsMap, rawStation, rawStation);
       if (!station) {
         return;
+      }
+
+      if (!isFiniteMetric(station.participantesTotal)) {
+        setEntrevistasMetrics(station, 0);
       }
 
       const fit = fitIndex >= 0 ? toInt(getCell(row, fitIndex)) : 0;
@@ -416,7 +524,7 @@
   }
 
   function applyMuestrasRecibidas(stationsMap, matrix, status) {
-    if (status !== "ok" || !Array.isArray(matrix) || matrix.length < 2) {
+    if (status !== "ok" || !Array.isArray(matrix) || matrix.length === 0) {
       stationsMap.forEach((station) => {
         station.muestrasRecibidas = null;
       });
@@ -430,6 +538,10 @@
       station.muestrasRecibidas = 0;
     });
 
+    if (matrix.length < 2) {
+      return;
+    }
+
     matrix.slice(1).forEach((row) => {
       const rawStation = getCell(row, 0);
       const station = ensureStation(stationsMap, rawStation, rawStation);
@@ -442,7 +554,7 @@
   }
 
   function applyMuestrasALab(stationsMap, matrix, status) {
-    if (status !== "ok" || !Array.isArray(matrix) || matrix.length < 2) {
+    if (status !== "ok" || !Array.isArray(matrix) || matrix.length === 0) {
       stationsMap.forEach((station) => {
         station.muestrasALab = null;
       });
@@ -455,6 +567,10 @@
     stationsMap.forEach((station) => {
       station.muestrasALab = 0;
     });
+
+    if (matrix.length < 2) {
+      return;
+    }
 
     matrix.slice(1).forEach((row) => {
       const rawStation = getCell(row, 0);
@@ -496,15 +612,17 @@
     const negativosIndex = findHeaderIndex(headers, ["negativo"]);
     const positivosIndex = findHeaderIndex(headers, ["positivo"]);
 
-    if (negativosIndex < 0) {
+    if (negativosIndex < 0 || positivosIndex < 0) {
+      stationsMap.forEach((station) => {
+        station.resultadosFitRecibidos = null;
+        station.fitInformados = null;
+        station.resultadosFitNegativos = null;
+        station.resultadosFitPositivos = null;
+      });
       console.warn(
-        "[KPI Dashboard] resultadosFitPorEstacion sin columna de resultados negativos.",
+        "[KPI Dashboard] resultadosFitPorEstacion con columnas incompletas. Se mostrará estado de Error al cargar.",
       );
-    }
-    if (positivosIndex < 0) {
-      console.warn(
-        "[KPI Dashboard] resultadosFitPorEstacion sin columna de resultados positivos.",
-      );
+      return;
     }
 
     matrix.slice(1).forEach((row) => {
@@ -514,8 +632,8 @@
         return;
       }
 
-      const negativos = negativosIndex >= 0 ? toInt(getCell(row, negativosIndex)) : 0;
-      const positivos = positivosIndex >= 0 ? toInt(getCell(row, positivosIndex)) : 0;
+      const negativos = toInt(getCell(row, negativosIndex));
+      const positivos = toInt(getCell(row, positivosIndex));
       const totalResultados = negativos + positivos;
 
       station.resultadosFitNegativos += negativos;
@@ -528,9 +646,26 @@
   function renderDashboard(root, model) {
     const totals = model.totals;
     const flow = model.fitFlowTotals;
+    const integrity = model.integrity || validateDataIntegrity(model.stations, totals);
+    const auditBanner = buildAuditBanner(model.audit, integrity);
 
-    const participantsBase = Math.max(totals.participantesTotal, 1);
-    const outsideBase = Math.max(totals.fueraDeScreening, 1);
+    const totalCriterioPct = ratioPercent(
+      totals.criterioFitKits,
+      totals.participantesTotal,
+    );
+    const totalFueraPct = ratioPercent(
+      totals.fueraDeScreening,
+      totals.participantesTotal,
+    );
+    const totalSeguimientoPct = ratioPercent(
+      totals.seguimientoVigente,
+      totals.fueraDeScreening,
+    );
+    const totalMayorRiesgoPct = ratioPercent(
+      totals.mayorRiesgo,
+      totals.fueraDeScreening,
+    );
+    const totalEdadPct = ratioPercent(totals.edadLt45, totals.fueraDeScreening);
     const executiveTop = renderExecutiveTopSection(totals, flow);
 
     const totalAvanceRow = [
@@ -542,25 +677,41 @@
       ),
       stageCell(
         totals.criterioFitKits,
-        percentage(totals.criterioFitKits, participantsBase),
+        totalCriterioPct || 0,
+        totalCriterioPct === null
+          ? ""
+          : totalCriterioPct + "% sobre participantes",
       ),
       stageCell(
         totals.fueraDeScreening,
-        percentage(totals.fueraDeScreening, participantsBase),
+        totalFueraPct || 0,
+        totalFueraPct === null ? "" : totalFueraPct + "% sobre participantes",
       ),
       stageCell(
         totals.seguimientoVigente,
-        percentage(totals.seguimientoVigente, outsideBase),
+        totalSeguimientoPct || 0,
       ),
-      stageCell(totals.mayorRiesgo, percentage(totals.mayorRiesgo, outsideBase)),
-      stageCell(totals.edadLt45, percentage(totals.edadLt45, outsideBase)),
+      stageCell(totals.mayorRiesgo, totalMayorRiesgoPct || 0),
+      stageCell(totals.edadLt45, totalEdadPct || 0),
       "</tr>",
     ].join("");
 
     const avanceRows = model.stations
       .map((station) => {
-        const participantsRowBase = Math.max(station.participantesTotal, 1);
-        const outsideRowBase = Math.max(station.fueraDeScreening, 1);
+        const criterioPct = ratioPercent(
+          station.criterioFitKits,
+          station.participantesTotal,
+        );
+        const fueraPct = ratioPercent(
+          station.fueraDeScreening,
+          station.participantesTotal,
+        );
+        const seguimientoPct = ratioPercent(
+          station.seguimientoVigente,
+          station.fueraDeScreening,
+        );
+        const mayorPct = ratioPercent(station.mayorRiesgo, station.fueraDeScreening);
+        const edadPct = ratioPercent(station.edadLt45, station.fueraDeScreening);
 
         return [
           "<tr>",
@@ -571,21 +722,17 @@
           ),
           stageCell(
             station.criterioFitKits,
-            percentage(station.criterioFitKits, participantsRowBase),
+            criterioPct || 0,
+            criterioPct === null ? "" : criterioPct + "% sobre participantes",
           ),
           stageCell(
             station.fueraDeScreening,
-            percentage(station.fueraDeScreening, participantsRowBase),
+            fueraPct || 0,
+            fueraPct === null ? "" : fueraPct + "% sobre participantes",
           ),
-          stageCell(
-            station.seguimientoVigente,
-            percentage(station.seguimientoVigente, outsideRowBase),
-          ),
-          stageCell(
-            station.mayorRiesgo,
-            percentage(station.mayorRiesgo, outsideRowBase),
-          ),
-          stageCell(station.edadLt45, percentage(station.edadLt45, outsideRowBase)),
+          stageCell(station.seguimientoVigente, seguimientoPct || 0),
+          stageCell(station.mayorRiesgo, mayorPct || 0),
+          stageCell(station.edadLt45, edadPct || 0),
           "</tr>",
         ].join("");
       })
@@ -674,6 +821,7 @@
       '<section class="kpiDash__header" aria-label="Resumen operativo de KPIs">',
       "<h3>Panel consolidado por estación</h3>",
       "<p>Lectura local agregada de participantes con foco en FIT, mayor riesgo, orientación, prevención y concientización.</p>",
+      auditBanner,
       "</section>",
       executiveTop,
       '<section class="kpiDash__charts" aria-label="Comparativos de participantes">',
@@ -698,7 +846,7 @@
       "<p>Distribución de participantes por etapa</p>",
       "</header>",
       '<div class="kpiDash__tableWrap">',
-      '<table class="kpiDash__table">',
+      '<table class="kpiDash__table kpiDash__table--avance">',
       "<thead><tr><th>Estación</th><th>Participantes</th><th>Criterio FIT</th><th>Fuera de screening</th><th>Seguimiento vigente</th><th>Mayor riesgo</th><th>Edad &lt; 45</th></tr></thead>",
       "<tbody>",
       totalAvanceRow,
@@ -737,8 +885,20 @@
   }
 
   function buildSummaryCard(totals) {
-    const participantsBase = Math.max(totals.participantesTotal, 1);
-    const outsideBase = Math.max(totals.fueraDeScreening, 1);
+    const fitPct = ratioPercent(totals.criterioFitKits, totals.participantesTotal);
+    const outsidePct = ratioPercent(
+      totals.fueraDeScreening,
+      totals.participantesTotal,
+    );
+    const fitBarPct = fitPct === null ? 0 : Math.max(0, Math.min(100, fitPct));
+    const outsideBarPct =
+      outsidePct === null ? 0 : Math.max(0, Math.min(100, outsidePct));
+    const followPct = ratioPercent(
+      totals.seguimientoVigente,
+      totals.fueraDeScreening,
+    );
+    const riskPct = ratioPercent(totals.mayorRiesgo, totals.fueraDeScreening);
+    const agePct = ratioPercent(totals.edadLt45, totals.fueraDeScreening);
 
     return [
       '<article class="kpiDash__summaryCard">',
@@ -748,37 +908,45 @@
         formatMetric(totals.participantesTotal) +
         "</span>",
       "</div>",
+      '<div class="kpiDash__summaryDistribution">',
+      '<div class="kpiDash__summaryBar" role="img" aria-label="Distribución de participantes entre criterio FIT y fuera de screening">',
+      '<span class="kpiDash__summaryBarSegment kpiDash__summaryBarSegment--fit" style="width:' +
+        fitBarPct +
+        '%"></span>',
+      '<span class="kpiDash__summaryBarSegment kpiDash__summaryBarSegment--outside" style="width:' +
+        outsideBarPct +
+        '%"></span>',
+      "</div>",
       '<div class="kpiDash__summarySplit">',
-      summaryChip(
-        "Criterio FIT (kits)",
-        formatMetric(totals.criterioFitKits),
-        percentage(totals.criterioFitKits, participantsBase) +
-          "% sobre participantes",
+      summaryMainMetric(
+        "Criterio FIT",
+        totals.criterioFitKits,
+        fitPct,
+        "participantes",
       ),
-      summaryChip(
+      summaryMainMetric(
         "Fuera de screening",
-        formatMetric(totals.fueraDeScreening),
-        percentage(totals.fueraDeScreening, participantsBase) +
-          "% sobre participantes",
+        totals.fueraDeScreening,
+        outsidePct,
+        "participantes",
       ),
       "</div>",
+      "</div>",
       '<div class="kpiDash__summaryReasons">',
-      summaryChip(
+      summaryReasonBadge(
         "Seguimiento vigente",
-        formatMetric(totals.seguimientoVigente),
-        percentage(totals.seguimientoVigente, outsideBase) +
-          "% sobre fuera de screening",
+        totals.seguimientoVigente,
+        followPct,
       ),
-      summaryChip(
+      summaryReasonBadge(
         "Mayor riesgo (orientación)",
-        formatMetric(totals.mayorRiesgo),
-        percentage(totals.mayorRiesgo, outsideBase) +
-          "% sobre fuera de screening",
+        totals.mayorRiesgo,
+        riskPct,
       ),
-      summaryChip(
+      summaryReasonBadge(
         "Edad < 45",
-        formatMetric(totals.edadLt45),
-        percentage(totals.edadLt45, outsideBase) + "% sobre fuera de screening",
+        totals.edadLt45,
+        agePct,
       ),
       "</div>",
       "</article>",
@@ -786,41 +954,107 @@
   }
 
   function buildFlowSteps(flow) {
+    const steps = [
+      {
+        label: "Kits entregados",
+        value: flow.kitsEntregadosTotal,
+        previous: null,
+      },
+      {
+        label: "Muestras recibidas",
+        value: flow.muestrasRecibidasTotal,
+        previous: flow.kitsEntregadosTotal,
+      },
+      {
+        label: "Envío a lab",
+        value: flow.muestrasALabTotal,
+        previous: flow.muestrasRecibidasTotal,
+      },
+      {
+        label: "Resultados recibidos",
+        value: flow.resultadosRecibidosTotal,
+        previous: flow.muestrasALabTotal,
+      },
+      {
+        label: "Resultados informados",
+        value: flow.resultadosInformadosTotal,
+        previous: flow.resultadosRecibidosTotal,
+      },
+    ];
+
+    return steps
+      .map((step, index) => flowStep(step, index, steps.length))
+      .join("");
+  }
+
+  function buildFlowOutcome(flow) {
+    const hasBreakdown =
+      flow.negativos !== null &&
+      flow.negativos !== undefined &&
+      flow.positivos !== null &&
+      flow.positivos !== undefined;
+
+    if (!hasBreakdown) {
+      return [
+        '<section class="kpiDash__fitOutcome" aria-label="Resultados informados">',
+        '<header class="kpiDash__fitOutcomeHeader">',
+        "<h5>Resultados informados</h5>",
+        '<span class="kpiDash__fitOutcomeTotal">—</span>',
+        "</header>",
+        '<p class="kpiDash__fitOutcomeEmpty">Sin datos disponibles para negativos y positivos.</p>',
+        "</section>",
+      ].join("");
+    }
+
+    const negativos = Math.max(0, Number(flow.negativos) || 0);
+    const positivos = Math.max(0, Number(flow.positivos) || 0);
+    const total = negativos + positivos;
+    const negativosPct = total > 0 ? percentage(negativos, total) : 0;
+    const positivosPct = total > 0 ? percentage(positivos, total) : 0;
+    const negativosBarPct = Math.max(0, Math.min(100, negativosPct));
+    const positivosBarPct = Math.max(0, Math.min(100, positivosPct));
+
     return [
-      flowStep("Kits entregados", flow.kitsEntregadosTotal, "", ""),
-      flowStep(
-        "Muestras recibidas",
-        flow.muestrasRecibidasTotal,
-        conversionLabel(flow.muestrasRecibidasTotal, flow.kitsEntregadosTotal),
-        "",
-      ),
-      flowStep(
-        "Envío a laboratorio",
-        flow.muestrasALabTotal,
-        conversionLabel(flow.muestrasALabTotal, flow.muestrasRecibidasTotal),
-        "",
-      ),
-      flowStep(
-        "Resultados recibidos",
-        flow.resultadosRecibidosTotal,
-        conversionLabel(flow.resultadosRecibidosTotal, flow.muestrasALabTotal),
-        "",
-      ),
-      flowStep(
-        "Resultados informados",
-        flow.resultadosInformadosTotal,
-        conversionLabel(flow.resultadosInformadosTotal, flow.resultadosRecibidosTotal),
-        "Pos/Neg: " +
-          formatMetric(flow.positivos) +
-          " / " +
-          formatMetric(flow.negativos),
-      ),
+      '<section class="kpiDash__fitOutcome" aria-label="Resultados informados">',
+      '<header class="kpiDash__fitOutcomeHeader">',
+      "<h5>Resultados informados</h5>",
+      '<span class="kpiDash__fitOutcomeTotal">' +
+        formatMetric(flow.resultadosInformadosTotal) +
+        "</span>",
+      "</header>",
+      '<div class="kpiDash__fitOutcomeBar" role="img" aria-label="Distribución de resultados informados: negativos y positivos">',
+      '<span class="kpiDash__fitOutcomeSegment kpiDash__fitOutcomeSegment--neg" style="width:' +
+        negativosBarPct +
+        '%"></span>',
+      '<span class="kpiDash__fitOutcomeSegment kpiDash__fitOutcomeSegment--pos" style="width:' +
+        positivosBarPct +
+        '%"></span>',
+      "</div>",
+      '<div class="kpiDash__fitOutcomeLegend">',
+      flowOutcomeMetric("Negativos", negativos, negativosPct, "neg"),
+      flowOutcomeMetric("Positivos", positivos, positivosPct, "pos"),
+      "</div>",
+      "</section>",
+    ].join("");
+  }
+
+  function flowOutcomeMetric(label, value, pct, tone) {
+    return [
+      '<div class="kpiDash__fitOutcomeItem">',
+      '<span class="kpiDash__fitOutcomeDot kpiDash__fitOutcomeDot--' +
+        tone +
+        '" aria-hidden="true"></span>',
+      '<span class="kpiDash__fitOutcomeLabel">' + escapeHtml(label) + "</span>",
+      '<span class="kpiDash__fitOutcomeValue">' + formatNumber(value) + "</span>",
+      '<span class="kpiDash__fitOutcomePct">' + formatNumber(pct) + "%</span>",
+      "</div>",
     ].join("");
   }
 
   function renderExecutiveTopSection(totals, flow) {
     const summaryCard = buildSummaryCard(totals);
     const flowSteps = buildFlowSteps(flow);
+    const flowOutcome = buildFlowOutcome(flow);
 
     return [
       '<section class="kpiDash__exec" aria-label="Resumen ejecutivo">',
@@ -837,50 +1071,279 @@
       "<p>Seguimiento integral del circuito FIT</p>",
       "</header>",
       '<div class="kpiDash__fitFlowBody">',
+      '<div class="kpiDash__fitFlowHint">% vs paso previo</div>',
       '<ol class="kpiDash__fitFlowSteps">',
       flowSteps,
       "</ol>",
-      '<article class="kpiDash__fitFlowDonutPanel">',
-      "<h5>Resultados informados</h5>",
-      '<div class="kpiDash__chart kpiDash__chart--compact" data-kpi-chart-posneg></div>',
-      "</article>",
+      flowOutcome,
       "</div>",
       "</section>",
       "</section>",
     ].join("");
   }
 
-  function summaryChip(label, value, meta) {
+  function buildAuditBanner(audit, integrity) {
+    const safeAudit = audit || {};
+    const sources = Array.isArray(safeAudit.sources) ? safeAudit.sources : [];
+    const issues =
+      integrity && Array.isArray(integrity.issues) ? integrity.issues : [];
+    const hasLoadErrors =
+      sources.some((source) => source.status !== "ok") || safeAudit.hasErrors;
+    const badges = [];
+
+    if (hasLoadErrors) {
+      badges.push(
+        '<span class="kpiDash__auditBadge kpiDash__auditBadge--error">Error al cargar</span>',
+      );
+    }
+    if (issues.length > 0) {
+      badges.push(
+        '<span class="kpiDash__auditBadge kpiDash__auditBadge--warn">⚠ Inconsistencia de datos</span>',
+      );
+    }
+    if (!hasLoadErrors && issues.length === 0) {
+      badges.push(
+        '<span class="kpiDash__auditBadge kpiDash__auditBadge--ok">Datos consistentes</span>',
+      );
+    }
+
+    const issuePreview = issues.slice(0, 4);
+    const hiddenIssueCount = Math.max(0, issues.length - issuePreview.length);
+    const issueText = issuePreview.join(" · ");
+
     return [
-      '<article class="kpiDash__summaryChip">',
-      '<span class="kpiDash__summaryChipLabel">' + escapeHtml(label) + "</span>",
-      '<span class="kpiDash__summaryChipValue">' + escapeHtml(value) + "</span>",
-      '<span class="kpiDash__summaryChipMeta">' + escapeHtml(meta) + "</span>",
-      "</article>",
+      '<div class="kpiDash__audit" role="status">',
+      '<div class="kpiDash__auditTop">',
+      '<span class="kpiDash__auditMeta"><strong>Fuente:</strong> ' +
+        escapeHtml(safeAudit.source || "Google Sheets") +
+        "</span>",
+      '<span class="kpiDash__auditMeta"><strong>Última actualización:</strong> ' +
+        escapeHtml(formatDateTime(safeAudit.loadedAt)) +
+        "</span>",
+      "</div>",
+      sources.length > 0
+        ? '<p class="kpiDash__auditRowsTitle">Filas leídas por hoja</p>' +
+          '<ul class="kpiDash__auditRows">' +
+          sources
+            .map((source) => {
+              const rowsLabel =
+                source.status === "ok"
+                  ? formatNumber(source.rowsRead || 0) + " filas leídas"
+                  : "Error al cargar";
+              return [
+                '<li class="kpiDash__auditRow">',
+                '<span class="kpiDash__auditSheet">' +
+                  escapeHtml(source.label || source.key || "Hoja") +
+                  "</span>",
+                '<span class="kpiDash__auditRead ' +
+                  (source.status === "ok"
+                    ? "kpiDash__auditRead--ok"
+                    : "kpiDash__auditRead--error") +
+                  '">' +
+                  escapeHtml(rowsLabel) +
+                  "</span>",
+                "</li>",
+              ].join("");
+            })
+            .join("") +
+          "</ul>"
+        : "",
+      '<div class="kpiDash__auditBadges">' + badges.join("") + "</div>",
+      issues.length > 0
+        ? '<p class="kpiDash__auditIssue">' +
+          escapeHtml(issueText) +
+          (hiddenIssueCount > 0
+            ? " · +" + escapeHtml(formatNumber(hiddenIssueCount)) + " más"
+            : "") +
+          "</p>"
+        : "",
+      "</div>",
     ].join("");
   }
 
-  function flowStep(label, value, conversion, detail) {
+  function validateDataIntegrity(stations, totals) {
+    const issues = [];
+    const safeStations = Array.isArray(stations) ? stations : [];
+    const safeTotals = totals || {};
+
+    const participantesEsperado = sumIfNumeric([
+      safeTotals.criterioFitKits,
+      safeTotals.fueraDeScreening,
+    ]);
+    collectMismatch(
+      issues,
+      "Participantes total",
+      safeTotals.participantesTotal,
+      participantesEsperado,
+    );
+
+    const fueraEsperado = sumIfNumeric([
+      safeTotals.seguimientoVigente,
+      safeTotals.mayorRiesgo,
+      safeTotals.edadLt45,
+    ]);
+    collectMismatch(
+      issues,
+      "Fuera de screening total",
+      safeTotals.fueraDeScreening,
+      fueraEsperado,
+    );
+
+    const informadosEsperado = sumIfNumeric([
+      safeTotals.resultadosFitPositivos,
+      safeTotals.resultadosFitNegativos,
+    ]);
+    collectMismatch(
+      issues,
+      "Resultados informados total",
+      safeTotals.fitInformados,
+      informadosEsperado,
+    );
+
+    const stockEsperado = subtractIfNumeric(
+      safeTotals.stockInicial,
+      safeTotals.entregados,
+    );
+    collectMismatch(issues, "Stock total", safeTotals.remanente, stockEsperado);
+
+    safeStations.forEach((station) => {
+      const participantsByStation = sumIfNumeric([
+        station.criterioFitKits,
+        station.fueraDeScreening,
+      ]);
+      collectMismatch(
+        issues,
+        "Participantes " + station.station,
+        station.participantesTotal,
+        participantsByStation,
+      );
+
+      const outsideByStation = sumIfNumeric([
+        station.seguimientoVigente,
+        station.mayorRiesgo,
+        station.edadLt45,
+      ]);
+      collectMismatch(
+        issues,
+        "Fuera de screening " + station.station,
+        station.fueraDeScreening,
+        outsideByStation,
+      );
+
+      const informedByStation = sumIfNumeric([
+        station.resultadosFitNegativos,
+        station.resultadosFitPositivos,
+      ]);
+      collectMismatch(
+        issues,
+        "Resultados informados " + station.station,
+        station.fitInformados,
+        informedByStation,
+      );
+
+      const stockByStation = subtractIfNumeric(station.stockInicial, station.entregados);
+      collectMismatch(
+        issues,
+        "Stock " + station.station,
+        station.remanente,
+        stockByStation,
+      );
+    });
+
+    return {
+      hasIssues: issues.length > 0,
+      issues,
+    };
+  }
+
+  function summaryMainMetric(label, value, pct, scopeLabel) {
+    const pctLabel = pct === null || pct === undefined
+      ? "—"
+      : formatNumber(pct) + "%";
+
+    return [
+      '<div class="kpiDash__summaryMainMetric">',
+      '<span class="kpiDash__summaryMainDot ' +
+        (normalizeText(label).includes("fuera")
+          ? "kpiDash__summaryMainDot--outside"
+          : "kpiDash__summaryMainDot--fit") +
+        '" aria-hidden="true"></span>',
+      '<span class="kpiDash__summaryMainLabel">' + escapeHtml(label) + "</span>",
+      '<span class="kpiDash__summaryMainValue">' + formatMetric(value) + "</span>",
+      '<span class="kpiDash__summaryMainMeta">' +
+        pctLabel +
+        " · " +
+        escapeHtml(scopeLabel) +
+        "</span>",
+      "</div>",
+    ].join("");
+  }
+
+  function summaryReasonBadge(label, value, pct) {
+    const pctLabel = pct === null || pct === undefined
+      ? "—"
+      : formatNumber(pct) + "%";
+
+    return [
+      '<div class="kpiDash__summaryBadge">',
+      '<span class="kpiDash__summaryBadgeLabel">' + escapeHtml(label) + "</span>",
+      '<span class="kpiDash__summaryBadgeValue">' + formatMetric(value) + "</span>",
+      '<span class="kpiDash__summaryBadgeMeta">' +
+        pctLabel +
+        " sobre fuera de screening</span>",
+      "</div>",
+    ].join("");
+  }
+
+  function flowStep(step, index, totalSteps) {
+    const pct = flowStepPercent(step.value, step.previous);
+    const badgeText = pct === null ? "Base" : formatNumber(pct) + "%";
+    const badgeClass =
+      pct === null
+        ? "kpiDash__fitStepBadge--base"
+        : pct >= 100
+          ? "kpiDash__fitStepBadge--full"
+          : "kpiDash__fitStepBadge--mid";
+
     return [
       '<li class="kpiDash__fitStep">',
-      '<span class="kpiDash__fitStepLabel">' + escapeHtml(label) + "</span>",
-      '<span class="kpiDash__fitStepValue">' + escapeHtml(formatMetric(value)) + "</span>",
-      conversion
-        ? '<span class="kpiDash__fitStepMeta">' + escapeHtml(conversion) + "</span>"
-        : "",
-      detail
-        ? '<span class="kpiDash__fitStepDetail">' + escapeHtml(detail) + "</span>"
-        : "",
+      '<span class="kpiDash__fitStepLabel">' + escapeHtml(step.label) + "</span>",
+      '<div class="kpiDash__fitStepRow">',
+      '<span class="kpiDash__fitStepValue">' +
+        escapeHtml(formatMetric(step.value)) +
+        "</span>",
+      '<span class="kpiDash__fitStepBadge ' + badgeClass + '">' + badgeText + "</span>",
+      "</div>",
+      index < totalSteps - 1 ? '<span class="kpiDash__fitStepArrow" aria-hidden="true">→</span>' : "",
       "</li>",
     ].join("");
   }
 
-  function stageCell(value, pct) {
+  function flowStepPercent(current, previous) {
+    if (
+      current === null ||
+      current === undefined ||
+      previous === null ||
+      previous === undefined ||
+      previous <= 0
+    ) {
+      return null;
+    }
+    return percentage(current, previous);
+  }
+
+  function stageCell(value, pct, meta) {
     const hasValue = value !== null && value !== undefined;
     const progress = hasValue ? Math.max(0, Math.min(100, Math.round(pct || 0))) : 0;
+    const tooltipText =
+      hasValue && meta
+        ? formatNumber(value) + " · " + meta
+        : hasValue
+          ? formatNumber(value)
+          : "Sin dato";
 
     return [
-      "<td>",
+      '<td title="' + escapeHtml(tooltipText) + '">',
       '<div class="kpiDash__stage">',
       '<span class="kpiDash__stageValue">' +
         (hasValue ? formatNumber(value) : "—") +
@@ -969,6 +1432,9 @@
   }
 
   function stockBadge(stock, threshold) {
+    if (!isFiniteMetric(stock)) {
+      return null;
+    }
     if (stock <= threshold) {
       return { className: "kpiDash__badge--critical", label: "Crítico" };
     }
@@ -1011,6 +1477,43 @@
     return Math.max(0, Math.min(999, Math.round((value / total) * 100)));
   }
 
+  function ratioPercent(value, total) {
+    if (!isFiniteMetric(value) || !isFiniteMetric(total) || Number(total) <= 0) {
+      return null;
+    }
+    return percentage(Number(value), Number(total));
+  }
+
+  function sumIfNumeric(values) {
+    if (!Array.isArray(values) || values.some((value) => !isFiniteMetric(value))) {
+      return null;
+    }
+    return values.reduce((acc, value) => acc + Number(value), 0);
+  }
+
+  function subtractIfNumeric(left, right) {
+    if (!isFiniteMetric(left) || !isFiniteMetric(right)) {
+      return null;
+    }
+    return Number(left) - Number(right);
+  }
+
+  function collectMismatch(issues, label, actual, expected) {
+    if (!isFiniteMetric(actual) || !isFiniteMetric(expected)) {
+      return;
+    }
+    if (Math.round(Number(actual)) === Math.round(Number(expected))) {
+      return;
+    }
+    issues.push(
+      label +
+        ": " +
+        formatNumber(actual) +
+        " vs " +
+        formatNumber(expected),
+    );
+  }
+
   async function renderCharts(root, model) {
     const barsEl = root.querySelector(SELECTORS.bars);
     const sankeyEl = root.querySelector(SELECTORS.sankey);
@@ -1023,43 +1526,109 @@
     try {
       const echarts = await ensureEcharts();
       const barChart = echarts.init(barsEl, null, { renderer: "canvas" });
-      const sankeyChart = echarts.init(sankeyEl, null, { renderer: "canvas" });
+      const sankeyChart = echarts.init(sankeyEl, null, { renderer: "svg" });
       const posnegChart = posnegEl
         ? echarts.init(posnegEl, null, { renderer: "canvas" })
         : null;
 
-      const stationNames = model.stations.map((station) => station.station);
-      const participants = model.stations.map((station) => station.participantesTotal);
-      const fit = model.stations.map((station) => station.criterioFitKits);
-      const outside = model.stations.map((station) => station.fueraDeScreening);
+      const orderedStations = model.stations.slice().sort((a, b) => {
+        if (b.participantesTotal !== a.participantesTotal) {
+          return b.participantesTotal - a.participantesTotal;
+        }
+        return a.station.localeCompare(b.station, "es");
+      });
+
+      const fullStationNames = orderedStations.map((station) => station.station);
+      const shortStationNames = fullStationNames.map((name) => {
+        const stationKey = normalizeStationKey(name);
+        if (stationKey === "saavedra") {
+          return "Saavedra";
+        }
+        if (stationKey === "rivadavia") {
+          return "Rivadavia";
+        }
+        if (stationKey === "chacabuco") {
+          return "Chacabuco";
+        }
+        if (stationKey === "aristobulo") {
+          return "Aristóbulo";
+        }
+        return name;
+      });
+
+      const participants = orderedStations.map((station) => station.participantesTotal);
+      const fit = orderedStations.map((station) => station.criterioFitKits);
+      const outside = orderedStations.map((station) => station.fueraDeScreening);
 
       barChart.setOption({
         animationDuration: 550,
         animationEasing: "cubicOut",
         color: ["#004B8F", "#3C7FC3", "#88BDF2"],
-        tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
-        legend: {
-          top: 4,
-          textStyle: { color: "#3e5479", fontSize: 11 },
-          itemWidth: 12,
-          itemHeight: 8,
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: "rgba(255, 255, 255, 0.97)",
+          borderColor: "rgba(19, 41, 75, 0.16)",
+          borderWidth: 1,
+          extraCssText:
+            "box-shadow: 0 10px 24px rgba(19,41,75,0.12); border-radius: 10px; padding: 8px 10px;",
+          axisPointer: {
+            type: "shadow",
+            shadowStyle: { color: "rgba(0, 75, 143, 0.04)" },
+          },
+          textStyle: { color: "#2f466b", fontSize: 11, fontWeight: 500 },
+          formatter: function (params) {
+            if (!Array.isArray(params) || params.length === 0) {
+              return "";
+            }
+
+            const rowIndex = params[0].dataIndex;
+            const stationName = fullStationNames[rowIndex] || params[0].axisValue;
+            const rows = params.map((item) => {
+              const value =
+                item.value === null || item.value === undefined
+                  ? "—"
+                  : formatNumber(item.value);
+              return item.marker + item.seriesName + ": " + value;
+            });
+            return [stationName].concat(rows).join("<br/>");
+          },
         },
-        grid: { left: 42, right: 16, top: 42, bottom: 38 },
+        legend: {
+          top: 0,
+          left: "center",
+          textStyle: { color: "#3f567a", fontSize: 10.5, fontWeight: 500 },
+          itemWidth: 10,
+          itemHeight: 8,
+          itemGap: 8,
+          padding: [0, 0, 0, 0],
+        },
+        grid: { left: 44, right: 16, top: 46, bottom: 34 },
         xAxis: {
           type: "category",
-          data: stationNames,
+          data: shortStationNames,
           axisLabel: {
-            color: "#5d7296",
+            color: "#5b7195",
+            fontSize: 10.5,
+            fontWeight: 500,
             interval: 0,
-            rotate: stationNames.length > 5 ? 18 : 0,
+            rotate: 0,
+            margin: 10,
           },
-          axisTick: { alignWithLabel: true },
-          axisLine: { lineStyle: { color: "#d4e1f5" } },
+          axisTick: { show: false },
+          axisLine: { lineStyle: { color: "rgba(19, 41, 75, 0.18)" } },
         },
         yAxis: {
           type: "value",
-          axisLabel: { color: "#5d7296" },
-          splitLine: { lineStyle: { color: "#e8effb" } },
+          splitNumber: 4,
+          axisLabel: { color: "#6a80a4", fontSize: 10.5 },
+          axisLine: { show: false },
+          axisTick: { show: false },
+          splitLine: {
+            lineStyle: {
+              color: "rgba(19, 41, 75, 0.07)",
+              type: "dashed",
+            },
+          },
         },
         series: [
           {
@@ -1067,6 +1636,7 @@
             type: "bar",
             barMaxWidth: 30,
             data: participants,
+            itemStyle: { borderRadius: [5, 5, 0, 0] },
             emphasis: { focus: "series" },
           },
           {
@@ -1074,6 +1644,7 @@
             type: "bar",
             barMaxWidth: 28,
             data: fit,
+            itemStyle: { borderRadius: [5, 5, 0, 0] },
             emphasis: { focus: "series" },
           },
           {
@@ -1081,6 +1652,7 @@
             type: "bar",
             barMaxWidth: 26,
             data: outside,
+            itemStyle: { borderRadius: [5, 5, 0, 0] },
             emphasis: { focus: "series" },
           },
         ],
@@ -1089,7 +1661,7 @@
       const links = [
         {
           source: "Participantes",
-          target: "Criterio FIT",
+          target: "Criterio FIT (kits)",
           value: model.totals.criterioFitKits,
         },
         {
@@ -1104,7 +1676,7 @@
         },
         {
           source: "Fuera de screening",
-          target: "Mayor riesgo",
+          target: "Mayor riesgo (orientación)",
           value: model.totals.mayorRiesgo,
         },
         {
@@ -1115,21 +1687,81 @@
       ].filter((link) => link.value > 0);
 
       const hasSankey = model.totals.participantesTotal > 0;
+      const sankeyTotal = model.totals.participantesTotal;
+      const sankeyNodeValues = {};
+      const sankeyWidth = Math.max(640, sankeyEl.clientWidth || 0);
+      const sankeyLeftPadding = Math.max(
+        92,
+        Math.min(156, Math.round(sankeyWidth * 0.14)),
+      );
+      const sankeyRightPadding = Math.max(
+        136,
+        Math.min(236, Math.round(sankeyWidth * 0.22)),
+      );
+      const sankeyLabelWidthLeft = Math.max(
+        132,
+        Math.min(216, Math.round(sankeyLeftPadding * 1.15)),
+      );
+      const sankeyLabelWidthRight = Math.max(
+        168,
+        Math.min(284, Math.round(sankeyRightPadding * 1.04)),
+      );
+      const sankeyLabelFormatter = function (params) {
+        const nodeValue = Number(sankeyNodeValues[params.name]) || 0;
+        return params.name + "\nN: " + formatNumber(nodeValue);
+      };
+      const syncSankeySvgViewBox = function () {
+        const svg = sankeyEl.querySelector("svg");
+        if (!svg) {
+          return;
+        }
+        const width = Math.max(1, Math.round(sankeyEl.clientWidth || svg.clientWidth || 0));
+        const height = Math.max(
+          1,
+          Math.round(sankeyEl.clientHeight || svg.clientHeight || 0),
+        );
+        svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      };
+      links.forEach((link) => {
+        sankeyNodeValues[link.source] = (sankeyNodeValues[link.source] || 0) + link.value;
+        sankeyNodeValues[link.target] = Math.max(
+          sankeyNodeValues[link.target] || 0,
+          link.value,
+        );
+      });
       sankeyChart.setOption({
         animationDuration: 620,
         tooltip: {
           trigger: "item",
           formatter: function (params) {
-            if (params.dataType === "edge") {
+            const isEdge = params.dataType === "edge";
+            const participants = isEdge
+              ? Number(params.data.value) || 0
+              : Number(sankeyNodeValues[params.name]) || 0;
+            const totalPct = sankeyTotal > 0 ? percentage(participants, sankeyTotal) : 0;
+
+            if (isEdge) {
               return (
                 params.data.source +
                 " → " +
                 params.data.target +
                 ": " +
-                formatNumber(params.data.value)
+                formatNumber(participants) +
+                " (" +
+                totalPct +
+                "%)"
               );
             }
-            return params.name;
+
+            return (
+              params.name +
+              ": " +
+              formatNumber(participants) +
+              " (" +
+              totalPct +
+              "%)"
+            );
           },
         },
         graphic:
@@ -1151,28 +1783,41 @@
         series: [
           {
             type: "sankey",
-            left: 10,
-            top: 12,
-            right: 10,
-            bottom: 10,
+            left: sankeyLeftPadding,
+            top: 14,
+            right: sankeyRightPadding,
+            bottom: 14,
             layoutIterations: 48,
-            nodeWidth: 16,
-            nodeGap: 20,
+            nodeWidth: 26,
+            nodeGap: 34,
             emphasis: { focus: "adjacency" },
             data: hasSankey
               ? [
-                  { name: "Participantes", itemStyle: { color: "#004B8F" } },
-                  { name: "Criterio FIT", itemStyle: { color: "#3C7FC3" } },
+                  {
+                    name: "Participantes",
+                    itemStyle: { color: "#004B8F" },
+                    label: {
+                      position: "left",
+                      align: "right",
+                      width: sankeyLabelWidthLeft,
+                      overflow: "break",
+                      formatter: sankeyLabelFormatter,
+                    },
+                  },
+                  { name: "Criterio FIT (kits)", itemStyle: { color: "#1E6FBF" } },
                   {
                     name: "Fuera de screening",
-                    itemStyle: { color: "#1E6FBF" },
+                    itemStyle: { color: "#3C7FC3" },
                   },
                   {
                     name: "Seguimiento vigente",
+                    itemStyle: { color: "#5E9DDA" },
+                  },
+                  {
+                    name: "Mayor riesgo (orientación)",
                     itemStyle: { color: "#88BDF2" },
                   },
-                  { name: "Mayor riesgo", itemStyle: { color: "#5E9DDA" } },
-                  { name: "Edad < 45", itemStyle: { color: "#B5D9FA" } },
+                  { name: "Edad < 45", itemStyle: { color: "#B9DBFB" } },
                 ]
               : [],
             links: hasSankey ? links : [],
@@ -1185,10 +1830,18 @@
               color: "#29476e",
               fontSize: 11,
               fontWeight: 600,
+              position: "right",
+              distance: 10,
+              width: sankeyLabelWidthRight,
+              lineHeight: 14,
+              overflow: "break",
+              formatter: sankeyLabelFormatter,
             },
+            labelLayout: { hideOverlap: false, moveOverlap: "shiftY" },
           },
         ],
       });
+      syncSankeySvgViewBox();
 
       if (posnegChart) {
         const positives = model.fitFlowTotals.positivos;
@@ -1262,6 +1915,7 @@
       const resize = () => {
         barChart.resize();
         sankeyChart.resize();
+        syncSankeySvgViewBox();
         if (posnegChart) {
           posnegChart.resize();
         }
@@ -1460,8 +2114,26 @@
     return formatNumber(value);
   }
 
+  function isFiniteMetric(value) {
+    if (value === null || value === undefined) {
+      return false;
+    }
+    return Number.isFinite(Number(value));
+  }
+
   function formatNumber(value) {
     return new Intl.NumberFormat("es-AR").format(Number(value) || 0);
+  }
+
+  function formatDateTime(value) {
+    const parsed = value ? new Date(value) : new Date();
+    if (Number.isNaN(parsed.getTime())) {
+      return "—";
+    }
+    return new Intl.DateTimeFormat("es-AR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(parsed);
   }
 
   function escapeHtml(value) {
