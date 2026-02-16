@@ -661,74 +661,7 @@
     const integrity = model.integrity || validateDataIntegrity(model.stations, totals);
     const reportHeader = buildReportHeader(model.audit, integrity);
 
-    const totalCriterioPct = ratioPercent(
-      totals.criterioFitKits,
-      totals.participantesTotal,
-    );
-    const totalFueraPct = ratioPercent(
-      totals.fueraDeScreening,
-      totals.participantesTotal,
-    );
-    const totalOutsideDetail = outsideBreakdownDetail(totals);
     const executiveTop = renderExecutiveTopSection(totals, flow);
-
-    const totalAvanceRow = [
-      '<tr class="kpiDash__rowTotal">',
-      '<td class="kpiDash__station">Total</td>',
-      stageCell(
-        totals.participantesTotal,
-        totals.participantesTotal > 0 ? 100 : 0,
-      ),
-      stageCell(
-        totals.criterioFitKits,
-        totalCriterioPct || 0,
-        totalCriterioPct === null
-          ? ""
-          : totalCriterioPct + "% sobre participantes",
-      ),
-      stageCell(
-        totals.fueraDeScreening,
-        totalFueraPct || 0,
-        (totalFueraPct === null ? "" : totalFueraPct + "% sobre participantes · ") +
-          totalOutsideDetail,
-      ),
-      "</tr>",
-    ].join("");
-
-    const avanceRows = model.stations
-      .map((station) => {
-        const criterioPct = ratioPercent(
-          station.criterioFitKits,
-          station.participantesTotal,
-        );
-        const fueraPct = ratioPercent(
-          station.fueraDeScreening,
-          station.participantesTotal,
-        );
-        const outsideDetail = outsideBreakdownDetail(station);
-
-        return [
-          "<tr>",
-          '<td class="kpiDash__station">' + escapeHtml(station.station) + "</td>",
-          stageCell(
-            station.participantesTotal,
-            station.participantesTotal > 0 ? 100 : 0,
-          ),
-          stageCell(
-            station.criterioFitKits,
-            criterioPct || 0,
-            criterioPct === null ? "" : criterioPct + "% sobre participantes",
-          ),
-          stageCell(
-            station.fueraDeScreening,
-            fueraPct || 0,
-            (fueraPct === null ? "" : fueraPct + "% sobre participantes · ") +
-              outsideDetail,
-          ),
-          "</tr>",
-        ].join("");
-      })
-      .join("");
 
     const totalFlowRow = [
       '<tr class="kpiDash__rowTotal">',
@@ -826,21 +759,6 @@
       "</header>",
       '<div id="ppccrSankeyParticipantes" class="ppccr-sankey"></div>',
       "</article>",
-      "</section>",
-      '<section class="kpiDash__funnel kpiDash__funnel--avance" aria-label="Avance por estación">',
-      '<header class="kpiDash__panelHeader">',
-      "<h4>Avance por estación</h4>",
-      "<p>Vista compacta de lectura ejecutiva</p>",
-      "</header>",
-      '<div class="kpiDash__tableWrap">',
-      '<table class="kpiDash__table kpiDash__table--avance">',
-      "<thead><tr><th>Estación</th><th>Participantes</th><th>Criterio FIT</th><th>Fuera de screening</th></tr></thead>",
-      "<tbody>",
-      totalAvanceRow,
-      avanceRows,
-      "</tbody>",
-      "</table>",
-      "</div>",
       "</section>",
       '<section class="kpiDash__funnel" aria-label="Flujo FIT por estación">',
       '<header class="kpiDash__panelHeader">',
@@ -1111,16 +1029,27 @@
       trkPct === null ? 0 : (gaugeCircumference * gaugePct) / 100;
     const pendingLength =
       trkPct === null ? 0 : Math.max(0, gaugeCircumference - deliveredLength);
-    const deliveredTooltip =
-      trkPct === null
-        ? "Muestras de FIT entregadas: —"
-        : "Muestras de FIT entregadas: " + formatNumber(gaugePct) + "%";
-    const pendingTooltip =
-      trkPct === null
-        ? "Muestras aun no entregadas (adherencia): —"
-        : "Muestras aun no entregadas (adherencia): " +
-          formatNumber(pendingPct) +
-          "%";
+    const totalKits = hasData ? Math.max(0, Number(kits) || 0) : null;
+
+    function formatTrkTooltip(label, pctValue) {
+      if (pctValue === null || totalKits === null || totalKits <= 0) {
+        return label + ": —";
+      }
+      const amount = Math.round((Number(pctValue) / 100) * totalKits);
+      return (
+        label +
+        ": " +
+        formatNumber(pctValue) +
+        "% (" +
+        formatMetric(amount) +
+        "/" +
+        formatMetric(totalKits) +
+        ")"
+      );
+    }
+
+    const deliveredTooltip = formatTrkTooltip("Adherencia al test", gaugePct);
+    const pendingTooltip = formatTrkTooltip("Adherencia al test", pendingPct);
 
     let tone = "empty";
     if (hasData && trkPct !== null) {
@@ -1209,6 +1138,7 @@
           '"></circle>' +
           "</g>" +
           "</svg>",
+      '<span class="kpiDash__trkGaugeMarker" aria-hidden="true"></span>',
       '<span class="kpiDash__trkGaugeTip" aria-hidden="true"></span>',
       '<div class="kpiDash__trkGaugeInner">',
       '<span class="kpiDash__trkGaugeValue">' + displayPct + "</span>",
@@ -1405,20 +1335,6 @@
     });
   }
 
-  function outsideBreakdownDetail(entry) {
-    const seguimiento = formatMetric(entry && entry.seguimientoVigente);
-    const riesgo = formatMetric(entry && entry.mayorRiesgo);
-    const edad = formatMetric(entry && entry.edadLt45);
-    return (
-      "Seguimiento vigente: " +
-      seguimiento +
-      " · Mayor riesgo: " +
-      riesgo +
-      " · Edad < 45: " +
-      edad
-    );
-  }
-
   function validateDataIntegrity(stations, totals) {
     const issues = [];
     const safeStations = Array.isArray(stations) ? stations : [];
@@ -1592,30 +1508,6 @@
     return percentage(current, previous);
   }
 
-  function stageCell(value, pct, meta) {
-    const hasValue = value !== null && value !== undefined;
-    const progress = hasValue ? Math.max(0, Math.min(100, Math.round(pct || 0))) : 0;
-    const tooltipText =
-      hasValue && meta
-        ? formatNumber(value) + " · " + meta
-        : hasValue
-          ? formatNumber(value)
-          : "Sin dato";
-
-    return [
-      '<td title="' + escapeHtml(tooltipText) + '">',
-      '<div class="kpiDash__stage">',
-      '<span class="kpiDash__stageValue">' +
-        (hasValue ? formatNumber(value) : "—") +
-        "</span>",
-      '<div class="kpiDash__progress" aria-hidden="true"><span style="width:' +
-        progress +
-        '%"></span></div>',
-      "</div>",
-      "</td>",
-    ].join("");
-  }
-
   function plainCell(value) {
     return "<td>" + (value === null || value === undefined ? "—" : formatNumber(value)) + "</td>";
   }
@@ -1633,11 +1525,18 @@
       '<span class="kpiDash__flowPrimary">' + formatNumber(received) + "</span>",
       coverage === null
         ? ""
-        : '<span class="kpiDash__flowPct' +
-          (coverage === 100 ? " kpiDash__flowPct--full" : "") +
-          '">' +
-          formatNumber(coverage) +
-          "%</span>",
+        : [
+            '<span class="kpiDash__flowProgress" role="img" aria-label="Muestras recibidas ' +
+              formatNumber(coverage) +
+              '%">',
+            '<span class="kpiDash__flowProgressFill" style="width:' +
+              Math.max(0, Math.min(coverage, 100)) +
+              '%"></span>',
+            '<span class="kpiDash__flowProgressLabel">' +
+              formatNumber(coverage) +
+              "%</span>",
+            "</span>",
+          ].join(""),
       "</div>",
       "</td>",
     ].join("");

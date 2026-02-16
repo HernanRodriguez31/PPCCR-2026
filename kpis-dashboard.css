@@ -244,8 +244,8 @@
 
 .kpiDash__summaryHeadTotal {
   margin-left: auto;
-  font-size: clamp(1.9rem, 3vw, 2.45rem);
-  line-height: 0.95;
+  font-size: clamp(1.56rem, 2.45vw, 2.04rem);
+  line-height: 0.92;
   font-weight: 700;
   color: var(--kpi-blue-900);
   text-align: right;
@@ -275,8 +275,14 @@
   display: block;
 }
 
+.kpiDash__summary.kpiDash__execPanel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  row-gap: 0.26rem;
+}
+
 .kpiDash__summary .kpiDash__execHeader {
-  margin-bottom: 0.34rem;
+  margin-bottom: 0.14rem;
 }
 
 .kpiDash__summaryCard {
@@ -285,8 +291,11 @@
   background: transparent;
   padding: 0;
   box-shadow: none;
-  display: grid;
-  gap: var(--kpi-space-3);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100%;
+  gap: 0.86rem;
 }
 
 .kpiDash__summaryTop {
@@ -314,9 +323,9 @@
 
 .kpiDash__summaryDistribution {
   display: grid;
-  gap: var(--kpi-space-2);
+  gap: 0.62rem;
   border-top: 1px solid var(--kpi-divider);
-  padding-top: var(--kpi-space-3);
+  padding-top: 0.58rem;
 }
 
 .kpiDash__summaryBar {
@@ -404,7 +413,7 @@
 .kpiDash__summarySplit {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--kpi-space-2);
+  gap: 0.66rem;
 }
 
 .kpiDash__summaryMainMetric {
@@ -414,9 +423,9 @@
     "dot label value ."
     ". meta meta .";
   column-gap: 0.42rem;
-  row-gap: 0.06rem;
+  row-gap: 0.08rem;
   align-items: center;
-  padding: 0.18rem 0;
+  padding: 0.24rem 0 0.16rem;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -465,9 +474,9 @@
 .kpiDash__summaryReasons {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--kpi-space-2);
+  gap: 0.64rem;
   border-top: 1px solid var(--kpi-divider);
-  padding-top: var(--kpi-space-3);
+  padding-top: 0.7rem;
 }
 
 .kpiDash__summaryReasonsScope {
@@ -482,13 +491,15 @@
   border: 1px solid var(--kpi-border-soft);
   border-radius: var(--kpi-radius-sm);
   background: linear-gradient(150deg, #ffffff, rgba(234, 243, 255, 0.45));
-  padding: 0.44rem 0.55rem;
+  min-height: 76px;
+  padding: 0.58rem 0.62rem;
   display: grid;
-  gap: 0.14rem;
+  align-content: center;
+  gap: 0.18rem;
 }
 
 .kpiDash__summaryBadgeLabel {
-  font-size: 0.71rem;
+  font-size: 0.72rem;
   color: var(--kpi-gray-600);
 }
 
@@ -499,7 +510,7 @@
   font-size: 1rem;
   font-weight: 700;
   color: var(--kpi-blue-900);
-  line-height: 1.05;
+  line-height: 1.08;
   font-variant-numeric: tabular-nums;
   text-align: center;
   justify-self: center;
@@ -964,7 +975,19 @@
   --trk-chip-bg: rgba(30, 111, 191, 0.12);
   --trk-chip-border: rgba(30, 111, 191, 0.26);
   --trk-chip-text: var(--kpi-blue-900);
+  --trk-ring-main-1: #0a3f78;
+  --trk-ring-main-2: #0f5c9f;
+  --trk-ring-main-3: #2f82c5;
+  --trk-ring-track-1: #d9e5f1;
+  --trk-ring-track-2: #ebf1f8;
   --trk-ring-rest: rgba(136, 189, 242, 0.34);
+  --trk-ring-edge: rgba(14, 72, 127, 0.2);
+  --trk-ring-shadow: rgba(14, 55, 98, 0.2);
+  --trk-ring-highlight: rgba(255, 255, 255, 0.44);
+  --trk-ring-sheen: rgba(255, 255, 255, 0.18);
+  --trk-gauge-center-1: #ffffff;
+  --trk-gauge-center-2: #f5f9fd;
+  --trk-gauge-core-border: rgba(14, 72, 127, 0.14);
 }
 
 .kpiDash__trkHead {
@@ -981,8 +1004,8 @@
 
 .kpiDash__trkTitle {
   margin: 0;
-  font-size: clamp(0.86rem, 1.2vw, 0.95rem);
-  font-weight: 650;
+  font-size: var(--kpi-title-md);
+  font-weight: 620;
   color: var(--kpi-blue-900);
 }
 
@@ -1078,13 +1101,54 @@
   height: 92px;
   border-radius: 50%;
   background: conic-gradient(
-    var(--trk-accent) calc(var(--trk-pct) * 1%),
-    var(--trk-ring-rest) 0
+    from -90deg,
+    var(--trk-ring-main-1) 0%,
+    var(--trk-ring-main-2) calc(var(--trk-pct) * 0.55%),
+    var(--trk-ring-main-3) calc(var(--trk-pct) * 1%),
+    var(--trk-ring-track-1) calc(var(--trk-pct) * 1%),
+    var(--trk-ring-track-2) 100%
   );
   display: grid;
   place-items: center;
-  box-shadow: inset 0 0 0 1px rgba(12, 78, 141, 0.08);
+  box-shadow:
+    inset 0 0 0 1px var(--trk-ring-edge),
+    0 6px 14px var(--trk-ring-shadow);
   overflow: visible;
+  isolation: isolate;
+}
+
+.kpiDash__trkGauge::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 22%,
+    var(--trk-ring-highlight) 0%,
+    rgba(255, 255, 255, 0.12) 30%,
+    transparent 58%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.kpiDash__trkGauge::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from -90deg,
+    rgba(255, 255, 255, 0.48) 0deg,
+    rgba(255, 255, 255, 0.06) 52deg,
+    transparent 120deg,
+    transparent 300deg,
+    var(--trk-ring-sheen) 338deg,
+    rgba(255, 255, 255, 0.42) 360deg
+  );
+  pointer-events: none;
+  z-index: 2;
 }
 
 .kpiDash__trkGaugeOverlay {
@@ -1092,6 +1156,7 @@
   inset: 0;
   width: 100%;
   height: 100%;
+  z-index: 4;
 }
 
 .kpiDash__trkGaugeHit {
@@ -1104,6 +1169,30 @@
 
 .kpiDash__trkGaugeHit:focus-visible {
   outline: none;
+}
+
+.kpiDash__trkGaugeMarker {
+  position: absolute;
+  inset: 0;
+  transform: rotate(calc((var(--trk-pct) * 3.6deg) - 90deg));
+  transform-origin: 50% 50%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.kpiDash__trkGaugeMarker::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 4px;
+  height: 10px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #f7fbff 0%, #d8e8f8 58%, #9ebbd8 100%);
+  box-shadow:
+    0 0 0 1px rgba(251, 254, 255, 0.96),
+    0 1px 3px rgba(12, 57, 99, 0.28);
 }
 
 .kpiDash__trkGaugeTip {
@@ -1146,21 +1235,24 @@
 
 .kpiDash__trkGaugeInner {
   position: relative;
-  z-index: 1;
-  width: 79%;
-  height: 79%;
+  z-index: 3;
+  width: 72%;
+  height: 72%;
   border-radius: 50%;
-  background: #ffffff;
-  border: 1px solid var(--kpi-border-soft);
+  background: linear-gradient(160deg, var(--trk-gauge-center-1), var(--trk-gauge-center-2));
+  border: 1px solid var(--trk-gauge-core-border);
   display: grid;
   place-items: center;
   align-content: center;
   gap: 0.06rem;
   text-align: center;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 2px 8px rgba(14, 60, 106, 0.12);
 }
 
 .kpiDash__trkGaugeValue {
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   line-height: 1;
   font-weight: 700;
   color: var(--kpi-blue-900);
@@ -1178,6 +1270,11 @@
   --trk-chip-bg: rgba(11, 95, 174, 0.14);
   --trk-chip-border: rgba(11, 95, 174, 0.28);
   --trk-chip-text: #0b4f8f;
+  --trk-ring-main-1: #083a6f;
+  --trk-ring-main-2: #0f5a9a;
+  --trk-ring-main-3: #2a81c8;
+  --trk-ring-track-1: #d4e2ef;
+  --trk-ring-track-2: #ebf2f9;
 }
 
 .kpiDash__trk--good {
@@ -1185,6 +1282,11 @@
   --trk-chip-bg: rgba(30, 111, 191, 0.12);
   --trk-chip-border: rgba(30, 111, 191, 0.24);
   --trk-chip-text: #0d4e8c;
+  --trk-ring-main-1: #0a3f78;
+  --trk-ring-main-2: #0f5c9f;
+  --trk-ring-main-3: #2f82c5;
+  --trk-ring-track-1: #d9e5f1;
+  --trk-ring-track-2: #ebf1f8;
 }
 
 .kpiDash__trk--watch {
@@ -1192,6 +1294,11 @@
   --trk-chip-bg: rgba(60, 127, 195, 0.14);
   --trk-chip-border: rgba(60, 127, 195, 0.24);
   --trk-chip-text: #1f5b97;
+  --trk-ring-main-1: #2a5d90;
+  --trk-ring-main-2: #467db2;
+  --trk-ring-main-3: #7daed8;
+  --trk-ring-track-1: #dce8f3;
+  --trk-ring-track-2: #eef4fa;
 }
 
 .kpiDash__trk--empty {
@@ -1199,12 +1306,22 @@
   --trk-chip-bg: rgba(143, 161, 185, 0.16);
   --trk-chip-border: rgba(143, 161, 185, 0.26);
   --trk-chip-text: #5f738d;
+  --trk-ring-main-1: #889db5;
+  --trk-ring-main-2: #9eb3c8;
+  --trk-ring-main-3: #bdcddd;
+  --trk-ring-track-1: #dfe7ef;
+  --trk-ring-track-2: #eff4f9;
   --trk-ring-rest: rgba(143, 161, 185, 0.28);
+  --trk-gauge-center-2: #f4f7fa;
 }
 
 .kpiDash__trk--empty .kpiDash__trkValue,
 .kpiDash__trk--empty .kpiDash__trkGaugeValue {
   color: var(--kpi-gray-600);
+}
+
+.kpiDash__trk--empty .kpiDash__trkGaugeMarker {
+  display: none;
 }
 
 .kpiDash__card {
@@ -1565,9 +1682,9 @@
 
 .kpiDash__flowCell {
   display: inline-grid;
-  grid-template-columns: 3ch 3.9em;
+  grid-template-columns: 3ch minmax(4.95rem, 5.35rem);
   align-items: center;
-  column-gap: 0.14rem;
+  column-gap: 0.22rem;
   white-space: nowrap;
 }
 
@@ -1580,26 +1697,48 @@
   font-variant-numeric: tabular-nums;
 }
 
-.kpiDash__flowPct {
+.kpiDash__flowProgress {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 3.9em;
+  height: 1.03rem;
+  min-width: 4.95rem;
   border-radius: 999px;
-  padding: 0.08rem 0.4rem;
-  font-size: 0.67rem;
-  line-height: 1.1;
-  font-weight: 700;
-  color: #ac4a80;
-  background: rgba(172, 74, 128, 0.12);
-  border: 1px solid rgba(172, 74, 128, 0.25);
-  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(227, 238, 251, 0.96), rgba(212, 228, 246, 0.92));
+  border: 1px solid rgba(136, 173, 218, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
-.kpiDash__flowPct--full {
-  color: #2f7a52;
-  background: rgba(47, 122, 82, 0.13);
-  border-color: rgba(47, 122, 82, 0.3);
+.kpiDash__flowProgress::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.kpiDash__flowProgressFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(26, 96, 168, 0.96), rgba(102, 164, 230, 0.95));
+  box-shadow: inset 0 -1px 0 rgba(10, 70, 135, 0.24);
+}
+
+.kpiDash__flowProgressLabel {
+  position: relative;
+  z-index: 1;
+  font-size: 0.64rem;
+  line-height: 1;
+  font-weight: 700;
+  color: #18456f;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 .kpiDash__informCell {
@@ -1795,6 +1934,19 @@
 
   .kpiDash__summaryReasons {
     grid-template-columns: 1fr;
+  }
+
+  .kpiDash__summary.kpiDash__execPanel {
+    row-gap: 0.22rem;
+  }
+
+  .kpiDash__summaryCard {
+    min-height: 0;
+    gap: var(--kpi-space-3);
+  }
+
+  .kpiDash__summaryBadge {
+    min-height: 64px;
   }
 
   .kpiDash__fitFlowBody {

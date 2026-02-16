@@ -5,28 +5,87 @@
     fuera: 15,
     motivos: [
       { key: "riesgo", label: "Mayor riesgo (orientación)", n: 7 },
-      { key: "seguimiento", label: "Seguimiento vigente", n: 4 },
+      { key: "seguimiento", label: "Seg. Vigente", n: 4 },
       { key: "edad", label: "Edad < 45", n: 4 }
     ]
   };
 
   const COLORS = {
-    nodeMain: "#0b4ea2",
-    nodeFit: "#2a78e4",
-    nodeFuera: "#7e9ec2",
+    nodeMain: "#0f58b5",
+    nodeFit: "#3b87ea",
+    nodeFuera: "#8faac6",
     motivoNodes: {
-      riesgo: "#8ca4c0",
-      seguimiento: "#9db2cb",
-      edad: "#b4c4d8"
+      riesgo: "#9ab0c8",
+      seguimiento: "#afc1d5",
+      edad: "#c2d0e0"
     },
-    linkFit: "rgba(42,120,228,.46)",
-    linkFuera: "rgba(126,158,194,.42)",
+    linkFit: "rgba(104,151,219,.52)",
+    linkFuera: "rgba(169,190,214,.46)",
     linkMotivos: {
-      riesgo: "rgba(140,164,192,.45)",
-      seguimiento: "rgba(157,178,203,.45)",
-      edad: "rgba(180,196,216,.45)"
+      riesgo: "rgba(155,176,201,.46)",
+      seguimiento: "rgba(171,191,213,.46)",
+      edad: "rgba(189,205,223,.46)"
     },
-    border: "rgba(226,236,249,1)"
+    nodeGradients: {
+      total: [
+        ["0%", "#0a4a9a", 1],
+        ["55%", "#176ac1", 0.98],
+        ["100%", "#3e8fdf", 0.96],
+      ],
+      fit: [
+        ["0%", "#4f88c9", 0.98],
+        ["55%", "#73a7dd", 0.96],
+        ["100%", "#a8c9ea", 0.95],
+      ],
+      fuera: [
+        ["0%", "#89a8c9", 0.96],
+        ["55%", "#a8bfd9", 0.95],
+        ["100%", "#d0deed", 0.94],
+      ],
+      edad: [
+        ["0%", "#a8bfd8", 0.94],
+        ["55%", "#c4d5e7", 0.92],
+        ["100%", "#e1ebf6", 0.9],
+      ],
+      seguimiento: [
+        ["0%", "#9eb7d2", 0.94],
+        ["55%", "#bfd1e4", 0.92],
+        ["100%", "#dde8f4", 0.9],
+      ],
+      riesgo: [
+        ["0%", "#96b0cc", 0.94],
+        ["55%", "#b8ccdf", 0.92],
+        ["100%", "#d7e4f2", 0.9],
+      ]
+    },
+    linkGradients: {
+      fit: [
+        ["0%", "#2f72c4", 0.62],
+        ["55%", "#6a9fd8", 0.48],
+        ["100%", "#c2d8ef", 0.3],
+      ],
+      fuera: [
+        ["0%", "#5d87b4", 0.56],
+        ["55%", "#8fb0d2", 0.43],
+        ["100%", "#d0e0f0", 0.28],
+      ],
+      edad: [
+        ["0%", "#7ca1c5", 0.5],
+        ["55%", "#a7c1da", 0.36],
+        ["100%", "#deebf7", 0.22],
+      ],
+      seguimiento: [
+        ["0%", "#769cc2", 0.5],
+        ["55%", "#a3bed8", 0.36],
+        ["100%", "#dbe9f6", 0.22],
+      ],
+      riesgo: [
+        ["0%", "#6e94bc", 0.52],
+        ["55%", "#9bb8d4", 0.38],
+        ["100%", "#d7e6f5", 0.24],
+      ]
+    },
+    border: "rgba(222,234,248,.98)"
   };
   const MOTIVO_LAYOUT_ORDER = ["edad", "seguimiento", "riesgo"];
 
@@ -107,17 +166,17 @@
     const sumMotivos = data.motivos.reduce((acc, motivo) => acc + motivo.n, 0);
     const hasMismatch = calcFuera !== data.fuera || sumMotivos !== data.fuera;
 
-    const W = 560;
-    const H = 214;
-    const x0 = 96;
-    const x1 = 220;
-    const x2 = 368;
-    const y0 = 18;
+    const W = 520;
+    const H = 236;
+    const x0 = 130;
+    const x1 = 254;
+    const x2 = 402;
+    const y0 = 28;
     const nodeW = 10;
     const splitGap = 5;
     const motivoGap = 6;
 
-    const k = Math.max(3.3, Math.min(4.1, 132 / Math.max(1, data.total)));
+    const k = Math.max(3.5, Math.min(4.4, 150 / Math.max(1, data.total)));
 
     const nodes = {
       total: {
@@ -211,8 +270,100 @@
       "aria-label": "Flujo de participantes y segmentación de screening"
     });
 
-    svg.appendChild(link("total", nodes.total, "fit", nodes.fit, data.fit, COLORS.linkFit));
-    svg.appendChild(link("total", nodes.total, "fuera", nodes.fuera, data.fuera, COLORS.linkFuera));
+    const gradientUid = `ppccr-sankey-${Math.random().toString(36).slice(2, 8)}`;
+    const defs = svgEl("defs", {});
+
+    function addLinearGradient(id, stops, direction = {}) {
+      const gradient = svgEl("linearGradient", {
+        id,
+        x1: direction.x1 || "0%",
+        y1: direction.y1 || "0%",
+        x2: direction.x2 || "100%",
+        y2: direction.y2 || "0%"
+      });
+      stops.forEach(([offset, color, opacity]) => {
+        gradient.appendChild(
+          svgEl("stop", {
+            offset,
+            "stop-color": color,
+            "stop-opacity": String(opacity)
+          }),
+        );
+      });
+      defs.appendChild(gradient);
+      return `url(#${id})`;
+    }
+
+    const nodeShadowId = `${gradientUid}-node-shadow`;
+    const nodeShadow = svgEl("filter", {
+      id: nodeShadowId,
+      x: "-30%",
+      y: "-25%",
+      width: "170%",
+      height: "170%"
+    });
+    nodeShadow.appendChild(
+      svgEl("feDropShadow", {
+        dx: "0",
+        dy: "0.5",
+        "stdDeviation": "0.55",
+        "flood-color": "#7ea2c9",
+        "flood-opacity": "0.28"
+      }),
+    );
+    defs.appendChild(nodeShadow);
+
+    const nodePaints = {
+      total: addLinearGradient(`${gradientUid}-node-total`, COLORS.nodeGradients.total, {
+        x1: "0%",
+        y1: "0%",
+        x2: "100%",
+        y2: "0%"
+      }),
+      fit: addLinearGradient(`${gradientUid}-node-fit`, COLORS.nodeGradients.fit, {
+        x1: "0%",
+        y1: "0%",
+        x2: "100%",
+        y2: "0%"
+      }),
+      fuera: addLinearGradient(`${gradientUid}-node-fuera`, COLORS.nodeGradients.fuera, {
+        x1: "0%",
+        y1: "0%",
+        x2: "100%",
+        y2: "0%"
+      }),
+      edad: addLinearGradient(`${gradientUid}-node-edad`, COLORS.nodeGradients.edad, {
+        x1: "0%",
+        y1: "0%",
+        x2: "100%",
+        y2: "0%"
+      }),
+      seguimiento: addLinearGradient(`${gradientUid}-node-seguimiento`, COLORS.nodeGradients.seguimiento, {
+        x1: "0%",
+        y1: "0%",
+        x2: "100%",
+        y2: "0%"
+      }),
+      riesgo: addLinearGradient(`${gradientUid}-node-riesgo`, COLORS.nodeGradients.riesgo, {
+        x1: "0%",
+        y1: "0%",
+        x2: "100%",
+        y2: "0%"
+      })
+    };
+
+    const linkPaints = {
+      fit: addLinearGradient(`${gradientUid}-link-fit`, COLORS.linkGradients.fit),
+      fuera: addLinearGradient(`${gradientUid}-link-fuera`, COLORS.linkGradients.fuera),
+      edad: addLinearGradient(`${gradientUid}-link-edad`, COLORS.linkGradients.edad),
+      seguimiento: addLinearGradient(`${gradientUid}-link-seguimiento`, COLORS.linkGradients.seguimiento),
+      riesgo: addLinearGradient(`${gradientUid}-link-riesgo`, COLORS.linkGradients.riesgo)
+    };
+
+    svg.appendChild(defs);
+
+    svg.appendChild(link("total", nodes.total, "fit", nodes.fit, data.fit, linkPaints.fit));
+    svg.appendChild(link("total", nodes.total, "fuera", nodes.fuera, data.fuera, linkPaints.fuera));
 
     motivoNodes.forEach((motivo) => {
       svg.appendChild(
@@ -222,7 +373,7 @@
           motivo.key,
           motivo,
           motivo.displayValue,
-          COLORS.linkMotivos[motivo.key] || COLORS.linkFuera,
+          linkPaints[motivo.key] || linkPaints.fuera,
         ),
       );
     });
@@ -235,8 +386,10 @@
         height: node.h,
         rx: 8,
         ry: 8,
-        fill: node.c,
-        stroke: COLORS.border
+        fill: nodePaints[node.key] || node.c,
+        stroke: COLORS.border,
+        "stroke-width": 1,
+        filter: `url(#${nodeShadowId})`
       });
     }
 
@@ -258,14 +411,19 @@
     function addCallout(config) {
       const side = config.side || "right";
       const value = config.valueText || `N ${config.node.n}`;
-      const label = config.label || config.node.label;
-      const meta = config.meta || config.node.meta || "";
-      const labelLines = wrapLabel(label, config.maxChars || 22);
+      const hasCustomLabel = Object.prototype.hasOwnProperty.call(config, "label");
+      const hasCustomMeta = Object.prototype.hasOwnProperty.call(config, "meta");
+      const label = hasCustomLabel ? config.label : config.node.label;
+      const meta = hasCustomMeta ? config.meta : (config.node.meta || "");
+      const hasLabel = Boolean(String(label || "").trim());
+      const labelLines = hasLabel ? wrapLabel(label, config.maxChars || 22) : [];
       const textAnchor = side === "left" ? "end" : "start";
       const lineHeight = 10;
       const valueY = config.y;
       const labelY = valueY + 14;
-      const metaY = labelY + labelLines.length * lineHeight + 1;
+      const metaY = hasLabel
+        ? labelY + labelLines.length * lineHeight + 1
+        : valueY + lineHeight + 2;
 
       addLeader(config.fromX, config.fromY, config.toX, config.toY);
 
@@ -279,21 +437,23 @@
       valueNode.textContent = value;
       g.appendChild(valueNode);
 
-      const labelNode = svgEl("text", {
-        x: config.textX,
-        y: labelY,
-        "text-anchor": textAnchor,
-        class: "node-label"
-      });
-      labelLines.forEach((line, index) => {
-        const span = svgEl("tspan", {
+      if (hasLabel) {
+        const labelNode = svgEl("text", {
           x: config.textX,
-          dy: index === 0 ? 0 : lineHeight
+          y: labelY,
+          "text-anchor": textAnchor,
+          class: "node-label"
         });
-        span.textContent = line;
-        labelNode.appendChild(span);
-      });
-      g.appendChild(labelNode);
+        labelLines.forEach((line, index) => {
+          const span = svgEl("tspan", {
+            x: config.textX,
+            dy: index === 0 ? 0 : lineHeight
+          });
+          span.textContent = line;
+          labelNode.appendChild(span);
+        });
+        g.appendChild(labelNode);
+      }
 
       if (meta) {
         const metaNode = svgEl("text", {
@@ -349,7 +509,7 @@
     const leftFlowStartX = nodes.total.x + nodeW;
     const leftFlowEndX = nodes.fit.x;
     const leftFlowLabelX =
-      leftFlowStartX + (leftFlowEndX - leftFlowStartX) * 0.45;
+      leftFlowStartX + (leftFlowEndX - leftFlowStartX) * 0.54;
 
     addNodeCenterLabel(nodes.fit, "N 20", "Criterio FIT", {
       x: leftFlowLabelX,
@@ -358,6 +518,25 @@
     addNodeCenterLabel(nodes.fuera, "N 15", "Fuera de screening", {
       x: leftFlowLabelX,
       y: nodes.fuera.y + nodes.fuera.h * 0.5,
+    });
+
+    const motivoInlineLabels = {
+      edad: "Edad < 45",
+      seguimiento: "Seg. Vigente",
+      riesgo: "Mayor riesgo",
+    };
+    const motivoInlineLabelX = x2 - 12;
+
+    motivoNodes.forEach((motivo) => {
+      const inlineLabel = motivoInlineLabels[motivo.key] || motivo.label;
+      const inlineText = svgEl("text", {
+        x: motivoInlineLabelX,
+        y: motivo.y + motivo.h * 0.5 + 3,
+        "text-anchor": "end",
+        class: "motivo-inline-label"
+      });
+      inlineText.textContent = inlineLabel;
+      svg.appendChild(inlineText);
     });
 
     const motivoRows = [
@@ -372,6 +551,7 @@
         side: "right",
         textX: x2 + nodeW + 20,
         y: motivoRows[index],
+        label: "",
         maxChars: 17,
         meta: "",
         fromX: motivo.x + nodeW,

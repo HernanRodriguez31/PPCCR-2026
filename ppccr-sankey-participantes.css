@@ -45,7 +45,7 @@
 }
 
 .ppccr-sankey .viz{
-  margin-top:2px;
+  margin-top:8px;
 }
 
 .ppccr-sankey svg{
@@ -56,8 +56,8 @@
 
 .ppccr-sankey .callout-line{
   fill:none;
-  stroke:rgba(91,107,130,.5);
-  stroke-width:1;
+  stroke:rgba(103,125,151,.48);
+  stroke-width:1.05;
   stroke-linecap:round;
 }
 
@@ -83,14 +83,28 @@
 .ppccr-sankey .segment-inline-value{
   font-size:15px;
   font-weight:860;
-  fill:#163a63;
+  fill:#123e6a;
+  letter-spacing:.12px;
   pointer-events:none;
 }
 
 .ppccr-sankey .segment-inline-label{
   font-size:10px;
   font-weight:740;
-  fill:#17395f;
+  fill:#264f78;
+  letter-spacing:.08px;
+  pointer-events:none;
+}
+
+.ppccr-sankey .motivo-inline-label{
+  font-size:8.75px;
+  font-weight:770;
+  fill:#34597d;
+  letter-spacing:.08px;
+  paint-order:stroke;
+  stroke:rgba(246,250,255,.62);
+  stroke-width:.45px;
+  stroke-linejoin:round;
   pointer-events:none;
 }
 
