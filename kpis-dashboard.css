@@ -79,6 +79,66 @@
   background: #ffffff;
 }
 
+.kpiDash__pdfSnapshot {
+  position: fixed;
+  left: -24000px;
+  top: 0;
+  width: 1280px;
+  background: #ffffff;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.kpiDash__pdfSnapshot,
+.kpiDash__pdfSnapshot * {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.kpiDash__pdfSnapshot .kpiDash__pdfSnapshotPage {
+  width: 100%;
+  background: #ffffff;
+}
+
+.kpiDash__pdfSnapshot .site-header {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.kpiDash__pdfSnapshot .site-topbar,
+.kpiDash__pdfSnapshot .topbar,
+.kpiDash__pdfSnapshot .site-topbar__inner {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.kpiDash__pdfSnapshot .site-nav {
+  display: none !important;
+}
+
+.kpiDash__pdfSnapshot .logo-strip {
+  margin-bottom: 16px !important;
+}
+
+.kpiDash__pdfSnapshot .kpiDash__reportRoot {
+  margin: 22px 0 0;
+}
+
+.kpiDash__pdfSnapshot .kpiDash__reportHeader,
+.kpiDash__pdfSnapshot .kpiDash__execPanel,
+.kpiDash__pdfSnapshot .kpiDash__panel,
+.kpiDash__pdfSnapshot .kpiDash__funnel,
+.kpiDash__pdfSnapshot .kpiDash__stock,
+.kpiDash__pdfSnapshot .kpiDash__tableWrap,
+.kpiDash__pdfSnapshot .kpiDash__chart,
+.kpiDash__pdfSnapshot .ppccr-sankey {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
 .kpiDash__shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -219,6 +279,52 @@
 
 .kpiDash__reportRoot.kpiDash--exporting .kpiDash__reportExportedAt {
   display: block;
+}
+
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__reportUpdated,
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__reportStatus {
+  display: none;
+}
+
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__summaryBarSegment--fit {
+  background: linear-gradient(95deg, #0f5497, #2a7bc6);
+}
+
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__summaryBarSegment--outside {
+  background: linear-gradient(95deg, #6aa9e6, #8ebef0);
+}
+
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__trk {
+  --trk-ring-main-1: #0b4e8d;
+  --trk-ring-main-2: #1b6db4;
+  --trk-ring-main-3: #3f93da;
+  --trk-ring-track-1: #d2e3f3;
+  --trk-ring-track-2: #e8f1f9;
+  --trk-ring-edge: rgba(12, 78, 141, 0.26);
+  --trk-ring-shadow: rgba(13, 59, 106, 0.18);
+}
+
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__trkGauge::before,
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__trkGauge::after {
+  display: none;
+}
+
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__flowProgress {
+  background: linear-gradient(180deg, #dce9f7, #c7dcf2);
+  border-color: rgba(107, 153, 205, 0.58);
+}
+
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__flowProgressFill {
+  background: linear-gradient(90deg, #155a9c, #4a96da);
+}
+
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__informChip--neg {
+  background: linear-gradient(145deg, #165b9d, #2d7cc3);
+}
+
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__informChip--pos {
+  background: linear-gradient(145deg, #d2e6fa, #afcfee);
+  border-color: rgba(102, 154, 206, 0.72);
 }
 
 .kpiDash__cards {
@@ -2204,13 +2310,26 @@
     background: #ffffff !important;
   }
 
-  body > header,
   body > footer,
   body > main > :not(#kpis),
   .mobile-fixed-dock,
   .back-to-top,
   .modal {
     display: none !important;
+  }
+
+  body > header {
+    display: block !important;
+    position: static !important;
+    box-shadow: none !important;
+  }
+
+  body > header .site-nav {
+    display: none !important;
+  }
+
+  body > header .logo-strip {
+    margin-bottom: 6mm !important;
   }
 
   #kpis {
@@ -2244,6 +2363,11 @@
 
   .kpiDash__reportExportedAt {
     display: block !important;
+  }
+
+  .kpiDash__reportUpdated,
+  .kpiDash__reportStatus {
+    display: none !important;
   }
 
   .kpiDash__reportHeader,

@@ -40,11 +40,8 @@
 
   const ECHARTS_CDN =
     "https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js";
-  const HTML2CANVAS_CDN =
-    "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
-  const JSPDF_CDN =
-    "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
-  const PDF_PAGE_MARGIN_MM = 10;
+  const HTML2PDF_CDN =
+    "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js";
 
   const SELECTORS = {
     root: "[data-kpi-dashboard]",
@@ -1237,7 +1234,6 @@
       '<p class="kpiDash__reportExportedAt" data-kpi-exported-at aria-live="polite"></p>',
       '<div class="kpiDash__reportActions" role="group" aria-label="Acciones del reporte">',
       '<button type="button" class="kpiDash__reportBtn" data-kpi-action="download-pdf" aria-label="Descargar reporte KPI en PDF">Descargar PDF</button>',
-      '<button type="button" class="kpiDash__reportBtn" data-kpi-action="print-pdf" aria-label="Imprimir reporte KPI o guardar como PDF">Imprimir / Guardar como PDF</button>',
       '<button type="button" class="kpiDash__reportBtn kpiDash__reportBtn--primary" data-kpi-action="refresh" aria-label="Actualizar reporte">Refresh</button>',
       "</div>",
       '<div class="kpiDash__reportStatus ' +
@@ -1290,23 +1286,15 @@
   }
 
   function bindReportHeaderActions(root) {
-    const reportRoot = root.querySelector(SELECTORS.reportRoot);
     const downloadPdfBtn = root.querySelector('[data-kpi-action="download-pdf"]');
-    const printPdfBtn = root.querySelector('[data-kpi-action="print-pdf"]');
     const refreshBtn = root.querySelector('[data-kpi-action="refresh"]');
 
-    if (downloadPdfBtn && reportRoot) {
+    if (downloadPdfBtn) {
       downloadPdfBtn.addEventListener("click", function () {
-        exportDashboardPdf(root, reportRoot, {
+        exportarReportePDF({
           downloadBtn: downloadPdfBtn,
-          printBtn: printPdfBtn,
+          refreshBtn,
         });
-      });
-    }
-
-    if (printPdfBtn && reportRoot) {
-      printPdfBtn.addEventListener("click", function () {
-        printDashboardReport(root, reportRoot);
       });
     }
 
@@ -1317,111 +1305,398 @@
     }
   }
 
-  async function exportDashboardPdf(root, reportRoot, controls) {
-    if (!reportRoot) {
+  async function exportarReportePDF(controls) {
+    const downloadBtn = controls && controls.downloadBtn ? controls.downloadBtn : null;
+    const refreshBtn = controls && controls.refreshBtn ? controls.refreshBtn : null;
+    const defaultDownloadLabel = downloadBtn ? downloadBtn.textContent : "";
+    const exportDate = new Date();
+    const exportStamp = formatDateTime(exportDate);
+    const filename = "Reporte_PPCCR_2026.pdf";
+    const headerSource = document.querySelector("#top");
+    const dashboardSource = document.querySelector("#kpi-dashboard-ppccr");
+
+    if (!headerSource || !dashboardSource) {
+      window.alert("No se encontraron los elementos del reporte para exportar.");
       return;
     }
 
-    const downloadBtn = controls && controls.downloadBtn ? controls.downloadBtn : null;
-    const printBtn = controls && controls.printBtn ? controls.printBtn : null;
-    const defaultDownloadLabel = downloadBtn ? downloadBtn.textContent : "";
-    const exportDate = new Date();
-    const filename = buildPdfFilename(exportDate);
-
-    setReportExportedAt(root, exportDate);
-    setExportActionState(downloadBtn, printBtn, true);
+    setExportActionState([downloadBtn, refreshBtn], true);
     if (downloadBtn) {
       downloadBtn.textContent = "Generando PDF...";
     }
-    reportRoot.classList.add("kpiDash--exporting");
+
+    let snapshotHost = null;
 
     try {
-      const libs = await ensurePdfLibraries();
+      const html2pdf = await ensureHtml2PdfLibrary();
+      snapshotHost = createPdfSnapshotHost({
+        headerSource,
+        dashboardSource,
+        exportStamp,
+      });
+      document.body.appendChild(snapshotHost);
+      if (!snapshotHost.isConnected) {
+        throw new Error(
+          "El contenedor temporal para PDF no quedó adjunto al DOM antes de capturar.",
+        );
+      }
+
+      // Espera obligatoria para estabilizar layout/clonado de gráficos.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       await waitForUiStable();
-      const canvas = await libs.html2canvas(reportRoot, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        width: Math.ceil(reportRoot.scrollWidth),
-        height: Math.ceil(reportRoot.scrollHeight),
-      });
+      await waitForSnapshotAssets(snapshotHost);
+      const avoidSelectors = [
+        ".kpiDash__reportHeader",
+        ".kpiDash__execPanel",
+        ".kpiDash__panel",
+        ".kpiDash__funnel",
+        ".kpiDash__stock",
+        ".kpiDash__tableWrap",
+        ".kpiDash__chart",
+        ".ppccr-sankey",
+      ];
 
-      const doc = new libs.jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-        compress: true,
-      });
-
-      appendCanvasToPdf(doc, canvas, PDF_PAGE_MARGIN_MM);
-      doc.save(filename);
-    } catch (error) {
-      console.error("[KPI Dashboard] Error al exportar PDF.", error);
-      window.alert("No se pudo generar el PDF del reporte. Reintentá en unos segundos.");
+      await html2pdf()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            logging: false,
+            letterRendering: true,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: 800,
+            windowHeight: Math.ceil(snapshotHost.scrollHeight || 1800),
+          },
+          jsPDF: {
+            unit: "mm",
+            format: "a4",
+            orientation: "portrait",
+          },
+          pagebreak: {
+            mode: ["avoid-all", "css", "legacy"],
+            avoid: avoidSelectors,
+          },
+        })
+        .from(snapshotHost)
+        .save();
+    } catch (err) {
+      console.error("ERROR CRÍTICO PDF:", err);
+      const message =
+        err && err.message ? err.message : JSON.stringify(err || "Error desconocido");
+      window.alert("Error: " + message);
     } finally {
-      reportRoot.classList.remove("kpiDash--exporting");
+      if (snapshotHost && snapshotHost.parentNode) {
+        snapshotHost.parentNode.removeChild(snapshotHost);
+      }
       if (downloadBtn) {
         downloadBtn.textContent = defaultDownloadLabel;
       }
-      setExportActionState(downloadBtn, printBtn, false);
+      setExportActionState([downloadBtn, refreshBtn], false);
     }
   }
 
-  function printDashboardReport(root, reportRoot) {
-    if (!reportRoot) {
-      return;
-    }
-
-    setReportExportedAt(root, new Date());
-    reportRoot.classList.add("kpiDash--exporting");
-
-    const cleanup = () => {
-      reportRoot.classList.remove("kpiDash--exporting");
-      window.removeEventListener("afterprint", cleanup);
-    };
-
-    window.addEventListener("afterprint", cleanup, { once: true });
-    window.print();
-    window.setTimeout(cleanup, 1500);
+  async function downloadPDF(reportRoot, controls) {
+    return exportarReportePDF(controls);
   }
 
-  function setReportExportedAt(root, date) {
-    const exportedAtEl = root.querySelector(SELECTORS.reportExportedAt);
-    if (!exportedAtEl) {
-      return;
-    }
-    exportedAtEl.textContent = "Exportado: " + formatDateTime(date);
-  }
-
-  function setExportActionState(downloadBtn, printBtn, disabled) {
-    [downloadBtn, printBtn].forEach((btn) => {
+  function setExportActionState(buttons, disabled) {
+    (Array.isArray(buttons) ? buttons : []).forEach((btn) => {
       if (btn) {
         btn.disabled = Boolean(disabled);
       }
     });
   }
 
-  async function ensurePdfLibraries() {
-    if (window.html2canvas && window.jspdf && window.jspdf.jsPDF) {
-      return { html2canvas: window.html2canvas, jsPDF: window.jspdf.jsPDF };
+  function createPdfSnapshotHost(payload) {
+    const data = payload || {};
+    const headerSource = data.headerSource;
+    const dashboardSource = data.dashboardSource;
+    const exportStamp = data.exportStamp || "";
+    const host = document.createElement("div");
+    host.id = "kpiDash__pdfCaptureRoot";
+    host.className = "kpiDash__pdfCaptureRoot";
+    host.setAttribute("aria-hidden", "true");
+    host.style.position = "fixed";
+    host.style.left = "-10000px";
+    host.style.top = "0";
+    host.style.width = "800px";
+    host.style.background = "#ffffff";
+    host.style.zIndex = "-1";
+    host.style.pointerEvents = "none";
+
+    const style = document.createElement("style");
+    style.textContent = buildPdfCaptureStyles();
+    host.appendChild(style);
+
+    const headerCopy = headerSource.cloneNode(true);
+    headerCopy.classList.add("kpiDash__pdfCaptureHeader");
+    headerCopy.removeAttribute("id");
+    headerCopy
+      .querySelectorAll(".site-nav, #mobileDockWrap, .mobile-fixed-dock, .nav-toggle")
+      .forEach((node) => node.remove());
+    headerCopy.querySelectorAll(".site-topbar").forEach((node) => {
+      node.style.position = "static";
+      node.style.top = "auto";
+    });
+    host.appendChild(headerCopy);
+
+    const dashboardCopy = dashboardSource.cloneNode(true);
+    dashboardCopy.classList.add("kpiDash__pdfCaptureDashboard");
+    dashboardCopy.removeAttribute("id");
+    snapshotDashboardCanvasesAsImages(dashboardSource, dashboardCopy);
+    const reportCopy = dashboardCopy.querySelector(SELECTORS.reportRoot);
+    if (reportCopy) {
+      reportCopy.classList.add("kpiDash--exporting");
+    }
+    const exportEl = dashboardCopy.querySelector(SELECTORS.reportExportedAt);
+    if (exportEl) {
+      exportEl.textContent = exportStamp;
+    }
+    host.appendChild(dashboardCopy);
+
+    return host;
+  }
+
+  function snapshotDashboardCanvasesAsImages(sourceRoot, targetRoot) {
+    if (!sourceRoot || !targetRoot) {
+      return;
     }
 
-    if (window.__kpiDashPdfLibrariesPromise) {
-      return window.__kpiDashPdfLibrariesPromise;
-    }
+    const sourceCanvases = Array.from(sourceRoot.querySelectorAll("canvas"));
+    const targetCanvases = Array.from(targetRoot.querySelectorAll("canvas"));
+    const totalCanvas = Math.min(sourceCanvases.length, targetCanvases.length);
 
-    window.__kpiDashPdfLibrariesPromise = Promise.all([
-      loadExternalScript(HTML2CANVAS_CDN, () => typeof window.html2canvas === "function"),
-      loadExternalScript(JSPDF_CDN, () => Boolean(window.jspdf && window.jspdf.jsPDF)),
-    ]).then(() => {
-      if (!window.html2canvas || !window.jspdf || !window.jspdf.jsPDF) {
-        throw new Error("Dependencias de exportación PDF incompletas.");
+    for (let i = 0; i < totalCanvas; i += 1) {
+      const originalCanvas = sourceCanvases[i];
+      const clonedCanvas = targetCanvases[i];
+
+      if (!originalCanvas || !clonedCanvas) {
+        continue;
       }
-      return { html2canvas: window.html2canvas, jsPDF: window.jspdf.jsPDF };
+
+      try {
+        if ((originalCanvas.width || 0) === 0 || (originalCanvas.height || 0) === 0) {
+          continue;
+        }
+
+        const imgData = originalCanvas.toDataURL("image/png", 1.0);
+        if (!imgData) {
+          continue;
+        }
+
+        const img = document.createElement("img");
+        img.src = imgData;
+        img.alt = "";
+        img.decoding = "sync";
+        img.style.width = "100%";
+        img.style.height = "auto";
+        img.style.display = "block";
+
+        if (clonedCanvas.className) {
+          img.className = clonedCanvas.className;
+        }
+
+        if (clonedCanvas.parentNode) {
+          clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+        }
+      } catch (error) {
+        console.warn("[KPI Dashboard] No se pudo convertir un canvas a imagen para PDF:", error);
+      }
+    }
+
+    // Soporte SVG: copia estilo computado para mantener apariencia en el clon.
+    const sourceSvgs = Array.from(sourceRoot.querySelectorAll("svg"));
+    const targetSvgs = Array.from(targetRoot.querySelectorAll("svg"));
+    const totalSvg = Math.min(sourceSvgs.length, targetSvgs.length);
+
+    for (let i = 0; i < totalSvg; i += 1) {
+      copySvgComputedStyleTree(sourceSvgs[i], targetSvgs[i]);
+    }
+  }
+
+  function copySvgComputedStyleTree(sourceSvg, targetSvg) {
+    if (!sourceSvg || !targetSvg) {
+      return;
+    }
+
+    const sourceNodes = [sourceSvg].concat(Array.from(sourceSvg.querySelectorAll("*")));
+    const targetNodes = [targetSvg].concat(Array.from(targetSvg.querySelectorAll("*")));
+    const total = Math.min(sourceNodes.length, targetNodes.length);
+
+    for (let i = 0; i < total; i += 1) {
+      const sourceNode = sourceNodes[i];
+      const targetNode = targetNodes[i];
+      if (!sourceNode || !targetNode) {
+        continue;
+      }
+      try {
+        const computed = window.getComputedStyle(sourceNode);
+        if (computed && computed.cssText) {
+          targetNode.style.cssText += ";" + computed.cssText;
+        } else if (computed) {
+          for (let j = 0; j < computed.length; j += 1) {
+            const prop = computed[j];
+            targetNode.style.setProperty(
+              prop,
+              computed.getPropertyValue(prop),
+              computed.getPropertyPriority(prop),
+            );
+          }
+        }
+      } catch (error) {
+        // Sin interrupción: algunos nodos SVG pueden no exponer estilos completos.
+      }
+    }
+  }
+
+  function buildPdfCaptureStyles() {
+    return [
+      ".kpiDash__pdfCaptureRoot, .kpiDash__pdfCaptureRoot * {",
+      "  -webkit-print-color-adjust: exact !important;",
+      "  print-color-adjust: exact !important;",
+      "}",
+      ".kpiDash__pdfCaptureRoot .site-header,",
+      ".kpiDash__pdfCaptureRoot .site-topbar,",
+      ".kpiDash__pdfCaptureRoot .topbar,",
+      ".kpiDash__pdfCaptureRoot .site-topbar__inner {",
+      "  position: static !important;",
+      "  left: auto !important;",
+      "  top: auto !important;",
+      "  width: 100% !important;",
+      "  max-width: none !important;",
+      "  box-shadow: none !important;",
+      "}",
+      ".kpiDash__pdfCaptureRoot .site-nav {",
+      "  display: none !important;",
+      "}",
+      ".kpiDash__pdfCaptureRoot .logo-strip {",
+      "  display: flex !important;",
+      "  flex-wrap: wrap !important;",
+      "  justify-content: center !important;",
+      "  gap: 10px !important;",
+      "  margin-bottom: 14px !important;",
+      "}",
+      ".kpiDash__pdfCaptureRoot .logo-pill {",
+      "  flex: 0 1 auto !important;",
+      "}",
+      ".kpiDash__pdfCaptureRoot .kpiDash {",
+      "  margin-top: 16px !important;",
+      "}",
+      ".kpiDash__pdfCaptureRoot .kpiDash__reportActions,",
+      ".kpiDash__pdfCaptureRoot .kpiDash__reportUpdated,",
+      ".kpiDash__pdfCaptureRoot .kpiDash__reportStatus {",
+      "  display: none !important;",
+      "}",
+      ".kpiDash__pdfCaptureRoot .kpiDash__reportExportedAt {",
+      "  display: block !important;",
+      "}",
+      ".kpiDash__pdfCaptureRoot .kpiDash__reportHeader,",
+      ".kpiDash__pdfCaptureRoot .kpiDash__execPanel,",
+      ".kpiDash__pdfCaptureRoot .kpiDash__panel,",
+      ".kpiDash__pdfCaptureRoot .kpiDash__funnel,",
+      ".kpiDash__pdfCaptureRoot .kpiDash__stock,",
+      ".kpiDash__pdfCaptureRoot .kpiDash__tableWrap,",
+      ".kpiDash__pdfCaptureRoot .kpiDash__chart,",
+      ".kpiDash__pdfCaptureRoot .ppccr-sankey {",
+      "  break-inside: avoid !important;",
+      "  page-break-inside: avoid !important;",
+      "}",
+      ".kpiDash__pdfCaptureRoot .kpiDash__tableWrap {",
+      "  overflow: visible !important;",
+      "}",
+      ".kpiDash__pdfCaptureRoot .kpiDash__table {",
+      "  min-width: 0 !important;",
+      "}",
+    ].join("\n");
+  }
+
+  function copyCanvasContent(sourceRoot, targetRoot) {
+    if (!sourceRoot || !targetRoot) {
+      return;
+    }
+
+    const sourceCanvases = Array.from(sourceRoot.querySelectorAll("canvas"));
+    const targetCanvases = Array.from(targetRoot.querySelectorAll("canvas"));
+    const total = Math.min(sourceCanvases.length, targetCanvases.length);
+
+    for (let i = 0; i < total; i += 1) {
+      const source = sourceCanvases[i];
+      const target = targetCanvases[i];
+      const ctx = target && target.getContext ? target.getContext("2d") : null;
+      if (!source || !target || !ctx) {
+        continue;
+      }
+
+      try {
+        target.width = source.width;
+        target.height = source.height;
+        target.style.width = source.style.width || source.clientWidth + "px";
+        target.style.height = source.style.height || source.clientHeight + "px";
+        ctx.drawImage(source, 0, 0);
+      } catch (error) {
+        console.warn("[KPI Dashboard] No se pudo copiar un canvas al snapshot PDF.", error);
+      }
+    }
+  }
+
+  async function waitForSnapshotAssets(host) {
+    if (!host) {
+      return;
+    }
+
+    const images = Array.from(host.querySelectorAll("img"));
+    const pendingImages = images.filter((img) => !(img.complete && img.naturalWidth > 0));
+    if (pendingImages.length > 0) {
+      await Promise.race([
+        Promise.all(
+          pendingImages.map((img) => {
+            return new Promise((resolve) => {
+              const done = () => resolve();
+              img.addEventListener("load", done, { once: true });
+              img.addEventListener("error", done, { once: true });
+              window.setTimeout(done, 2600);
+            });
+          }),
+        ),
+        new Promise((resolve) => window.setTimeout(resolve, 3200)),
+      ]);
+    }
+
+    if (document.fonts && document.fonts.ready) {
+      await Promise.race([
+        document.fonts.ready,
+        new Promise((resolve) => window.setTimeout(resolve, 1200)),
+      ]);
+    }
+  }
+
+  async function ensureHtml2PdfLibrary() {
+    if (typeof window.html2pdf === "function") {
+      return window.html2pdf;
+    }
+
+    if (window.__kpiDashHtml2PdfPromise) {
+      return window.__kpiDashHtml2PdfPromise;
+    }
+
+    window.__kpiDashHtml2PdfPromise = loadExternalScript(
+      HTML2PDF_CDN,
+      () => typeof window.html2pdf === "function",
+    ).then(() => {
+      if (typeof window.html2pdf !== "function") {
+        throw new Error("html2pdf.js no se cargó correctamente.");
+      }
+      return window.html2pdf;
     });
 
-    return window.__kpiDashPdfLibrariesPromise;
+    return window.__kpiDashHtml2PdfPromise;
   }
 
   function loadExternalScript(url, validator) {
@@ -1435,10 +1710,49 @@
       );
 
       if (existing) {
-        existing.addEventListener("load", onLoad, { once: true });
-        existing.addEventListener("error", onError, { once: true });
-        if (typeof validator === "function" && validator()) {
+        let settled = false;
+        const finishResolve = () => {
+          if (settled) {
+            return;
+          }
+          settled = true;
           resolve();
+        };
+        const finishReject = (error) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          reject(error);
+        };
+        const verifyReady = () => {
+          if (typeof validator === "function" && !validator()) {
+            return false;
+          }
+          finishResolve();
+          return true;
+        };
+        const start = Date.now();
+        const waitUntilReady = () => {
+          if (verifyReady()) {
+            return;
+          }
+          if (Date.now() - start >= 5000) {
+            finishReject(new Error("No se detectó la librería esperada: " + url));
+            return;
+          }
+          window.setTimeout(waitUntilReady, 80);
+        };
+
+        existing.addEventListener("load", verifyReady, { once: true });
+        existing.addEventListener(
+          "error",
+          () => finishReject(new Error("No se pudo cargar: " + url)),
+          { once: true },
+        );
+
+        if (!verifyReady()) {
+          waitUntilReady();
         }
         return;
       }
@@ -1462,69 +1776,6 @@
         reject(new Error("No se pudo cargar: " + url));
       }
     });
-  }
-
-  function appendCanvasToPdf(doc, canvas, marginMm) {
-    if (!doc || !canvas) {
-      return;
-    }
-
-    const pageWidthMm = doc.internal.pageSize.getWidth();
-    const pageHeightMm = doc.internal.pageSize.getHeight();
-    const contentWidthMm = pageWidthMm - marginMm * 2;
-    const contentHeightMm = pageHeightMm - marginMm * 2;
-    const pxPerMm = canvas.width / contentWidthMm;
-    const maxSliceHeightPx = Math.max(1, Math.floor(contentHeightMm * pxPerMm));
-
-    let renderedHeightPx = 0;
-    let pageIndex = 0;
-
-    while (renderedHeightPx < canvas.height) {
-      const sliceHeightPx = Math.min(maxSliceHeightPx, canvas.height - renderedHeightPx);
-      const pageCanvas = document.createElement("canvas");
-      pageCanvas.width = canvas.width;
-      pageCanvas.height = sliceHeightPx;
-
-      const ctx = pageCanvas.getContext("2d");
-      if (!ctx) {
-        throw new Error("No se pudo crear contexto de render para PDF.");
-      }
-
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-      ctx.drawImage(
-        canvas,
-        0,
-        renderedHeightPx,
-        canvas.width,
-        sliceHeightPx,
-        0,
-        0,
-        canvas.width,
-        sliceHeightPx,
-      );
-
-      const sliceHeightMm = sliceHeightPx / pxPerMm;
-      const imageData = pageCanvas.toDataURL("image/jpeg", 0.95);
-
-      if (pageIndex > 0) {
-        doc.addPage();
-      }
-
-      doc.addImage(
-        imageData,
-        "JPEG",
-        marginMm,
-        marginMm,
-        contentWidthMm,
-        sliceHeightMm,
-        undefined,
-        "FAST",
-      );
-
-      renderedHeightPx += sliceHeightPx;
-      pageIndex += 1;
-    }
   }
 
   function buildPdfFilename(date) {
