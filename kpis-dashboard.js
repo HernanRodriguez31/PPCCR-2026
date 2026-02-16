@@ -48,6 +48,17 @@
     posneg: "[data-kpi-chart-posneg]",
   };
 
+  const SANKEY_PARTICIPANTES_DATA = {
+    total: 35,
+    fit: 20,
+    fuera: 15,
+    motivos: [
+      { key: "riesgo", label: "Mayor riesgo (orientación)", n: 7 },
+      { key: "seguimiento", label: "Seguimiento vigente", n: 4 },
+      { key: "edad", label: "Edad < 45", n: 4 },
+    ],
+  };
+
   function initKpiDashboard() {
     const root = document.querySelector(SELECTORS.root);
     if (!root) {
@@ -148,7 +159,8 @@
 
   function renderLoading(root) {
     root.innerHTML =
-      '<div class="kpiDash__loading"><h3>Construyendo tablero local</h3><p>Sincronizando participantes y flujo FIT con fuentes agregadas.</p></div>';
+      '<div class="kpiDash__loading"><h3>Construyendo tablero local</h3><p>Sincronizando participantes y flujo FIT con fuentes agregadas.</p></div>' +
+      '<div id="ppccrSankeyParticipantes" class="ppccr-sankey" style="display:none" aria-hidden="true"></div>';
   }
 
   function renderEmptyState(root) {
@@ -812,7 +824,7 @@
       "<h4>Sankey de participantes</h4>",
       "<p>Participantes y segmentación de screening</p>",
       "</header>",
-      '<div class="kpiDash__chart" data-kpi-chart-flow></div>',
+      '<div id="ppccrSankeyParticipantes" class="ppccr-sankey"></div>',
       "</article>",
       "</section>",
       '<section class="kpiDash__funnel kpiDash__funnel--avance" aria-label="Avance por estación">',
@@ -832,7 +844,7 @@
       "</section>",
       '<section class="kpiDash__funnel" aria-label="Flujo FIT por estación">',
       '<header class="kpiDash__panelHeader">',
-      "<h4>FLUJO FIT POR ESTACIÓN</h4>",
+      "<h4>Flujo FIT por estación</h4>",
       "<p>Seguimiento de kits, muestras y resultados FIT</p>",
       "</header>",
       '<div class="kpiDash__tableWrap">',
@@ -859,6 +871,28 @@
     ].join("");
     bindReportHeaderActions(root);
     bindTrkGaugeTooltips(root);
+    renderParticipantSankey();
+  }
+
+  function renderParticipantSankey(attempt = 0) {
+    const host = document.getElementById("ppccrSankeyParticipantes");
+    if (!host) {
+      return;
+    }
+
+    const api = window.PPCCR_SANK;
+    if (!api || typeof api.render !== "function") {
+      if (attempt < 10) {
+        window.setTimeout(() => renderParticipantSankey(attempt + 1), 120);
+      } else {
+        console.warn(
+          "[KPI Dashboard] Componente Sankey de participantes no disponible.",
+        );
+      }
+      return;
+    }
+
+    api.render(host, SANKEY_PARTICIPANTES_DATA);
   }
 
   function buildSummaryCard(totals) {
@@ -1755,17 +1789,20 @@
       tooltipText: "#2E4567",
     };
 
-    if (!barsEl || !sankeyEl) {
+    if (!barsEl) {
       return;
     }
 
     try {
       const echarts = await ensureEcharts();
       const barChart = echarts.init(barsEl, null, { renderer: "canvas" });
-      const sankeyChart = echarts.init(sankeyEl, null, { renderer: "svg" });
+      const sankeyChart = sankeyEl
+        ? echarts.init(sankeyEl, null, { renderer: "svg" })
+        : null;
       const posnegChart = posnegEl
         ? echarts.init(posnegEl, null, { renderer: "canvas" })
         : null;
+      let syncSankeySvgViewBox = function () {};
 
       const orderedStations = model.stations.slice().sort((a, b) => {
         if (b.participantesTotal !== a.participantesTotal) {
@@ -1920,196 +1957,202 @@
         ],
       });
 
-      const links = [
-        {
-          source: "Participantes",
-          target: "Criterio FIT (kits)",
-          value: model.totals.criterioFitKits,
-        },
-        {
-          source: "Participantes",
-          target: "Fuera de screening",
-          value: model.totals.fueraDeScreening,
-        },
-        {
-          source: "Fuera de screening",
-          target: "Seguimiento vigente",
-          value: model.totals.seguimientoVigente,
-        },
-        {
-          source: "Fuera de screening",
-          target: "Mayor riesgo (orientación)",
-          value: model.totals.mayorRiesgo,
-        },
-        {
-          source: "Fuera de screening",
-          target: "Edad < 45",
-          value: model.totals.edadLt45,
-        },
-      ].filter((link) => link.value > 0);
+      if (sankeyChart && sankeyEl) {
+        const links = [
+          {
+            source: "Participantes",
+            target: "Criterio FIT (kits)",
+            value: model.totals.criterioFitKits,
+          },
+          {
+            source: "Participantes",
+            target: "Fuera de screening",
+            value: model.totals.fueraDeScreening,
+          },
+          {
+            source: "Fuera de screening",
+            target: "Seguimiento vigente",
+            value: model.totals.seguimientoVigente,
+          },
+          {
+            source: "Fuera de screening",
+            target: "Mayor riesgo (orientación)",
+            value: model.totals.mayorRiesgo,
+          },
+          {
+            source: "Fuera de screening",
+            target: "Edad < 45",
+            value: model.totals.edadLt45,
+          },
+        ].filter((link) => link.value > 0);
 
-      const hasSankey = model.totals.participantesTotal > 0;
-      const sankeyTotal = model.totals.participantesTotal;
-      const sankeyNodeValues = {};
-      const sankeyWidth = Math.max(640, sankeyEl.clientWidth || 0);
-      const sankeyLeftPadding = Math.max(
-        92,
-        Math.min(156, Math.round(sankeyWidth * 0.14)),
-      );
-      const sankeyRightPadding = Math.max(
-        136,
-        Math.min(236, Math.round(sankeyWidth * 0.22)),
-      );
-      const sankeyLabelWidthLeft = Math.max(
-        132,
-        Math.min(216, Math.round(sankeyLeftPadding * 1.15)),
-      );
-      const sankeyLabelWidthRight = Math.max(
-        168,
-        Math.min(284, Math.round(sankeyRightPadding * 1.04)),
-      );
-      const sankeyLabelFormatter = function (params) {
-        const nodeValue = Number(sankeyNodeValues[params.name]) || 0;
-        return params.name + "\nN: " + formatNumber(nodeValue);
-      };
-      const syncSankeySvgViewBox = function () {
-        const svg = sankeyEl.querySelector("svg");
-        if (!svg) {
-          return;
-        }
-        const width = Math.max(1, Math.round(sankeyEl.clientWidth || svg.clientWidth || 0));
-        const height = Math.max(
-          1,
-          Math.round(sankeyEl.clientHeight || svg.clientHeight || 0),
+        const hasSankey = model.totals.participantesTotal > 0;
+        const sankeyTotal = model.totals.participantesTotal;
+        const sankeyNodeValues = {};
+        const sankeyWidth = Math.max(640, sankeyEl.clientWidth || 0);
+        const sankeyLeftPadding = Math.max(
+          92,
+          Math.min(156, Math.round(sankeyWidth * 0.14)),
         );
-        svg.setAttribute("viewBox", "0 0 " + width + " " + height);
-        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-      };
-      links.forEach((link) => {
-        sankeyNodeValues[link.source] = (sankeyNodeValues[link.source] || 0) + link.value;
-        sankeyNodeValues[link.target] = Math.max(
-          sankeyNodeValues[link.target] || 0,
-          link.value,
+        const sankeyRightPadding = Math.max(
+          136,
+          Math.min(236, Math.round(sankeyWidth * 0.22)),
         );
-      });
-      sankeyChart.setOption({
-        animationDuration: 620,
-        tooltip: {
-          trigger: "item",
-          formatter: function (params) {
-            const isEdge = params.dataType === "edge";
-            const participants = isEdge
-              ? Number(params.data.value) || 0
-              : Number(sankeyNodeValues[params.name]) || 0;
-            const totalPct = sankeyTotal > 0 ? percentage(participants, sankeyTotal) : 0;
+        const sankeyLabelWidthLeft = Math.max(
+          132,
+          Math.min(216, Math.round(sankeyLeftPadding * 1.15)),
+        );
+        const sankeyLabelWidthRight = Math.max(
+          168,
+          Math.min(284, Math.round(sankeyRightPadding * 1.04)),
+        );
+        const sankeyLabelFormatter = function (params) {
+          const nodeValue = Number(sankeyNodeValues[params.name]) || 0;
+          return params.name + "\nN: " + formatNumber(nodeValue);
+        };
+        syncSankeySvgViewBox = function () {
+          const svg = sankeyEl.querySelector("svg");
+          if (!svg) {
+            return;
+          }
+          const width = Math.max(
+            1,
+            Math.round(sankeyEl.clientWidth || svg.clientWidth || 0),
+          );
+          const height = Math.max(
+            1,
+            Math.round(sankeyEl.clientHeight || svg.clientHeight || 0),
+          );
+          svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        };
+        links.forEach((link) => {
+          sankeyNodeValues[link.source] =
+            (sankeyNodeValues[link.source] || 0) + link.value;
+          sankeyNodeValues[link.target] = Math.max(
+            sankeyNodeValues[link.target] || 0,
+            link.value,
+          );
+        });
+        sankeyChart.setOption({
+          animationDuration: 620,
+          tooltip: {
+            trigger: "item",
+            formatter: function (params) {
+              const isEdge = params.dataType === "edge";
+              const participants = isEdge
+                ? Number(params.data.value) || 0
+                : Number(sankeyNodeValues[params.name]) || 0;
+              const totalPct = sankeyTotal > 0 ? percentage(participants, sankeyTotal) : 0;
 
-            if (isEdge) {
+              if (isEdge) {
+                return (
+                  params.data.source +
+                  " → " +
+                  params.data.target +
+                  ": " +
+                  formatNumber(participants) +
+                  " (" +
+                  totalPct +
+                  "%)"
+                );
+              }
+
               return (
-                params.data.source +
-                " → " +
-                params.data.target +
+                params.name +
                 ": " +
                 formatNumber(participants) +
                 " (" +
                 totalPct +
                 "%)"
               );
-            }
-
-            return (
-              params.name +
-              ": " +
-              formatNumber(participants) +
-              " (" +
-              totalPct +
-              "%)"
-            );
+            },
           },
-        },
-        graphic:
-          hasSankey
-            ? []
-            : [
-                {
-                  type: "text",
-                  left: "center",
-                  top: "middle",
-                  style: {
-                    text: "Sin flujo consolidado",
-                    textAlign: "center",
-                    fill: chartPalette.axisText,
-                    fontSize: 13,
-                  },
-                },
-              ],
-        series: [
-          {
-            type: "sankey",
-            left: sankeyLeftPadding,
-            top: 14,
-            right: sankeyRightPadding,
-            bottom: 14,
-            layoutIterations: 48,
-            nodeWidth: 26,
-            nodeGap: 34,
-            emphasis: { focus: "adjacency" },
-            data: hasSankey
-                ? [
+          graphic:
+            hasSankey
+              ? []
+              : [
                   {
-                    name: "Participantes",
-                    itemStyle: { color: chartPalette.blueDark },
-                    label: {
-                      position: "left",
-                      align: "right",
-                      width: sankeyLabelWidthLeft,
-                      overflow: "break",
-                      formatter: sankeyLabelFormatter,
+                    type: "text",
+                    left: "center",
+                    top: "middle",
+                    style: {
+                      text: "Sin flujo consolidado",
+                      textAlign: "center",
+                      fill: chartPalette.axisText,
+                      fontSize: 13,
                     },
                   },
-                  {
-                    name: "Criterio FIT (kits)",
-                    itemStyle: { color: chartPalette.blueMid },
-                  },
-                  {
-                    name: "Fuera de screening",
-                    itemStyle: { color: chartPalette.blueLight },
-                  },
-                  {
-                    name: "Seguimiento vigente",
-                    itemStyle: { color: chartPalette.neutralGray },
-                  },
-                  {
-                    name: "Mayor riesgo (orientación)",
-                    itemStyle: { color: chartPalette.blueMid },
-                  },
-                  {
-                    name: "Edad < 45",
-                    itemStyle: { color: chartPalette.neutralGray },
-                  },
-                ]
-              : [],
-            links: hasSankey ? links : [],
-            lineStyle: {
-              color: "source",
-              curveness: 0.5,
-              opacity: 0.34,
+                ],
+          series: [
+            {
+              type: "sankey",
+              left: sankeyLeftPadding,
+              top: 14,
+              right: sankeyRightPadding,
+              bottom: 14,
+              layoutIterations: 48,
+              nodeWidth: 26,
+              nodeGap: 34,
+              emphasis: { focus: "adjacency" },
+              data: hasSankey
+                ? [
+                    {
+                      name: "Participantes",
+                      itemStyle: { color: chartPalette.blueDark },
+                      label: {
+                        position: "left",
+                        align: "right",
+                        width: sankeyLabelWidthLeft,
+                        overflow: "break",
+                        formatter: sankeyLabelFormatter,
+                      },
+                    },
+                    {
+                      name: "Criterio FIT (kits)",
+                      itemStyle: { color: chartPalette.blueMid },
+                    },
+                    {
+                      name: "Fuera de screening",
+                      itemStyle: { color: chartPalette.blueLight },
+                    },
+                    {
+                      name: "Seguimiento vigente",
+                      itemStyle: { color: chartPalette.neutralGray },
+                    },
+                    {
+                      name: "Mayor riesgo (orientación)",
+                      itemStyle: { color: chartPalette.blueMid },
+                    },
+                    {
+                      name: "Edad < 45",
+                      itemStyle: { color: chartPalette.neutralGray },
+                    },
+                  ]
+                : [],
+              links: hasSankey ? links : [],
+              lineStyle: {
+                color: "source",
+                curveness: 0.5,
+                opacity: 0.34,
+              },
+              label: {
+                color: chartPalette.tooltipText,
+                fontSize: 11,
+                fontWeight: 600,
+                position: "right",
+                distance: 10,
+                width: sankeyLabelWidthRight,
+                lineHeight: 14,
+                overflow: "break",
+                formatter: sankeyLabelFormatter,
+              },
+              labelLayout: { hideOverlap: false, moveOverlap: "shiftY" },
             },
-            label: {
-              color: chartPalette.tooltipText,
-              fontSize: 11,
-              fontWeight: 600,
-              position: "right",
-              distance: 10,
-              width: sankeyLabelWidthRight,
-              lineHeight: 14,
-              overflow: "break",
-              formatter: sankeyLabelFormatter,
-            },
-            labelLayout: { hideOverlap: false, moveOverlap: "shiftY" },
-          },
-        ],
-      });
-      syncSankeySvgViewBox();
+          ],
+        });
+        syncSankeySvgViewBox();
+      }
 
       if (posnegChart) {
         const positives = model.fitFlowTotals.positivos;
@@ -2182,8 +2225,10 @@
 
       const resize = () => {
         barChart.resize();
-        sankeyChart.resize();
-        syncSankeySvgViewBox();
+        if (sankeyChart) {
+          sankeyChart.resize();
+          syncSankeySvgViewBox();
+        }
         if (posnegChart) {
           posnegChart.resize();
         }
@@ -2202,8 +2247,10 @@
       );
       barsEl.innerHTML =
         '<div class="kpiDash__chartFallback">No se pudo inicializar el gráfico comparativo.</div>';
-      sankeyEl.innerHTML =
-        '<div class="kpiDash__chartFallback">No se pudo inicializar el Sankey de participantes.</div>';
+      if (sankeyEl) {
+        sankeyEl.innerHTML =
+          '<div class="kpiDash__chartFallback">No se pudo inicializar el Sankey de participantes.</div>';
+      }
       if (posnegEl) {
         posnegEl.innerHTML =
           '<div class="kpiDash__chartFallback">No se pudo inicializar el donut de resultados.</div>';

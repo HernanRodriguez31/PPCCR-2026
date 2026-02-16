@@ -442,7 +442,7 @@ code {
   color: var(--blue-900);
   overflow-wrap: break-word;
   white-space: normal;
-  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .brand-subtitle {
@@ -985,7 +985,7 @@ body.page-home #guias.section {
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.01em;
-  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .hero-action-card__subtitle {
@@ -3376,7 +3376,7 @@ body.page-home #guias.section {
     font-size: clamp(1.44rem, 3vw, 1.96rem);
     line-height: 1.12;
     white-space: normal;
-    text-wrap: balance;
+    overflow-wrap: anywhere;
   }
 
   .partner-logo,
@@ -4022,9 +4022,10 @@ body.page-home #guias.section {
 .page-home .role-link__label {
   font-weight: 600;
   line-height: 1.2;
-  text-wrap: balance;
+  overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -4085,6 +4086,7 @@ body.page-home #guias.section {
     font-size: 0.8rem;
     line-height: 1.18;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
   }
 
   .page-home .role-card--single-nohead .action-pill__chev,
@@ -4210,8 +4212,8 @@ body.page-home #guias.section {
     background: transparent;
     border-bottom: 0;
     box-shadow: none;
-    backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   .page-home .site-header::before,
@@ -4369,7 +4371,6 @@ body.page-home #guias.section {
   }
 
   .page-home .site-nav .nav-link__label {
-    display: block;
     max-width: 100%;
     overflow: visible;
     text-overflow: clip;
@@ -4382,6 +4383,7 @@ body.page-home #guias.section {
     text-align: center;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
   }
 
@@ -4474,7 +4476,7 @@ body.page-home #guias.section {
     overflow-x: hidden;
     overflow-x: clip;
     overscroll-behavior-x: none;
-    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
@@ -4582,8 +4584,9 @@ body.page-home #guias.section {
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
-    text-wrap: balance;
+    overflow-wrap: anywhere;
     max-width: 18ch;
     margin-inline: auto;
   }
@@ -4610,6 +4613,7 @@ body.page-home #guias.section {
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
   }
 
@@ -4819,6 +4823,7 @@ body.page-home #guias.section {
     text-overflow: clip;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     margin: 0;
     padding: 0;
@@ -4879,6 +4884,7 @@ body.page-home #guias.section {
   body {
     touch-action: pan-y;
     overscroll-behavior-x: none;
+    text-size-adjust: 100%;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -5167,7 +5173,6 @@ body.page-home #guias.section {
   body {
     touch-action: pan-y;
     overscroll-behavior-x: none;
-    -webkit-overflow-scrolling: touch;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -6854,7 +6859,6 @@ iframe {
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
-  text-wrap: nowrap;
   font-family:
     "Avenir Next", "Trebuchet MS", "Montserrat", "Segoe UI", Helvetica, Arial,
     sans-serif;
@@ -7221,7 +7225,7 @@ iframe {
   line-height: 1.15;
   font-weight: 800;
   letter-spacing: -0.012em;
-  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 #auth-gate.auth-gate .pp-modal__hint {
@@ -7969,7 +7973,7 @@ iframe {
   font-size: 0.95rem;
   font-weight: 700;
   line-height: 1.2;
-  text-wrap: pretty;
+  overflow-wrap: anywhere;
 }
 
 .telew-target__meta {
@@ -9239,7 +9243,6 @@ body.page-home .ppccr-modal.modal--interview .home-algo__panel {
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-gutter: stable;
   overscroll-behavior: contain;
   padding: 12px 12px 96px;
   position: relative;
@@ -9313,10 +9316,7 @@ body.page-home .ppccr-modal.modal--interview .home-algo__panel::-webkit-scrollba
   border: 2px solid rgba(227, 240, 252, 0.86);
 }
 
-body.page-home .ppccr-modal.modal--interview .home-algo__panel {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(15, 95, 166, 0.65) rgba(227, 240, 252, 0.88);
-}
+
 
 body.page-home .ppccr-modal.modal--interview .home-algo__panel-title {
   margin-bottom: 4px;
@@ -9607,10 +9607,7 @@ body.page-home .ppccr-modal.modal--interview .interview-body {
   overflow-x: hidden;
   position: relative;
   padding: 14px 16px 18px;
-  scrollbar-gutter: stable;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(12, 42, 79, 0.35) transparent;
 }
 
 body.page-home .ppccr-modal.modal--interview .interview-body::-webkit-scrollbar {
@@ -10388,7 +10385,7 @@ body.page-home .ppccr-modal.modal--interview .modal-status-hud {
   line-height: 1.15;
   font-weight: 700;
   letter-spacing: -0.012em;
-  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 #auth-gate.auth-gate .station-card__check {
@@ -10563,7 +10560,7 @@ body.page-home .ppccr-modal.modal--interview .modal-status-hud {
   color: #103f6c;
   margin: 0;
   max-width: 24ch;
-  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 #auth-gate.auth-gate .pp-modal__brand {

@@ -1759,13 +1759,13 @@
   }
 
   .kpiDash__panel--bars {
-    grid-column: span 7;
-    padding-inline: 0.86rem;
+    grid-column: span 6;
+    padding-inline: 0.82rem;
   }
 
   .kpiDash__panel--aux {
-    grid-column: span 5;
-    padding-inline: 1.14rem;
+    grid-column: span 6;
+    padding-inline: 0.96rem;
   }
 
   .kpiDash__panel--aux .kpiDash__chart,
