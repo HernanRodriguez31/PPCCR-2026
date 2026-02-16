@@ -1507,13 +1507,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.18rem;
+  gap: 0.22rem;
   white-space: nowrap;
   width: 100%;
 }
 
 .kpiDash__thLegendText {
-  color: #7c8dad;
+  color: #6f82a4;
+  font-weight: 500;
 }
 
 .kpiDash__thPill {
@@ -1521,24 +1522,25 @@
   align-items: center;
   justify-content: center;
   min-width: 1.15rem;
-  height: 0.86rem;
+  height: 0.88rem;
   padding: 0 0.28rem;
   border-radius: 999px;
   font-size: 0.58rem;
   font-weight: 700;
   line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
 }
 
 .kpiDash__thPill--neg {
-  color: #2f7a52;
-  background: rgba(47, 122, 82, 0.13);
-  border: 1px solid rgba(47, 122, 82, 0.3);
+  color: #f2f8ff;
+  background: linear-gradient(150deg, #1e66ad, #2f7ec9);
+  border: 1px solid rgba(19, 86, 152, 0.64);
 }
 
 .kpiDash__thPill--pos {
-  color: #ac4a80;
-  background: rgba(172, 74, 128, 0.12);
-  border: 1px solid rgba(172, 74, 128, 0.25);
+  color: #245487;
+  background: linear-gradient(150deg, rgba(228, 239, 252, 0.96), rgba(199, 220, 245, 0.94));
+  border: 1px solid rgba(128, 169, 214, 0.62);
 }
 
 .kpiDash__table--flow thead th:nth-child(2),
@@ -1742,36 +1744,113 @@
 }
 
 .kpiDash__informCell {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: minmax(1.6rem, auto) minmax(4.8rem, auto);
   align-items: center;
   justify-content: center;
-  gap: 0.24rem;
+  gap: 0.32rem;
   white-space: nowrap;
 }
 
 .kpiDash__informTotal {
-  color: var(--kpi-ink);
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.22rem;
+  padding: 0 0.38rem;
+  border-radius: 999px;
+  color: #103e70;
+  font-size: 0.82rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(104, 154, 211, 0.52);
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0) 52%),
+    linear-gradient(155deg, rgba(230, 241, 254, 0.98), rgba(202, 221, 245, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 1px 3px rgba(22, 73, 125, 0.08);
+}
+
+.kpiDash__informDetail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 4.8rem;
 }
 
 .kpiDash__informSplit {
   display: inline-flex;
   align-items: center;
-  gap: 0.14rem;
+  justify-content: space-between;
+  gap: 0.12rem;
+  width: 100%;
+  padding: 0.08rem 0.1rem;
+  border-radius: 999px;
+  background: linear-gradient(145deg, rgba(244, 249, 255, 0.95), rgba(225, 237, 252, 0.9));
+  border: 1px solid rgba(181, 204, 232, 0.58);
 }
 
-.kpiDash__informPill {
-  min-width: 1.35rem;
-  height: 0.9rem;
-  padding: 0 0.34rem;
-  font-size: 0.62rem;
-  font-weight: 500;
+.kpiDash__informSplitSep {
+  width: 1px;
+  height: 0.68rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(127, 167, 211, 0.28), rgba(88, 136, 191, 0.45));
 }
 
-.kpiDash__informSep {
-  color: #8ea0be;
-  font-size: 0.67rem;
+.kpiDash__informChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.62rem;
+  height: 1.03rem;
+  border-radius: 999px;
+  padding: 0 0.36rem;
+  border: 1px solid transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiDash__informChip--neg {
+  color: #f3f8ff;
+  background: linear-gradient(145deg, #1f66ad, #2b79c1);
+  border-color: rgba(24, 90, 158, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.kpiDash__informChip--pos {
+  color: #24568d;
+  background: linear-gradient(145deg, rgba(224, 237, 252, 0.96), rgba(196, 218, 244, 0.94));
+  border-color: rgba(130, 171, 216, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.kpiDash__informChipSign {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.72rem;
+  height: 0.72rem;
+  margin-right: 0.15rem;
+  border-radius: 999px;
+  font-size: 0.56rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.kpiDash__informChip--neg .kpiDash__informChipSign {
+  color: #f4f9ff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.kpiDash__informChip--pos .kpiDash__informChipSign {
+  color: #1f4f83;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.kpiDash__informChipValue {
+  font-size: 0.72rem;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -1782,7 +1861,7 @@
 .kpiDash__table--flow tbody tr.kpiDash__rowTotal td:nth-child(6),
 .kpiDash__table--flow tbody tr.kpiDash__rowTotal .kpiDash__flowPrimary,
 .kpiDash__table--flow tbody tr.kpiDash__rowTotal .kpiDash__informTotal,
-.kpiDash__table--flow tbody tr.kpiDash__rowTotal .kpiDash__informPill {
+.kpiDash__table--flow tbody tr.kpiDash__rowTotal .kpiDash__informChipValue {
   font-weight: 700;
 }
 

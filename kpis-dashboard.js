@@ -1553,20 +1553,27 @@
       positivos !== null &&
       positivos !== undefined;
 
+    const negativosSafe = hasBreakdown ? Math.max(0, Number(negativos) || 0) : 0;
+    const positivosSafe = hasBreakdown ? Math.max(0, Number(positivos) || 0) : 0;
+
     return [
       "<td>",
       '<div class="kpiDash__informCell">',
       '<span class="kpiDash__informTotal">' + formatNumber(totalInformados) + "</span>",
       hasBreakdown
         ? [
+            '<span class="kpiDash__informDetail">',
             '<span class="kpiDash__informSplit">',
-            '<span class="kpiDash__thPill kpiDash__thPill--neg kpiDash__informPill">' +
-              formatNumber(negativos) +
-              "</span>",
-            '<span class="kpiDash__informSep">/</span>',
-            '<span class="kpiDash__thPill kpiDash__thPill--pos kpiDash__informPill">' +
-              formatNumber(positivos) +
-              "</span>",
+            '<span class="kpiDash__informChip kpiDash__informChip--neg" title="Resultados negativos">',
+            '<span class="kpiDash__informChipSign">-</span>',
+            '<span class="kpiDash__informChipValue">' + formatNumber(negativosSafe) + "</span>",
+            "</span>",
+            '<span class="kpiDash__informSplitSep" aria-hidden="true"></span>',
+            '<span class="kpiDash__informChip kpiDash__informChip--pos" title="Resultados positivos">',
+            '<span class="kpiDash__informChipSign">+</span>',
+            '<span class="kpiDash__informChipValue">' + formatNumber(positivosSafe) + "</span>",
+            "</span>",
+            "</span>",
             "</span>",
           ].join("")
         : "",
