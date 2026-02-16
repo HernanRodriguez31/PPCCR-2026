@@ -75,6 +75,10 @@
   line-height: 1.45;
 }
 
+.kpiDash__reportRoot {
+  background: #ffffff;
+}
+
 .kpiDash__shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -116,6 +120,14 @@
 
 .kpiDash__reportUpdated {
   margin: 0;
+  font-size: 0.73rem;
+  color: var(--kpi-gray-600);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiDash__reportExportedAt {
+  margin: 0;
+  display: none;
   font-size: 0.73rem;
   color: var(--kpi-gray-600);
   font-variant-numeric: tabular-nums;
@@ -199,6 +211,14 @@
 
 .kpiDash__reportStatus--warn .kpiDash__reportStatusDot {
   background: #91a1b5;
+}
+
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__reportActions {
+  display: none;
+}
+
+.kpiDash__reportRoot.kpiDash--exporting .kpiDash__reportExportedAt {
+  display: block;
 }
 
 .kpiDash__cards {
@@ -2168,5 +2188,108 @@
 
   .kpiDash__stockGrid {
     grid-template-columns: 1fr;
+  }
+}
+
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@media print {
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  body > header,
+  body > footer,
+  body > main > :not(#kpis),
+  .mobile-fixed-dock,
+  .back-to-top,
+  .modal {
+    display: none !important;
+  }
+
+  #kpis {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #kpis .container {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #kpis .section-header {
+    display: none !important;
+  }
+
+  #kpi-dashboard-ppccr {
+    margin: 0 !important;
+  }
+
+  [data-kpi-report-root] {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  .kpiDash__reportActions {
+    display: none !important;
+  }
+
+  .kpiDash__reportExportedAt {
+    display: block !important;
+  }
+
+  .kpiDash__reportHeader,
+  .kpiDash__execPanel,
+  .kpiDash__panel,
+  .kpiDash__funnel,
+  .kpiDash__stock,
+  .kpiDash__tableWrap {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  .kpiDash__charts {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .kpiDash__funnel[aria-label="Flujo FIT por estación"] {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .kpiDash__tableWrap {
+    overflow: visible !important;
+  }
+
+  .kpiDash__table {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .kpiDash__table thead {
+    display: table-header-group;
+  }
+
+  .kpiDash__table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .kpiDash__chart,
+  .kpiDash__chartFallback,
+  .ppccr-sankey {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }

@@ -40,9 +40,16 @@
 
   const ECHARTS_CDN =
     "https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js";
+  const HTML2CANVAS_CDN =
+    "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+  const JSPDF_CDN =
+    "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
+  const PDF_PAGE_MARGIN_MM = 10;
 
   const SELECTORS = {
     root: "[data-kpi-dashboard]",
+    reportRoot: "[data-kpi-report-root]",
+    reportExportedAt: "[data-kpi-exported-at]",
     bars: "[data-kpi-chart-bars]",
     sankey: "[data-kpi-chart-flow]",
     posneg: "[data-kpi-chart-posneg]",
@@ -742,6 +749,7 @@
       .join("");
 
     root.innerHTML = [
+      '<div class="kpiDash__reportRoot" data-kpi-report-root>',
       '<div class="kpiDash__shell">',
       reportHeader,
       executiveTop,
@@ -785,6 +793,7 @@
       stockRows,
       "</ul>",
       "</section>",
+      "</div>",
       "</div>",
     ].join("");
     bindReportHeaderActions(root);
@@ -1225,8 +1234,10 @@
       '<p class="kpiDash__reportUpdated">Actualizado: ' +
         escapeHtml(formatDateTime(safeAudit.loadedAt)) +
         "</p>",
+      '<p class="kpiDash__reportExportedAt" data-kpi-exported-at aria-live="polite"></p>',
       '<div class="kpiDash__reportActions" role="group" aria-label="Acciones del reporte">',
-      '<button type="button" class="kpiDash__reportBtn" data-kpi-action="pdf" aria-label="Exportar reporte en PDF (próximamente)" disabled>PDF</button>',
+      '<button type="button" class="kpiDash__reportBtn" data-kpi-action="download-pdf" aria-label="Descargar reporte KPI en PDF">Descargar PDF</button>',
+      '<button type="button" class="kpiDash__reportBtn" data-kpi-action="print-pdf" aria-label="Imprimir reporte KPI o guardar como PDF">Imprimir / Guardar como PDF</button>',
       '<button type="button" class="kpiDash__reportBtn kpiDash__reportBtn--primary" data-kpi-action="refresh" aria-label="Actualizar reporte">Refresh</button>',
       "</div>",
       '<div class="kpiDash__reportStatus ' +
@@ -1279,12 +1290,23 @@
   }
 
   function bindReportHeaderActions(root) {
-    const pdfBtn = root.querySelector('[data-kpi-action="pdf"]');
+    const reportRoot = root.querySelector(SELECTORS.reportRoot);
+    const downloadPdfBtn = root.querySelector('[data-kpi-action="download-pdf"]');
+    const printPdfBtn = root.querySelector('[data-kpi-action="print-pdf"]');
     const refreshBtn = root.querySelector('[data-kpi-action="refresh"]');
 
-    if (pdfBtn) {
-      pdfBtn.addEventListener("click", function () {
-        console.info("[KPI Dashboard] Exportación a PDF disponible próximamente.");
+    if (downloadPdfBtn && reportRoot) {
+      downloadPdfBtn.addEventListener("click", function () {
+        exportDashboardPdf(root, reportRoot, {
+          downloadBtn: downloadPdfBtn,
+          printBtn: printPdfBtn,
+        });
+      });
+    }
+
+    if (printPdfBtn && reportRoot) {
+      printPdfBtn.addEventListener("click", function () {
+        printDashboardReport(root, reportRoot);
       });
     }
 
@@ -1293,6 +1315,233 @@
         window.location.reload();
       });
     }
+  }
+
+  async function exportDashboardPdf(root, reportRoot, controls) {
+    if (!reportRoot) {
+      return;
+    }
+
+    const downloadBtn = controls && controls.downloadBtn ? controls.downloadBtn : null;
+    const printBtn = controls && controls.printBtn ? controls.printBtn : null;
+    const defaultDownloadLabel = downloadBtn ? downloadBtn.textContent : "";
+    const exportDate = new Date();
+    const filename = buildPdfFilename(exportDate);
+
+    setReportExportedAt(root, exportDate);
+    setExportActionState(downloadBtn, printBtn, true);
+    if (downloadBtn) {
+      downloadBtn.textContent = "Generando PDF...";
+    }
+    reportRoot.classList.add("kpiDash--exporting");
+
+    try {
+      const libs = await ensurePdfLibraries();
+      await waitForUiStable();
+      const canvas = await libs.html2canvas(reportRoot, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        width: Math.ceil(reportRoot.scrollWidth),
+        height: Math.ceil(reportRoot.scrollHeight),
+      });
+
+      const doc = new libs.jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+      appendCanvasToPdf(doc, canvas, PDF_PAGE_MARGIN_MM);
+      doc.save(filename);
+    } catch (error) {
+      console.error("[KPI Dashboard] Error al exportar PDF.", error);
+      window.alert("No se pudo generar el PDF del reporte. Reintentá en unos segundos.");
+    } finally {
+      reportRoot.classList.remove("kpiDash--exporting");
+      if (downloadBtn) {
+        downloadBtn.textContent = defaultDownloadLabel;
+      }
+      setExportActionState(downloadBtn, printBtn, false);
+    }
+  }
+
+  function printDashboardReport(root, reportRoot) {
+    if (!reportRoot) {
+      return;
+    }
+
+    setReportExportedAt(root, new Date());
+    reportRoot.classList.add("kpiDash--exporting");
+
+    const cleanup = () => {
+      reportRoot.classList.remove("kpiDash--exporting");
+      window.removeEventListener("afterprint", cleanup);
+    };
+
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.print();
+    window.setTimeout(cleanup, 1500);
+  }
+
+  function setReportExportedAt(root, date) {
+    const exportedAtEl = root.querySelector(SELECTORS.reportExportedAt);
+    if (!exportedAtEl) {
+      return;
+    }
+    exportedAtEl.textContent = "Exportado: " + formatDateTime(date);
+  }
+
+  function setExportActionState(downloadBtn, printBtn, disabled) {
+    [downloadBtn, printBtn].forEach((btn) => {
+      if (btn) {
+        btn.disabled = Boolean(disabled);
+      }
+    });
+  }
+
+  async function ensurePdfLibraries() {
+    if (window.html2canvas && window.jspdf && window.jspdf.jsPDF) {
+      return { html2canvas: window.html2canvas, jsPDF: window.jspdf.jsPDF };
+    }
+
+    if (window.__kpiDashPdfLibrariesPromise) {
+      return window.__kpiDashPdfLibrariesPromise;
+    }
+
+    window.__kpiDashPdfLibrariesPromise = Promise.all([
+      loadExternalScript(HTML2CANVAS_CDN, () => typeof window.html2canvas === "function"),
+      loadExternalScript(JSPDF_CDN, () => Boolean(window.jspdf && window.jspdf.jsPDF)),
+    ]).then(() => {
+      if (!window.html2canvas || !window.jspdf || !window.jspdf.jsPDF) {
+        throw new Error("Dependencias de exportación PDF incompletas.");
+      }
+      return { html2canvas: window.html2canvas, jsPDF: window.jspdf.jsPDF };
+    });
+
+    return window.__kpiDashPdfLibrariesPromise;
+  }
+
+  function loadExternalScript(url, validator) {
+    if (typeof validator === "function" && validator()) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+      const existing = Array.from(document.scripts).find((script) =>
+        script.src === url || script.src.indexOf(url) === 0,
+      );
+
+      if (existing) {
+        existing.addEventListener("load", onLoad, { once: true });
+        existing.addEventListener("error", onError, { once: true });
+        if (typeof validator === "function" && validator()) {
+          resolve();
+        }
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = url;
+      script.async = true;
+      script.onload = onLoad;
+      script.onerror = onError;
+      document.head.appendChild(script);
+
+      function onLoad() {
+        if (typeof validator === "function" && !validator()) {
+          reject(new Error("Script cargado sin objeto esperado: " + url));
+          return;
+        }
+        resolve();
+      }
+
+      function onError() {
+        reject(new Error("No se pudo cargar: " + url));
+      }
+    });
+  }
+
+  function appendCanvasToPdf(doc, canvas, marginMm) {
+    if (!doc || !canvas) {
+      return;
+    }
+
+    const pageWidthMm = doc.internal.pageSize.getWidth();
+    const pageHeightMm = doc.internal.pageSize.getHeight();
+    const contentWidthMm = pageWidthMm - marginMm * 2;
+    const contentHeightMm = pageHeightMm - marginMm * 2;
+    const pxPerMm = canvas.width / contentWidthMm;
+    const maxSliceHeightPx = Math.max(1, Math.floor(contentHeightMm * pxPerMm));
+
+    let renderedHeightPx = 0;
+    let pageIndex = 0;
+
+    while (renderedHeightPx < canvas.height) {
+      const sliceHeightPx = Math.min(maxSliceHeightPx, canvas.height - renderedHeightPx);
+      const pageCanvas = document.createElement("canvas");
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = sliceHeightPx;
+
+      const ctx = pageCanvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("No se pudo crear contexto de render para PDF.");
+      }
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+      ctx.drawImage(
+        canvas,
+        0,
+        renderedHeightPx,
+        canvas.width,
+        sliceHeightPx,
+        0,
+        0,
+        canvas.width,
+        sliceHeightPx,
+      );
+
+      const sliceHeightMm = sliceHeightPx / pxPerMm;
+      const imageData = pageCanvas.toDataURL("image/jpeg", 0.95);
+
+      if (pageIndex > 0) {
+        doc.addPage();
+      }
+
+      doc.addImage(
+        imageData,
+        "JPEG",
+        marginMm,
+        marginMm,
+        contentWidthMm,
+        sliceHeightMm,
+        undefined,
+        "FAST",
+      );
+
+      renderedHeightPx += sliceHeightPx;
+      pageIndex += 1;
+    }
+  }
+
+  function buildPdfFilename(date) {
+    const safeDate = date instanceof Date ? date : new Date();
+    const day = String(safeDate.getDate()).padStart(2, "0");
+    const month = String(safeDate.getMonth() + 1).padStart(2, "0");
+    const year = String(safeDate.getFullYear());
+    return "Reporte de Programa de Precencion de CCR. " + day + "-" + month + "-" + year + ".pdf";
+  }
+
+  async function waitForUiStable() {
+    const raf = typeof window.requestAnimationFrame === "function"
+      ? window.requestAnimationFrame.bind(window)
+      : (callback) => window.setTimeout(callback, 16);
+    await new Promise((resolve) => raf(resolve));
+    await new Promise((resolve) => raf(resolve));
+    await new Promise((resolve) => window.setTimeout(resolve, 80));
   }
 
   function bindTrkGaugeTooltips(root) {
