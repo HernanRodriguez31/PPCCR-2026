@@ -897,9 +897,9 @@ function renderRoles() {
 
   const shortLabels = {
     entregaKitFIT: "Entrega de kit FIT",
-    recepcionMuestraFIT: "Recepción de muestra FIT",
-    envioMuestrasLaboratorio: "Envío a laboratorio",
-    recepcionResultadosFIT: "Recepción de resultados FIT",
+    recepcionMuestraFIT: "Recepción de muestra de FIT",
+    envioMuestrasLaboratorio: "Entrega de FIT al laboratorio",
+    recepcionResultadosFIT: "Recepción de resultado de FIT",
     entrevistaMedica: "Entrevista médica",
     informePacienteResultadoFIT: "Informe de resultado FIT",
     evaluacionInicialSalud: "Evaluación inicial",
@@ -908,20 +908,14 @@ function renderRoles() {
   const enfermeriaItems = Array.isArray(CONFIG.links.formularios?.enfermeria?.items)
     ? [...CONFIG.links.formularios.enfermeria.items]
     : [];
-  const medicosItems = Array.isArray(CONFIG.links.formularios?.medicos?.items)
-    ? CONFIG.links.formularios.medicos.items
-    : [];
-  const informeResultadoFIT = medicosItems.find(
-    (item) => item?.key === "informePacienteResultadoFIT",
-  );
-
-  const consolidatedItems = [...enfermeriaItems];
-  if (
-    informeResultadoFIT &&
-    !consolidatedItems.some((item) => item.key === informeResultadoFIT.key)
-  ) {
-    consolidatedItems.push(informeResultadoFIT);
-  }
+  const registroOrden = [
+    "recepcionMuestraFIT",
+    "envioMuestrasLaboratorio",
+    "recepcionResultadosFIT",
+  ];
+  const consolidatedItems = registroOrden
+    .map((key) => enfermeriaItems.find((item) => item?.key === key))
+    .filter(Boolean);
 
   const roles = consolidatedItems.length
     ? [{ key: "registroOperativo", title: "", desc: "", items: consolidatedItems }]

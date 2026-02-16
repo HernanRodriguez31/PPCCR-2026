@@ -3959,7 +3959,7 @@ body.page-home #guias.section {
 @media (min-width: 1081px) {
   .page-home .role-card--single-nohead .role-card__actions,
   .page-home .role-card--single-nohead .role-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     column-gap: 14px;
   }
 }
@@ -4052,6 +4052,44 @@ body.page-home #guias.section {
 @media (max-width: 720px) {
   .page-home .role-grid {
     grid-template-columns: 1fr;
+  }
+
+  .page-home .role-card--single-nohead {
+    padding: 14px 12px 12px;
+  }
+
+  .page-home .role-card--single-nohead .role-card__actions,
+  .page-home .role-card--single-nohead .role-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .page-home .role-card--single-nohead .action-pill,
+  .page-home .role-card--single-nohead .role-link {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    min-height: 104px;
+    gap: 8px;
+    padding: 10px 8px;
+  }
+
+  .page-home .role-card--single-nohead .action-pill__icon,
+  .page-home .role-card--single-nohead .role-link__icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .page-home .role-card--single-nohead .action-pill__label,
+  .page-home .role-card--single-nohead .role-link__label {
+    font-size: 0.8rem;
+    line-height: 1.18;
+    -webkit-line-clamp: 3;
+  }
+
+  .page-home .role-card--single-nohead .action-pill__chev,
+  .page-home .role-card--single-nohead .role-link__chev {
+    display: none;
   }
 }
 
