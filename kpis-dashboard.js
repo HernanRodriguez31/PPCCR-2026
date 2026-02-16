@@ -804,7 +804,6 @@
       '<article class="kpiDash__panel kpiDash__panel--bars">',
       '<header class="kpiDash__panelHeader">',
       "<h4>Comparativo por estación</h4>",
-      "<p>Participantes, criterio FIT y fuera de screening</p>",
       "</header>",
       '<div class="kpiDash__chart" data-kpi-chart-bars></div>',
       "</article>",
@@ -1796,6 +1795,25 @@
       const participants = orderedStations.map((station) => station.participantesTotal);
       const fit = orderedStations.map((station) => station.criterioFitKits);
       const outside = orderedStations.map((station) => station.fueraDeScreening);
+      const barValueLabel = {
+        show: true,
+        position: "top",
+        distance: 6,
+        color: chartPalette.axisText,
+        fontSize: 10.5,
+        fontWeight: 600,
+        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+        formatter: function (params) {
+          if (
+            params.value === null ||
+            params.value === undefined ||
+            Number(params.value) <= 0
+          ) {
+            return "";
+          }
+          return formatNumber(params.value);
+        },
+      };
 
       barChart.setOption({
         animationDuration: 550,
@@ -1843,7 +1861,7 @@
           itemGap: 8,
           padding: [0, 0, 0, 0],
         },
-        grid: { left: 44, right: 16, top: 46, bottom: 34 },
+        grid: { left: 44, right: 16, top: 54, bottom: 34 },
         xAxis: {
           type: "category",
           data: shortStationNames,
@@ -1878,6 +1896,7 @@
             barMaxWidth: 30,
             data: participants,
             itemStyle: { borderRadius: [5, 5, 0, 0] },
+            label: barValueLabel,
             emphasis: { focus: "series" },
           },
           {
@@ -1886,6 +1905,7 @@
             barMaxWidth: 28,
             data: fit,
             itemStyle: { borderRadius: [5, 5, 0, 0] },
+            label: barValueLabel,
             emphasis: { focus: "series" },
           },
           {
@@ -1894,6 +1914,7 @@
             barMaxWidth: 26,
             data: outside,
             itemStyle: { borderRadius: [5, 5, 0, 0] },
+            label: barValueLabel,
             emphasis: { focus: "series" },
           },
         ],

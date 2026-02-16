@@ -1759,11 +1759,18 @@
   }
 
   .kpiDash__panel--bars {
-    grid-column: span 8;
+    grid-column: span 7;
+    padding-inline: 0.86rem;
   }
 
   .kpiDash__panel--aux {
-    grid-column: span 4;
+    grid-column: span 5;
+    padding-inline: 1.14rem;
+  }
+
+  .kpiDash__panel--aux .kpiDash__chart,
+  .kpiDash__panel--aux .kpiDash__chartFallback {
+    min-height: 304px;
   }
 }
 
