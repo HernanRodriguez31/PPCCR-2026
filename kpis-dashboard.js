@@ -117,7 +117,7 @@
       matrices,
       status,
       audit: {
-        source: "Google Sheets",
+        source: "Reporte operativo consolidado",
         sheetId: SHEET_ID,
         loadedAt,
         sources,
@@ -229,7 +229,7 @@
     const matrices = payload.matrices || {};
     const status = payload.status || {};
     const audit = payload.audit || {
-      source: "Google Sheets",
+      source: "Reporte operativo consolidado",
       sheetId: SHEET_ID,
       loadedAt: new Date().toISOString(),
       sources: [],
@@ -647,7 +647,7 @@
     const totals = model.totals;
     const flow = model.fitFlowTotals;
     const integrity = model.integrity || validateDataIntegrity(model.stations, totals);
-    const auditBanner = buildAuditBanner(model.audit, integrity);
+    const reportHeader = buildReportHeader(model.audit, integrity);
 
     const totalCriterioPct = ratioPercent(
       totals.criterioFitKits,
@@ -657,15 +657,7 @@
       totals.fueraDeScreening,
       totals.participantesTotal,
     );
-    const totalSeguimientoPct = ratioPercent(
-      totals.seguimientoVigente,
-      totals.fueraDeScreening,
-    );
-    const totalMayorRiesgoPct = ratioPercent(
-      totals.mayorRiesgo,
-      totals.fueraDeScreening,
-    );
-    const totalEdadPct = ratioPercent(totals.edadLt45, totals.fueraDeScreening);
+    const totalOutsideDetail = outsideBreakdownDetail(totals);
     const executiveTop = renderExecutiveTopSection(totals, flow);
 
     const totalAvanceRow = [
@@ -685,14 +677,9 @@
       stageCell(
         totals.fueraDeScreening,
         totalFueraPct || 0,
-        totalFueraPct === null ? "" : totalFueraPct + "% sobre participantes",
+        (totalFueraPct === null ? "" : totalFueraPct + "% sobre participantes · ") +
+          totalOutsideDetail,
       ),
-      stageCell(
-        totals.seguimientoVigente,
-        totalSeguimientoPct || 0,
-      ),
-      stageCell(totals.mayorRiesgo, totalMayorRiesgoPct || 0),
-      stageCell(totals.edadLt45, totalEdadPct || 0),
       "</tr>",
     ].join("");
 
@@ -706,12 +693,7 @@
           station.fueraDeScreening,
           station.participantesTotal,
         );
-        const seguimientoPct = ratioPercent(
-          station.seguimientoVigente,
-          station.fueraDeScreening,
-        );
-        const mayorPct = ratioPercent(station.mayorRiesgo, station.fueraDeScreening);
-        const edadPct = ratioPercent(station.edadLt45, station.fueraDeScreening);
+        const outsideDetail = outsideBreakdownDetail(station);
 
         return [
           "<tr>",
@@ -728,11 +710,9 @@
           stageCell(
             station.fueraDeScreening,
             fueraPct || 0,
-            fueraPct === null ? "" : fueraPct + "% sobre participantes",
+            (fueraPct === null ? "" : fueraPct + "% sobre participantes · ") +
+              outsideDetail,
           ),
-          stageCell(station.seguimientoVigente, seguimientoPct || 0),
-          stageCell(station.mayorRiesgo, mayorPct || 0),
-          stageCell(station.edadLt45, edadPct || 0),
           "</tr>",
         ].join("");
       })
@@ -818,21 +798,17 @@
 
     root.innerHTML = [
       '<div class="kpiDash__shell">',
-      '<section class="kpiDash__header" aria-label="Resumen operativo de KPIs">',
-      "<h3>Panel consolidado por estación</h3>",
-      "<p>Lectura local agregada de participantes con foco en FIT, mayor riesgo, orientación, prevención y concientización.</p>",
-      auditBanner,
-      "</section>",
+      reportHeader,
       executiveTop,
       '<section class="kpiDash__charts" aria-label="Comparativos de participantes">',
-      '<article class="kpiDash__panel">',
+      '<article class="kpiDash__panel kpiDash__panel--bars">',
       '<header class="kpiDash__panelHeader">',
       "<h4>Comparativo por estación</h4>",
       "<p>Participantes, criterio FIT y fuera de screening</p>",
       "</header>",
       '<div class="kpiDash__chart" data-kpi-chart-bars></div>',
       "</article>",
-      '<article class="kpiDash__panel">',
+      '<article class="kpiDash__panel kpiDash__panel--aux">',
       '<header class="kpiDash__panelHeader">',
       "<h4>Sankey de participantes</h4>",
       "<p>Participantes y segmentación de screening</p>",
@@ -840,14 +816,14 @@
       '<div class="kpiDash__chart" data-kpi-chart-flow></div>',
       "</article>",
       "</section>",
-      '<section class="kpiDash__funnel" aria-label="Avance por estación">',
+      '<section class="kpiDash__funnel kpiDash__funnel--avance" aria-label="Avance por estación">',
       '<header class="kpiDash__panelHeader">',
       "<h4>Avance por estación</h4>",
-      "<p>Distribución de participantes por etapa</p>",
+      "<p>Vista compacta de lectura ejecutiva</p>",
       "</header>",
       '<div class="kpiDash__tableWrap">',
       '<table class="kpiDash__table kpiDash__table--avance">',
-      "<thead><tr><th>Estación</th><th>Participantes</th><th>Criterio FIT</th><th>Fuera de screening</th><th>Seguimiento vigente</th><th>Mayor riesgo</th><th>Edad &lt; 45</th></tr></thead>",
+      "<thead><tr><th>Estación</th><th>Participantes</th><th>Criterio FIT</th><th>Fuera de screening</th></tr></thead>",
       "<tbody>",
       totalAvanceRow,
       avanceRows,
@@ -882,6 +858,8 @@
       "</section>",
       "</div>",
     ].join("");
+    bindReportHeaderActions(root);
+    bindTrkGaugeTooltips(root);
   }
 
   function buildSummaryCard(totals) {
@@ -893,6 +871,14 @@
     const fitBarPct = fitPct === null ? 0 : Math.max(0, Math.min(100, fitPct));
     const outsideBarPct =
       outsidePct === null ? 0 : Math.max(0, Math.min(100, outsidePct));
+    const fitTooltip =
+      fitPct === null
+        ? "Participantes con Criterio FIT —"
+        : "Participantes con Criterio FIT " + formatNumber(fitPct) + "%";
+    const outsideTooltip =
+      outsidePct === null
+        ? "Participantes fuera de screening —"
+        : "Participantes fuera de screening " + formatNumber(outsidePct) + "%";
     const followPct = ratioPercent(
       totals.seguimientoVigente,
       totals.fueraDeScreening,
@@ -902,20 +888,22 @@
 
     return [
       '<article class="kpiDash__summaryCard">',
-      '<div class="kpiDash__summaryTop">',
-      '<span class="kpiDash__summaryLabel">Participantes (Total)</span>',
-      '<span class="kpiDash__summaryValue">' +
-        formatMetric(totals.participantesTotal) +
-        "</span>",
-      "</div>",
       '<div class="kpiDash__summaryDistribution">',
       '<div class="kpiDash__summaryBar" role="img" aria-label="Distribución de participantes entre criterio FIT y fuera de screening">',
       '<span class="kpiDash__summaryBarSegment kpiDash__summaryBarSegment--fit" style="width:' +
         fitBarPct +
-        '%"></span>',
+        '%" data-kpi-tooltip="' +
+        escapeHtml(fitTooltip) +
+        '" aria-label="' +
+        escapeHtml(fitTooltip) +
+        '" tabindex="0"></span>',
       '<span class="kpiDash__summaryBarSegment kpiDash__summaryBarSegment--outside" style="width:' +
         outsideBarPct +
-        '%"></span>',
+        '%" data-kpi-tooltip="' +
+        escapeHtml(outsideTooltip) +
+        '" aria-label="' +
+        escapeHtml(outsideTooltip) +
+        '" tabindex="0"></span>',
       "</div>",
       '<div class="kpiDash__summarySplit">',
       summaryMainMetric(
@@ -933,6 +921,12 @@
       "</div>",
       "</div>",
       '<div class="kpiDash__summaryReasons">',
+      '<p class="kpiDash__summaryReasonsScope">* % sobre fuera de screening</p>',
+      summaryReasonBadge(
+        "Edad < 45",
+        totals.edadLt45,
+        agePct,
+      ),
       summaryReasonBadge(
         "Seguimiento vigente",
         totals.seguimientoVigente,
@@ -942,11 +936,6 @@
         "Mayor riesgo (orientación)",
         totals.mayorRiesgo,
         riskPct,
-      ),
-      summaryReasonBadge(
-        "Edad < 45",
-        totals.edadLt45,
-        agePct,
       ),
       "</div>",
       "</article>",
@@ -1013,6 +1002,9 @@
     const positivosPct = total > 0 ? percentage(positivos, total) : 0;
     const negativosBarPct = Math.max(0, Math.min(100, negativosPct));
     const positivosBarPct = Math.max(0, Math.min(100, positivosPct));
+    const hasSplit = negativosBarPct > 0 && positivosBarPct > 0;
+    const negativosTooltip = "Resultados Negativos " + formatNumber(negativosPct) + "%";
+    const positivosTooltip = "Resultados Positivos " + formatNumber(positivosPct) + "%";
 
     return [
       '<section class="kpiDash__fitOutcome" aria-label="Resultados informados">',
@@ -1022,17 +1014,175 @@
         formatMetric(flow.resultadosInformadosTotal) +
         "</span>",
       "</header>",
-      '<div class="kpiDash__fitOutcomeBar" role="img" aria-label="Distribución de resultados informados: negativos y positivos">',
-      '<span class="kpiDash__fitOutcomeSegment kpiDash__fitOutcomeSegment--neg" style="width:' +
+      '<div class="kpiDash__fitOutcomeBarWrap">',
+      '<div class="kpiDash__fitOutcomeBar" role="img" data-has-split="' +
+        (hasSplit ? "true" : "false") +
+        '" aria-label="' +
+        escapeHtml(
+          "Distribución de resultados informados. " +
+            negativosTooltip +
+            ". " +
+            positivosTooltip +
+            ".",
+        ) +
+        '">',
+      '<span class="kpiDash__fitOutcomeSegment kpiDash__fitOutcomeSegment--neg" tabindex="0" data-tooltip="' +
+        escapeHtml(negativosTooltip) +
+        '" aria-label="' +
+        escapeHtml(negativosTooltip) +
+        '" style="width:' +
         negativosBarPct +
-        '%"></span>',
-      '<span class="kpiDash__fitOutcomeSegment kpiDash__fitOutcomeSegment--pos" style="width:' +
+        '%">' +
+        '<span class="kpiDash__fitOutcomeSegmentTip" role="tooltip">' +
+        escapeHtml(negativosTooltip) +
+        "</span>" +
+        "</span>",
+      '<span class="kpiDash__fitOutcomeSegment kpiDash__fitOutcomeSegment--pos" tabindex="0" data-tooltip="' +
+        escapeHtml(positivosTooltip) +
+        '" aria-label="' +
+        escapeHtml(positivosTooltip) +
+        '" style="width:' +
         positivosBarPct +
-        '%"></span>',
+        '%">' +
+        '<span class="kpiDash__fitOutcomeSegmentTip" role="tooltip">' +
+        escapeHtml(positivosTooltip) +
+        "</span>" +
+        "</span>",
+      "</div>",
       "</div>",
       '<div class="kpiDash__fitOutcomeLegend">',
       flowOutcomeMetric("Negativos", negativos, negativosPct, "neg"),
       flowOutcomeMetric("Positivos", positivos, positivosPct, "pos"),
+      "</div>",
+      "</section>",
+    ].join("");
+  }
+
+  function buildTrkSection(flow) {
+    const kits = flow ? flow.kitsEntregadosTotal : null;
+    const muestras = flow ? flow.muestrasRecibidasTotal : null;
+    const trkPct = ratioPercent(muestras, kits);
+    const hasData =
+      kits !== null &&
+      kits !== undefined &&
+      Number(kits) > 0 &&
+      muestras !== null &&
+      muestras !== undefined;
+    const displayPct = trkPct === null ? "—" : formatNumber(trkPct) + "%";
+    const gaugePct = trkPct === null ? 0 : Math.max(0, Math.min(100, trkPct));
+    const pendingPct = trkPct === null ? 0 : Math.max(0, 100 - gaugePct);
+    const gapToTarget = trkPct === null ? null : Math.max(0, 100 - Number(trkPct));
+    const gaugeRadius = 44;
+    const gaugeCircumference = 2 * Math.PI * gaugeRadius;
+    const deliveredLength =
+      trkPct === null ? 0 : (gaugeCircumference * gaugePct) / 100;
+    const pendingLength =
+      trkPct === null ? 0 : Math.max(0, gaugeCircumference - deliveredLength);
+    const deliveredTooltip =
+      trkPct === null
+        ? "Muestras de FIT entregadas: —"
+        : "Muestras de FIT entregadas: " + formatNumber(gaugePct) + "%";
+    const pendingTooltip =
+      trkPct === null
+        ? "Muestras aun no entregadas (adherencia): —"
+        : "Muestras aun no entregadas (adherencia): " +
+          formatNumber(pendingPct) +
+          "%";
+
+    let tone = "empty";
+    if (hasData && trkPct !== null) {
+      if (trkPct >= 85) {
+        tone = "strong";
+      } else if (trkPct >= 70) {
+        tone = "good";
+      } else {
+        tone = "watch";
+      }
+    }
+
+    const statusDetail =
+      gapToTarget === null
+        ? "Completar kits y muestras para medir TRK."
+        : gapToTarget === 0
+          ? "Objetivo alcanzado."
+          : "Gap a objetivo: " + formatNumber(gapToTarget) + " pp";
+    const compactGap =
+      gapToTarget === null
+        ? "Sin referencia"
+        : gapToTarget === 0
+          ? "Objetivo alcanzado"
+          : "Gap " + formatNumber(gapToTarget) + " pp";
+
+    return [
+      '<section class="kpiDash__trk kpiDash__trk--' +
+        tone +
+        '" aria-label="Tasa de Retorno de Kits">',
+      '<header class="kpiDash__trkHead">',
+      '<div class="kpiDash__trkMeta">',
+      '<p class="kpiDash__trkTitle">Tasa de Retorno de Kits (TRK)</p>',
+      '<p class="kpiDash__trkSub">Muestras recibidas / Kits entregados</p>',
+      "</div>",
+      "</header>",
+      '<div class="kpiDash__trkBody">',
+      '<div class="kpiDash__trkKpi">',
+      '<div class="kpiDash__trkPrimary">',
+      '<span class="kpiDash__trkValue">' + displayPct + "</span>",
+      '<span class="kpiDash__trkTarget">Obj. 100%</span>',
+      "</div>",
+      '<span class="kpiDash__trkGap" title="' +
+        escapeHtml(statusDetail) +
+        '">' +
+        escapeHtml(compactGap) +
+        "</span>",
+      '<span class="kpiDash__trkFactLine"><strong>' +
+        formatMetric(kits) +
+        "</strong> kits / <strong>" +
+        formatMetric(muestras) +
+        "</strong> muestras</span>",
+      "</div>",
+      '<div class="kpiDash__trkGaugeWrap">',
+      '<div class="kpiDash__trkGauge" style="--trk-pct:' +
+        gaugePct +
+        ';" role="img" aria-label="' +
+        escapeHtml("TRK " + displayPct + " sobre objetivo 100%") +
+        '">',
+      trkPct === null
+        ? ""
+        : '<svg class="kpiDash__trkGaugeOverlay" viewBox="0 0 100 100" aria-hidden="true">' +
+          '<g transform="rotate(-90 50 50)">' +
+          '<circle class="kpiDash__trkGaugeHit kpiDash__trkGaugeHit--delivered" tabindex="0" data-tip="' +
+          escapeHtml(deliveredTooltip) +
+          '" aria-label="' +
+          escapeHtml(deliveredTooltip) +
+          '" cx="50" cy="50" r="' +
+          gaugeRadius +
+          '" stroke-dasharray="' +
+          deliveredLength.toFixed(2) +
+          " " +
+          gaugeCircumference.toFixed(2) +
+          '" stroke-dashoffset="0"></circle>' +
+          '<circle class="kpiDash__trkGaugeHit kpiDash__trkGaugeHit--pending" tabindex="0" data-tip="' +
+          escapeHtml(pendingTooltip) +
+          '" aria-label="' +
+          escapeHtml(pendingTooltip) +
+          '" cx="50" cy="50" r="' +
+          gaugeRadius +
+          '" stroke-dasharray="' +
+          pendingLength.toFixed(2) +
+          " " +
+          gaugeCircumference.toFixed(2) +
+          '" stroke-dashoffset="' +
+          (-deliveredLength).toFixed(2) +
+          '"></circle>' +
+          "</g>" +
+          "</svg>",
+      '<span class="kpiDash__trkGaugeTip" aria-hidden="true"></span>',
+      '<div class="kpiDash__trkGaugeInner">',
+      '<span class="kpiDash__trkGaugeValue">' + displayPct + "</span>",
+      '<span class="kpiDash__trkGaugeGoal">Obj. 100%</span>',
+      "</div>",
+      "</div>",
+      "</div>",
       "</div>",
       "</section>",
     ].join("");
@@ -1045,8 +1195,14 @@
         tone +
         '" aria-hidden="true"></span>',
       '<span class="kpiDash__fitOutcomeLabel">' + escapeHtml(label) + "</span>",
-      '<span class="kpiDash__fitOutcomeValue">' + formatNumber(value) + "</span>",
-      '<span class="kpiDash__fitOutcomePct">' + formatNumber(pct) + "%</span>",
+      '<span class="kpiDash__fitOutcomeMetric">' +
+        '<span class="kpiDash__fitOutcomeValue">' +
+        formatNumber(value) +
+        "</span>" +
+        '<span class="kpiDash__fitOutcomePct">(' +
+        formatNumber(pct) +
+        "%)</span>" +
+        "</span>",
       "</div>",
     ].join("");
   }
@@ -1055,13 +1211,16 @@
     const summaryCard = buildSummaryCard(totals);
     const flowSteps = buildFlowSteps(flow);
     const flowOutcome = buildFlowOutcome(flow);
+    const trkSection = buildTrkSection(flow);
 
     return [
       '<section class="kpiDash__exec" aria-label="Resumen ejecutivo">',
       '<section class="kpiDash__summary kpiDash__execPanel" aria-label="Resumen consolidado de participantes">',
       '<header class="kpiDash__panelHeader kpiDash__execHeader">',
       "<h4>Participantes</h4>",
-      "<p>Total y segmentación consolidada</p>",
+      '<span class="kpiDash__summaryHeadTotal">' +
+        formatMetric(totals.participantesTotal) +
+        "</span>",
       "</header>",
       summaryCard,
       "</section>",
@@ -1075,90 +1234,156 @@
       '<ol class="kpiDash__fitFlowSteps">',
       flowSteps,
       "</ol>",
+      '<div class="kpiDash__fitFlowSplit">',
+      '<div class="kpiDash__fitFlowPanel kpiDash__fitFlowPanel--outcome">',
       flowOutcome,
+      "</div>",
+      '<div class="kpiDash__fitFlowPanel kpiDash__fitFlowPanel--trk">',
+      trkSection,
+      "</div>",
+      "</div>",
       "</div>",
       "</section>",
       "</section>",
     ].join("");
   }
 
-  function buildAuditBanner(audit, integrity) {
+  function buildReportHeader(audit, integrity) {
+    const safeAudit = audit || {};
+    const status = resolveReportStatus(audit, integrity);
+
+    return [
+      '<section class="kpiDash__reportHeader" aria-label="Encabezado del reporte">',
+      '<div class="kpiDash__reportHeadMain">',
+      "<h3>Reporte consolidado de KPIs</h3>",
+      "<p>Vista ejecutiva por estación</p>",
+      "</div>",
+      '<div class="kpiDash__reportHeadMeta">',
+      '<p class="kpiDash__reportUpdated">Actualizado: ' +
+        escapeHtml(formatDateTime(safeAudit.loadedAt)) +
+        "</p>",
+      '<div class="kpiDash__reportActions" role="group" aria-label="Acciones del reporte">',
+      '<button type="button" class="kpiDash__reportBtn" data-kpi-action="pdf" aria-label="Exportar reporte en PDF (próximamente)" disabled>PDF</button>',
+      '<button type="button" class="kpiDash__reportBtn kpiDash__reportBtn--primary" data-kpi-action="refresh" aria-label="Actualizar reporte">Refresh</button>',
+      "</div>",
+      '<div class="kpiDash__reportStatus ' +
+        status.className +
+        '" title="' +
+        escapeHtml(status.title) +
+        '" role="status" aria-live="polite">',
+      '<span class="kpiDash__reportStatusDot" aria-hidden="true"></span>',
+      status.icon
+        ? '<span class="kpiDash__reportStatusIcon" aria-hidden="true">' +
+          escapeHtml(status.icon) +
+          "</span>"
+        : "",
+      '<span class="kpiDash__reportStatusText">' + escapeHtml(status.label) + "</span>",
+      "</div>",
+      "</div>",
+      "</section>",
+    ].join("");
+  }
+
+  function resolveReportStatus(audit, integrity) {
     const safeAudit = audit || {};
     const sources = Array.isArray(safeAudit.sources) ? safeAudit.sources : [];
     const issues =
       integrity && Array.isArray(integrity.issues) ? integrity.issues : [];
     const hasLoadErrors =
       sources.some((source) => source.status !== "ok") || safeAudit.hasErrors;
-    const badges = [];
+    const ok = !hasLoadErrors && issues.length === 0;
+    const titleParts = [];
 
     if (hasLoadErrors) {
-      badges.push(
-        '<span class="kpiDash__auditBadge kpiDash__auditBadge--error">Error al cargar</span>',
-      );
+      titleParts.push("Hay fuentes con carga incompleta.");
     }
     if (issues.length > 0) {
-      badges.push(
-        '<span class="kpiDash__auditBadge kpiDash__auditBadge--warn">⚠ Inconsistencia de datos</span>',
-      );
-    }
-    if (!hasLoadErrors && issues.length === 0) {
-      badges.push(
-        '<span class="kpiDash__auditBadge kpiDash__auditBadge--ok">Datos consistentes</span>',
-      );
+      titleParts.push(issues.slice(0, 3).join(" · "));
     }
 
-    const issuePreview = issues.slice(0, 4);
-    const hiddenIssueCount = Math.max(0, issues.length - issuePreview.length);
-    const issueText = issuePreview.join(" · ");
+    return {
+      ok,
+      label: ok ? "Datos OK" : "Datos incompletos",
+      className: ok
+        ? "kpiDash__reportStatus--ok"
+        : "kpiDash__reportStatus--warn",
+      icon: ok ? "" : "i",
+      title:
+        titleParts.length > 0
+          ? titleParts.join(" ")
+          : "Reporte operativo consolidado",
+    };
+  }
 
-    return [
-      '<div class="kpiDash__audit" role="status">',
-      '<div class="kpiDash__auditTop">',
-      '<span class="kpiDash__auditMeta"><strong>Fuente:</strong> ' +
-        escapeHtml(safeAudit.source || "Google Sheets") +
-        "</span>",
-      '<span class="kpiDash__auditMeta"><strong>Última actualización:</strong> ' +
-        escapeHtml(formatDateTime(safeAudit.loadedAt)) +
-        "</span>",
-      "</div>",
-      sources.length > 0
-        ? '<p class="kpiDash__auditRowsTitle">Filas leídas por hoja</p>' +
-          '<ul class="kpiDash__auditRows">' +
-          sources
-            .map((source) => {
-              const rowsLabel =
-                source.status === "ok"
-                  ? formatNumber(source.rowsRead || 0) + " filas leídas"
-                  : "Error al cargar";
-              return [
-                '<li class="kpiDash__auditRow">',
-                '<span class="kpiDash__auditSheet">' +
-                  escapeHtml(source.label || source.key || "Hoja") +
-                  "</span>",
-                '<span class="kpiDash__auditRead ' +
-                  (source.status === "ok"
-                    ? "kpiDash__auditRead--ok"
-                    : "kpiDash__auditRead--error") +
-                  '">' +
-                  escapeHtml(rowsLabel) +
-                  "</span>",
-                "</li>",
-              ].join("");
-            })
-            .join("") +
-          "</ul>"
-        : "",
-      '<div class="kpiDash__auditBadges">' + badges.join("") + "</div>",
-      issues.length > 0
-        ? '<p class="kpiDash__auditIssue">' +
-          escapeHtml(issueText) +
-          (hiddenIssueCount > 0
-            ? " · +" + escapeHtml(formatNumber(hiddenIssueCount)) + " más"
-            : "") +
-          "</p>"
-        : "",
-      "</div>",
-    ].join("");
+  function bindReportHeaderActions(root) {
+    const pdfBtn = root.querySelector('[data-kpi-action="pdf"]');
+    const refreshBtn = root.querySelector('[data-kpi-action="refresh"]');
+
+    if (pdfBtn) {
+      pdfBtn.addEventListener("click", function () {
+        console.info("[KPI Dashboard] Exportación a PDF disponible próximamente.");
+      });
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", function () {
+        window.location.reload();
+      });
+    }
+  }
+
+  function bindTrkGaugeTooltips(root) {
+    const gauges = root.querySelectorAll(".kpiDash__trkGauge");
+    gauges.forEach((gauge) => {
+      const tip = gauge.querySelector(".kpiDash__trkGaugeTip");
+      if (!tip) {
+        return;
+      }
+
+      const hits = gauge.querySelectorAll(".kpiDash__trkGaugeHit");
+      if (!hits.length) {
+        return;
+      }
+
+      const showTip = (text) => {
+        if (!text) {
+          return;
+        }
+        tip.textContent = text;
+        tip.classList.add("is-visible");
+      };
+
+      const hideTip = () => {
+        tip.classList.remove("is-visible");
+      };
+
+      hits.forEach((hit) => {
+        const text = hit.getAttribute("data-tip");
+        if (!text) {
+          return;
+        }
+        hit.addEventListener("mouseenter", () => showTip(text));
+        hit.addEventListener("focus", () => showTip(text));
+        hit.addEventListener("mouseleave", hideTip);
+        hit.addEventListener("blur", hideTip);
+      });
+
+      gauge.addEventListener("mouseleave", hideTip);
+    });
+  }
+
+  function outsideBreakdownDetail(entry) {
+    const seguimiento = formatMetric(entry && entry.seguimientoVigente);
+    const riesgo = formatMetric(entry && entry.mayorRiesgo);
+    const edad = formatMetric(entry && entry.edadLt45);
+    return (
+      "Seguimiento vigente: " +
+      seguimiento +
+      " · Mayor riesgo: " +
+      riesgo +
+      " · Edad < 45: " +
+      edad
+    );
   }
 
   function validateDataIntegrity(stations, totals) {
@@ -1283,14 +1508,16 @@
     const pctLabel = pct === null || pct === undefined
       ? "—"
       : formatNumber(pct) + "%";
+    const pctDisplay = pctLabel === "—" ? "(—)" : "(" + pctLabel + "*)";
 
     return [
       '<div class="kpiDash__summaryBadge">',
       '<span class="kpiDash__summaryBadgeLabel">' + escapeHtml(label) + "</span>",
-      '<span class="kpiDash__summaryBadgeValue">' + formatMetric(value) + "</span>",
-      '<span class="kpiDash__summaryBadgeMeta">' +
-        pctLabel +
-        " sobre fuera de screening</span>",
+      '<span class="kpiDash__summaryBadgeValue">' +
+        formatMetric(value) +
+        '<span class="kpiDash__summaryBadgePct">' +
+        escapeHtml(pctDisplay) +
+        "</span></span>",
       "</div>",
     ].join("");
   }
@@ -1518,6 +1745,16 @@
     const barsEl = root.querySelector(SELECTORS.bars);
     const sankeyEl = root.querySelector(SELECTORS.sankey);
     const posnegEl = root.querySelector(SELECTORS.posneg);
+    const chartPalette = {
+      blueDark: "#0C4E8D",
+      blueMid: "#3C7FC3",
+      blueLight: "#88BDF2",
+      neutralGray: "#95A4B8",
+      axisText: "#5E7393",
+      axisLine: "rgba(95, 115, 147, 0.28)",
+      gridLine: "rgba(95, 115, 147, 0.11)",
+      tooltipText: "#2E4567",
+    };
 
     if (!barsEl || !sankeyEl) {
       return;
@@ -1563,11 +1800,11 @@
       barChart.setOption({
         animationDuration: 550,
         animationEasing: "cubicOut",
-        color: ["#004B8F", "#3C7FC3", "#88BDF2"],
+        color: [chartPalette.blueDark, chartPalette.blueMid, chartPalette.blueLight],
         tooltip: {
           trigger: "axis",
           backgroundColor: "rgba(255, 255, 255, 0.97)",
-          borderColor: "rgba(19, 41, 75, 0.16)",
+          borderColor: "rgba(95, 115, 147, 0.18)",
           borderWidth: 1,
           extraCssText:
             "box-shadow: 0 10px 24px rgba(19,41,75,0.12); border-radius: 10px; padding: 8px 10px;",
@@ -1575,7 +1812,11 @@
             type: "shadow",
             shadowStyle: { color: "rgba(0, 75, 143, 0.04)" },
           },
-          textStyle: { color: "#2f466b", fontSize: 11, fontWeight: 500 },
+          textStyle: {
+            color: chartPalette.tooltipText,
+            fontSize: 11,
+            fontWeight: 500,
+          },
           formatter: function (params) {
             if (!Array.isArray(params) || params.length === 0) {
               return "";
@@ -1596,7 +1837,7 @@
         legend: {
           top: 0,
           left: "center",
-          textStyle: { color: "#3f567a", fontSize: 10.5, fontWeight: 500 },
+          textStyle: { color: chartPalette.axisText, fontSize: 10.5, fontWeight: 500 },
           itemWidth: 10,
           itemHeight: 8,
           itemGap: 8,
@@ -1607,7 +1848,7 @@
           type: "category",
           data: shortStationNames,
           axisLabel: {
-            color: "#5b7195",
+            color: chartPalette.axisText,
             fontSize: 10.5,
             fontWeight: 500,
             interval: 0,
@@ -1615,17 +1856,17 @@
             margin: 10,
           },
           axisTick: { show: false },
-          axisLine: { lineStyle: { color: "rgba(19, 41, 75, 0.18)" } },
+          axisLine: { lineStyle: { color: chartPalette.axisLine } },
         },
         yAxis: {
           type: "value",
           splitNumber: 4,
-          axisLabel: { color: "#6a80a4", fontSize: 10.5 },
+          axisLabel: { color: chartPalette.axisText, fontSize: 10.5 },
           axisLine: { show: false },
           axisTick: { show: false },
           splitLine: {
             lineStyle: {
-              color: "rgba(19, 41, 75, 0.07)",
+              color: chartPalette.gridLine,
               type: "dashed",
             },
           },
@@ -1775,7 +2016,7 @@
                   style: {
                     text: "Sin flujo consolidado",
                     textAlign: "center",
-                    fill: "#6b7f9f",
+                    fill: chartPalette.axisText,
                     fontSize: 13,
                   },
                 },
@@ -1792,10 +2033,10 @@
             nodeGap: 34,
             emphasis: { focus: "adjacency" },
             data: hasSankey
-              ? [
+                ? [
                   {
                     name: "Participantes",
-                    itemStyle: { color: "#004B8F" },
+                    itemStyle: { color: chartPalette.blueDark },
                     label: {
                       position: "left",
                       align: "right",
@@ -1804,20 +2045,26 @@
                       formatter: sankeyLabelFormatter,
                     },
                   },
-                  { name: "Criterio FIT (kits)", itemStyle: { color: "#1E6FBF" } },
+                  {
+                    name: "Criterio FIT (kits)",
+                    itemStyle: { color: chartPalette.blueMid },
+                  },
                   {
                     name: "Fuera de screening",
-                    itemStyle: { color: "#3C7FC3" },
+                    itemStyle: { color: chartPalette.blueLight },
                   },
                   {
                     name: "Seguimiento vigente",
-                    itemStyle: { color: "#5E9DDA" },
+                    itemStyle: { color: chartPalette.neutralGray },
                   },
                   {
                     name: "Mayor riesgo (orientación)",
-                    itemStyle: { color: "#88BDF2" },
+                    itemStyle: { color: chartPalette.blueMid },
                   },
-                  { name: "Edad < 45", itemStyle: { color: "#B9DBFB" } },
+                  {
+                    name: "Edad < 45",
+                    itemStyle: { color: chartPalette.neutralGray },
+                  },
                 ]
               : [],
             links: hasSankey ? links : [],
@@ -1827,7 +2074,7 @@
               opacity: 0.34,
             },
             label: {
-              color: "#29476e",
+              color: chartPalette.tooltipText,
               fontSize: 11,
               fontWeight: 600,
               position: "right",
@@ -1851,7 +2098,7 @@
 
         posnegChart.setOption({
           animationDuration: 520,
-          color: ["#004B8F", "#88BDF2"],
+          color: [chartPalette.blueMid, chartPalette.blueLight],
           tooltip: {
             trigger: "item",
             formatter: function (params) {
@@ -1867,7 +2114,7 @@
           },
           legend: {
             bottom: 0,
-            textStyle: { color: "#4c6287", fontSize: 11 },
+            textStyle: { color: chartPalette.axisText, fontSize: 11 },
           },
           graphic:
             hasPosNegData && posNegTotal > 0
@@ -1882,7 +2129,7 @@
                         ? "Sin resultados informados"
                         : "Resultados informados\nno disponibles",
                       textAlign: "center",
-                      fill: "#6b7f9f",
+                      fill: chartPalette.axisText,
                       fontSize: 12,
                     },
                   },
@@ -1896,7 +2143,7 @@
               avoidLabelOverlap: true,
               label: {
                 show: true,
-                color: "#3e5479",
+                color: chartPalette.tooltipText,
                 formatter: "{d}%",
               },
               labelLine: { show: true, length: 10, length2: 6 },
@@ -2130,10 +2377,29 @@
     if (Number.isNaN(parsed.getTime())) {
       return "—";
     }
-    return new Intl.DateTimeFormat("es-AR", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(parsed);
+    const parts = new Intl.DateTimeFormat("es-AR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(parsed);
+    const map = {};
+    parts.forEach((part) => {
+      map[part.type] = part.value;
+    });
+    return (
+      (map.day || "—") +
+      "/" +
+      (map.month || "—") +
+      "/" +
+      (map.year || "—") +
+      " " +
+      (map.hour || "—") +
+      ":" +
+      (map.minute || "—")
+    );
   }
 
   function escapeHtml(value) {
