@@ -1309,97 +1309,71 @@
     const downloadBtn = controls && controls.downloadBtn ? controls.downloadBtn : null;
     const refreshBtn = controls && controls.refreshBtn ? controls.refreshBtn : null;
     const defaultDownloadLabel = downloadBtn ? downloadBtn.textContent : "";
-    const exportDate = new Date();
-    const exportStamp = formatDateTime(exportDate);
-    const filename = "Reporte_PPCCR_2026.pdf";
-    const headerSource = document.querySelector("#top");
-    const dashboardSource = document.querySelector("#kpi-dashboard-ppccr");
-
-    if (!headerSource || !dashboardSource) {
-      window.alert("No se encontraron los elementos del reporte para exportar.");
-      return;
-    }
 
     setExportActionState([downloadBtn, refreshBtn], true);
     if (downloadBtn) {
       downloadBtn.textContent = "Generando PDF...";
     }
 
-    let snapshotHost = null;
-
     try {
-      const html2pdf = await ensureHtml2PdfLibrary();
-      snapshotHost = createPdfSnapshotHost({
-        headerSource,
-        dashboardSource,
-        exportStamp,
+      const pdfModule = await loadPpccrPdfModule();
+      if (!pdfModule || typeof pdfModule.exportPPCCRToPdf !== "function") {
+        throw new Error("No se pudo cargar exportPPCCRToPdf desde el módulo de exportación.");
+      }
+
+      await pdfModule.exportPPCCRToPdf({
+        headerSelector: "#top",
+        dashboardSelector: "#kpi-dashboard-ppccr",
+        filenamePrefix: "PPCCR_Reporte",
+        debug: true,
       });
-      document.body.appendChild(snapshotHost);
-      if (!snapshotHost.isConnected) {
-        throw new Error(
-          "El contenedor temporal para PDF no quedó adjunto al DOM antes de capturar.",
-        );
-      }
-
-      // Espera obligatoria para estabilizar layout/clonado de gráficos.
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      await waitForUiStable();
-      await waitForSnapshotAssets(snapshotHost);
-      const avoidSelectors = [
-        ".kpiDash__reportHeader",
-        ".kpiDash__execPanel",
-        ".kpiDash__panel",
-        ".kpiDash__funnel",
-        ".kpiDash__stock",
-        ".kpiDash__tableWrap",
-        ".kpiDash__chart",
-        ".ppccr-sankey",
-      ];
-
-      await html2pdf()
-        .set({
-          margin: [10, 10, 10, 10],
-          filename,
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: "#ffffff",
-            logging: false,
-            letterRendering: true,
-            scrollX: 0,
-            scrollY: 0,
-            windowWidth: 800,
-            windowHeight: Math.ceil(snapshotHost.scrollHeight || 1800),
-          },
-          jsPDF: {
-            unit: "mm",
-            format: "a4",
-            orientation: "portrait",
-          },
-          pagebreak: {
-            mode: ["avoid-all", "css", "legacy"],
-            avoid: avoidSelectors,
-          },
-        })
-        .from(snapshotHost)
-        .save();
     } catch (err) {
-      console.error("ERROR CRÍTICO PDF:", err);
-      const message =
+      console.error("[KPI Dashboard] Falló exportPPCCRToPdf.", err);
+      const reason =
         err && err.message ? err.message : JSON.stringify(err || "Error desconocido");
-      window.alert("Error: " + message);
+      window.alert("No se pudo exportar el PDF.\\nDetalle: " + reason);
     } finally {
-      if (snapshotHost && snapshotHost.parentNode) {
-        snapshotHost.parentNode.removeChild(snapshotHost);
-      }
       if (downloadBtn) {
         downloadBtn.textContent = defaultDownloadLabel;
       }
       setExportActionState([downloadBtn, refreshBtn], false);
     }
+  }
+
+  async function loadPpccrPdfModule() {
+    if (window.__ppccrPdfModulePromise) {
+      return window.__ppccrPdfModulePromise;
+    }
+
+    const candidates = [
+      "/assets/js/export/ppccr-export-pdf.js",
+      "./assets/js/export/ppccr-export-pdf.js",
+      "assets/js/export/ppccr-export-pdf.js",
+    ];
+
+    window.__ppccrPdfModulePromise = (async () => {
+      let lastError = null;
+
+      for (let i = 0; i < candidates.length; i += 1) {
+        const specifier = candidates[i];
+        try {
+          return await import(specifier);
+        } catch (error) {
+          lastError = error;
+          console.warn("[KPI Dashboard] No se pudo importar módulo PDF desde:", specifier, error);
+        }
+      }
+
+      throw (
+        lastError ||
+        new Error("No se pudo resolver el módulo de exportación PDF en ninguna ruta.")
+      );
+    })().catch((error) => {
+      window.__ppccrPdfModulePromise = null;
+      throw error;
+    });
+
+    return window.__ppccrPdfModulePromise;
   }
 
   async function downloadPDF(reportRoot, controls) {
