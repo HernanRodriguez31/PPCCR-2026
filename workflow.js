@@ -9,8 +9,9 @@ const ROLE_LABELS = {
 const WORKFLOW_PHASES = [
   {
     id: "etapa-1",
-    title: "Etapa 1 — Captación y preparación",
-    timelineTitle: "Captación y preparación",
+    iconKey: "megaphone",
+    title: "Etapa 1 — Difusión e información + preparación",
+    timelineTitle: "Difusión e información",
     range: "del 9 al 22 de marzo",
     rangeShort: "9–22 mar",
     objective:
@@ -21,7 +22,9 @@ const WORKFLOW_PHASES = [
         number: 1,
         title: "Difusión y concientización",
         desc: "Campaña en redes + comunicación institucional.",
-        details: ["Objetivo: captar participantes y promover el acceso al tamizaje."],
+        details: [
+          "Objetivo: informar a participantes y promover el acceso al tamizaje.",
+        ],
         roles: ["CO", "EN"],
       },
       {
@@ -44,6 +47,7 @@ const WORKFLOW_PHASES = [
   },
   {
     id: "etapa-2",
+    iconKey: "station",
     title: "Etapa 2 — Operativo en estación",
     timelineTitle: "Operativo en estación",
     range: "del 23 de marzo al 1 de abril",
@@ -66,28 +70,30 @@ const WORKFLOW_PHASES = [
           {
             id: "ruta-a",
             tone: "success",
-            title: "Ruta A — Criterio para tamizaje → Test FIT",
-            desc: "Cumple criterio para tamizaje con test FIT. Continuar a educación y entrega de kit.",
+            tag: "Ruta A",
+            title: "Criterio para tamizaje y test FIT",
+            desc: "Cumple criterio para tamizaje con test FIT. Continúa a educación y entrega de kit.",
             roles: ["EN"],
             status: "Continúa",
           },
           {
             id: "ruta-b",
             tone: "neutral",
-            title: "Ruta B — Sin criterio para tamizaje",
-            reasons:
-              "Fuera de rango etario / seguimiento vigente por profesional de la salud / colonoscopía reciente, etc.",
-            action: "Brindar orientación a consulta a salud, registrar y finalizar.",
+            tag: "Ruta B",
+            title: "Sin criterio para tamizaje",
+            reasons: "Fuera de rango etario, seguimiento vigente o colonoscopía reciente.",
+            action: "Orientar a consulta a salud, registrar y finalizar.",
             roles: ["EN"],
             status: "Fin",
           },
           {
             id: "ruta-c",
             tone: "warning",
-            title: "Ruta C — Riesgo elevado → Orientación a consulta a salud",
+            tag: "Ruta C",
+            title: "Riesgo elevado y orientación a consulta a salud",
             reasons:
-              "Detección de antecedentes personales o familiares, signos o síntomas que confieren mayor riesgo de cáncer colorrectal.",
-            action: "Brindar orientación a consulta a salud, registrar y finalizar.",
+              "Antecedentes personales/familiares o signos y síntomas de mayor riesgo.",
+            action: "Orientar a consulta a salud, registrar y finalizar.",
             roles: ["EN"],
             status: "Fin",
           },
@@ -97,6 +103,7 @@ const WORKFLOW_PHASES = [
   },
   {
     id: "etapa-3",
+    iconKey: "fit",
     title: "Etapa 3 — Test FIT (Ruta A)",
     timelineTitle: "Test FIT + resultados",
     range: "del 23 de marzo al 1 de abril",
@@ -107,10 +114,10 @@ const WORKFLOW_PHASES = [
       {
         id: "paso-5",
         number: 5,
-        title: "Educación + entrega de kit FIT",
-        desc: "Educación a la población y entrega de test FIT.",
+        title: "Información sobre uso y entrega del test FIT",
+        desc: "Información sobre el uso y entrega del test FIT.",
         details: [
-          "Instrucción: toma de muestra y rotulado.",
+          "Instrucción para toma de muestra y rotulado.",
           "Se informa sobre los plazos y la importancia de realizar el FIT.",
           "Registrar entrega.",
         ],
@@ -136,7 +143,7 @@ const WORKFLOW_PHASES = [
       {
         id: "paso-8",
         number: 8,
-        title: "Recepción de resultado FIT (canal definido)",
+        title: "Recepción de resultado FIT",
         desc: "Los resultados del test FIT llegan a la coordinación operativa del programa y directamente al participante por correo.",
         roles: ["CO"],
       },
@@ -152,7 +159,8 @@ const WORKFLOW_PHASES = [
           {
             id: "fit-negativo",
             tone: "success",
-            title: "FIT negativo",
+            tag: "FIT negativo",
+            title: "Información y cierre del circuito",
             desc: "Informar el resultado y reforzar la educación y concientización sobre prevención de cáncer colorrectal.",
             action: "Fin del programa para ese participante.",
             roles: ["EN"],
@@ -161,7 +169,8 @@ const WORKFLOW_PHASES = [
           {
             id: "fit-positivo",
             tone: "warning",
-            title: "FIT positivo",
+            tag: "FIT positivo",
+            title: "Información, contención y orientación",
             desc: "Informar el resultado, tranquilizar y brindar contención.",
             action:
               "Recomendar orientación a consulta a salud por mayor riesgo. Fin del programa para ese participante.",
@@ -174,6 +183,7 @@ const WORKFLOW_PHASES = [
   },
   {
     id: "etapa-4",
+    iconKey: "check",
     title: "Etapa 4 — Cierre operativo",
     timelineTitle: "Cierre operativo",
     range: "1 de abril",
@@ -322,11 +332,22 @@ function renderStep(step, isLastStep) {
       const branchTop = document.createElement("div");
       branchTop.className = "wf-branch__top";
 
+      const branchHeading = document.createElement("div");
+      branchHeading.className = "wf-branch__heading";
+
+      if (branch.tag) {
+        const branchTag = document.createElement("span");
+        branchTag.className = "wf-branch__tag";
+        branchTag.textContent = branch.tag;
+        branchHeading.appendChild(branchTag);
+      }
+
       const branchTitle = document.createElement("h5");
       branchTitle.className = "wf-branch__title";
       branchTitle.textContent = branch.title;
 
-      branchTop.appendChild(branchTitle);
+      branchHeading.appendChild(branchTitle);
+      branchTop.appendChild(branchHeading);
 
       if (branch.status) {
         const branchStatus = document.createElement("span");
@@ -337,11 +358,19 @@ function renderStep(step, isLastStep) {
 
       branchEl.appendChild(branchTop);
 
+      const headerDivider = document.createElement("div");
+      headerDivider.className = "wf-branch__header-divider";
+      headerDivider.setAttribute("aria-hidden", "true");
+      branchEl.appendChild(headerDivider);
+
+      const branchContent = document.createElement("div");
+      branchContent.className = "wf-branch__content";
+
       if (branch.desc) {
         const branchDesc = document.createElement("p");
         branchDesc.className = "wf-branch__desc";
         branchDesc.textContent = branch.desc;
-        branchEl.appendChild(branchDesc);
+        branchContent.appendChild(branchDesc);
       }
 
       if (branch.reasons) {
@@ -357,7 +386,7 @@ function renderStep(step, isLastStep) {
 
         reasons.appendChild(label);
         reasons.appendChild(text);
-        branchEl.appendChild(reasons);
+        branchContent.appendChild(reasons);
       }
 
       if (branch.action) {
@@ -365,7 +394,7 @@ function renderStep(step, isLastStep) {
         action.className = "wf-branch__action";
 
         const label = document.createElement("span");
-        label.className = "wf-branch__label";
+        label.className = "wf-branch__action-label";
         label.textContent = "Acción:";
 
         const text = document.createElement("span");
@@ -373,9 +402,10 @@ function renderStep(step, isLastStep) {
 
         action.appendChild(label);
         action.appendChild(text);
-        branchEl.appendChild(action);
+        branchContent.appendChild(action);
       }
 
+      branchEl.appendChild(branchContent);
       branchEl.appendChild(createRoleMeta(branch.roles));
       branchGrid.appendChild(branchEl);
     });
@@ -450,25 +480,35 @@ function initStageTimeline(phases) {
     link.href = `#${phase.id}`;
     link.dataset.stageTarget = phase.id;
 
-    const dot = document.createElement("span");
-    dot.className = "wf-stage-nav__dot";
-    dot.textContent = `${index + 1}`;
+    const icon = document.createElement("span");
+    icon.className = "wf-stage-nav__icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = getStageIconSvg(phase.iconKey);
+
+    const stageLabel = document.createElement("span");
+    stageLabel.className = "wf-stage-nav__stage";
+    stageLabel.textContent = `Etapa ${index + 1}`;
+
+    const head = document.createElement("span");
+    head.className = "wf-stage-nav__head";
+    head.appendChild(icon);
+    head.appendChild(stageLabel);
 
     const text = document.createElement("span");
     text.className = "wf-stage-nav__text";
 
-    const title = document.createElement("span");
-    title.className = "wf-stage-nav__name";
-    title.textContent =
+    const subtitle = document.createElement("span");
+    subtitle.className = "wf-stage-nav__name";
+    subtitle.textContent =
       phase.timelineTitle || phase.title.replace(/^Etapa\s+\d+\s+—\s+/i, "");
 
     const range = document.createElement("span");
     range.className = "wf-stage-nav__range";
     range.textContent = phase.rangeShort || phase.range || "—";
 
-    text.appendChild(title);
+    text.appendChild(subtitle);
     text.appendChild(range);
-    link.appendChild(dot);
+    link.appendChild(head);
     link.appendChild(text);
     item.appendChild(link);
     timelineList.appendChild(item);
@@ -670,7 +710,7 @@ function scrollToStage(stageId, { updateHash = true } = {}) {
   if (!(target instanceof HTMLElement)) return;
 
   const top =
-    window.scrollY + target.getBoundingClientRect().top - getFixedHeaderOffset() - 14;
+    window.scrollY + target.getBoundingClientRect().top - getFixedHeaderOffset() - 20;
 
   window.scrollTo({
     top: Math.max(0, Math.round(top)),
@@ -693,4 +733,18 @@ function getFixedHeaderOffset() {
 
 function isReduceMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function getStageIconSvg(iconKey) {
+  const iconMap = {
+    megaphone:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 12.5v-1.8c0-.7.5-1.2 1.2-1.2h2.3l8-3.8c.8-.4 1.7.2 1.7 1.1v9.4c0 .9-.9 1.5-1.7 1.1l-8-3.8H4.7c-.7 0-1.2-.5-1.2-1.2Z"/><path d="M8 13.7l1.4 5.1c.2.7 1 .9 1.5.4l1.1-1.1"/><path d="M18.8 9.2c1 .9 1.6 2.1 1.6 3.3s-.6 2.4-1.6 3.3"/></svg>',
+    station:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21s6-4.5 6-10a6 6 0 1 0-12 0c0 5.5 6 10 6 10Z"/><circle cx="12" cy="11" r="2.2"/><path d="M9.3 5.6h5.4"/></svg>',
+    fit:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="7" y="3.5" width="10" height="17" rx="2"/><path d="M10 7.5h4M10 11h4M10 14.5h4"/><path d="M9.5 20.5h5"/></svg>',
+    check:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.3 2.2 2.2 4.8-4.8"/></svg>',
+  };
+  return iconMap[iconKey] || iconMap.check;
 }

@@ -98,29 +98,48 @@
 
     <main id="workflow-main" class="wf-main site-main">
       <div class="container">
+        <section class="wf-page-heading wf-section" aria-labelledby="wf-page-title">
+          <div class="wf-page-heading__bar">
+            <h1 class="wf-hero__title" id="wf-page-title">Workflow operativo</h1>
+          </div>
+        </section>
+
         <section class="wf-overview wf-section" aria-labelledby="wf-page-title">
           <header class="wf-overview__header">
-            <h1 class="wf-hero__title" id="wf-page-title">Workflow operativo</h1>
-            <p class="wf-hero__subtitle">
-              Secuencia operativa integral para captación, tamizaje, circuito FIT,
-              información de resultados y cierre de métricas del programa.
+            <h2 class="wf-overview__title">Secuencia operativa integral</h2>
+            <p class="wf-overview__subtitle">
+              Flujo operativo para difusión, información, tamizaje, circuito FIT,
+              resultados y cierre de métricas del programa.
             </p>
           </header>
 
           <div class="wf-overview__meta" role="list" aria-label="Resumen operativo">
-            <article class="wf-meta-card" role="listitem">
+            <article class="wf-meta-card wf-meta-card--vigencia" role="listitem">
               <h2 class="wf-meta-card__title">Vigencia</h2>
-              <p class="wf-meta-card__text">
-                Del 9 de marzo al 1 de abril.
-                <strong>Difusión y educación:</strong> del 9 al 22 de marzo.
-                <strong>Operativo FIT:</strong> del 23 de marzo al 1 de abril.
+              <p class="wf-meta-card__total">
+                Vigencia total: del 9 de marzo al 1 de abril.
               </p>
+              <div class="wf-meta-schedule" aria-label="Cronograma operativo">
+                <p class="wf-meta-schedule__item">
+                  <span class="wf-meta-schedule__date">Del 9 al 22 de marzo</span>
+                  <span class="wf-meta-schedule__task">
+                    Difusión, comunicación e información a la comunidad.
+                  </span>
+                </p>
+                <p class="wf-meta-schedule__item">
+                  <span class="wf-meta-schedule__date">Del 23 de marzo al 1 de abril</span>
+                  <span class="wf-meta-schedule__task">
+                    Objetivo operativo FIT en estación, recepción de muestras y gestión de resultados.
+                  </span>
+                </p>
+              </div>
             </article>
             <article class="wf-meta-card" role="listitem">
               <h2 class="wf-meta-card__title">Alcance</h2>
               <p class="wf-meta-card__text">
-                Captación, tamizaje, educación, entrega/recepción de test FIT,
-                traslado, recepción de resultados e información al participante.
+                Difusión e información comunitaria, tamizaje, educación,
+                entrega/recepción de test FIT, traslado, recepción de resultados e
+                información al participante.
               </p>
             </article>
             <article class="wf-meta-card" role="listitem">
@@ -132,25 +151,27 @@
             </article>
           </div>
 
-          <details class="wf-roles" id="wf-roles-details">
-            <summary aria-label="Ver referencia de roles operativos">
-              <span class="wf-roles__icon" aria-hidden="true">i</span>
-              <span class="wf-roles__summary-text">Roles operativos</span>
-            </summary>
-            <div class="wf-roles__panel">
-              <ul class="wf-roles__list">
-                <li><strong>CO:</strong> Coordinación</li>
-                <li><strong>EN:</strong> Enfermería / Navegación / Facilitación</li>
-                <li><strong>LO:</strong> Logística</li>
-              </ul>
-            </div>
-          </details>
+          <div class="wf-overview__flow wf-overview__progress" aria-label="Flujo por etapas">
+            <details class="wf-roles" id="wf-roles-details">
+              <summary aria-label="Ver referencia de roles operativos">
+                <span class="wf-roles__icon" aria-hidden="true">i</span>
+                <span class="wf-roles__summary-text">Roles operativos</span>
+              </summary>
+              <div class="wf-roles__panel">
+                <ul class="wf-roles__list">
+                  <li><strong>CO:</strong> Coordinación</li>
+                  <li><strong>EN:</strong> Enfermería / Navegación / Facilitación</li>
+                  <li><strong>LO:</strong> Logística</li>
+                </ul>
+              </div>
+            </details>
 
-          <nav class="wf-stage-nav" aria-label="Línea de tiempo del proceso">
-            <ol class="wf-stage-nav__list" id="wf-stage-timeline">
-              <!-- Render dinámico desde workflow.js -->
-            </ol>
-          </nav>
+            <nav class="wf-stage-nav" aria-label="Línea de tiempo del proceso">
+              <ol class="wf-stage-nav__list" id="wf-stage-timeline">
+                <!-- Render dinámico desde workflow.js -->
+              </ol>
+            </nav>
+          </div>
         </section>
 
         <section class="wf-section" aria-labelledby="wf-process-title">
