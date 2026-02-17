@@ -14,13 +14,13 @@ const DEFAULT_OPTIONS = {
   headerSelector: "#top",
   dashboardSelector: "#kpi-dashboard-ppccr",
   filenamePrefix: "PPCCR_Reporte",
-  desiredScale: 2.4,
+  desiredScale: 3,
   maxDimPx: 15000,
-  maxAreaPx: 120000000,
+  maxAreaPx: 160000000,
   marginsMm: { top: 10, right: 10, bottom: 10, left: 10 },
   contentGapMm: 4,
   footerMm: 8,
-  headerHeightMultiplier: 1.14,
+  headerHeightMultiplier: 1.34,
   repeatHeaderOnEachPage: true,
   ignoreSelectors: [],
   extraCloneCss: "",
@@ -47,43 +47,65 @@ const DEFAULT_CLONE_HIDE_SELECTORS = [
   ".loading-overlay",
 ];
 
-const PDF_DASHBOARD_VISUAL_ENHANCE_CSS = [
-  ".kpiDash__trk {",
-  "  --trk-ring-main-1: #0b4e8d !important;",
-  "  --trk-ring-main-2: #1b6db4 !important;",
-  "  --trk-ring-main-3: #3f93da !important;",
-  "  --trk-ring-track-1: #d2e3f3 !important;",
-  "  --trk-ring-track-2: #e8f1f9 !important;",
-  "  --trk-ring-edge: rgba(12, 78, 141, 0.28) !important;",
-  "  --trk-ring-shadow: rgba(13, 59, 106, 0.22) !important;",
+const PDF_HEADER_VISUAL_ENHANCE_CSS = [
+  "#top .partners-bar,",
+  "#top .logo-strip.partners-bar {",
+  "  padding-top: 10px !important;",
+  "  padding-bottom: 10px !important;",
   "}",
-  ".kpiDash__trkGauge::before, .kpiDash__trkGauge::after {",
+  "#top #partner-logos.partners-strip > *,",
+  "#top #partner-logos.partners-strip > a,",
+  "#top #partner-logos.partners-strip > .partner-logo,",
+  "#top #partner-logos.partners-strip > .partner-pill {",
+  "  min-height: 44px !important;",
+  "}",
+].join("\n");
+
+const PDF_DASHBOARD_VISUAL_ENHANCE_CSS = [
+  "#kpi-dashboard-ppccr .kpiDash__summaryBar {",
+  "  overflow: hidden !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment::before,",
+  "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment::after {",
+  "  content: none !important;",
   "  display: none !important;",
   "}",
-  ".kpiDash__trkGaugeOverlay {",
+  "#kpi-dashboard-ppccr .kpiDash__flowProgress {",
+  "  background: linear-gradient(180deg, rgba(227, 238, 251, 0.96), rgba(212, 228, 246, 0.92)) !important;",
+  "  border: 1px solid rgba(136, 173, 218, 0.45) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__flowProgressFill {",
+  "  background: linear-gradient(90deg, rgba(26, 96, 168, 0.96), rgba(102, 164, 230, 0.95)) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__informSplit {",
+  "  background: linear-gradient(145deg, rgba(244, 249, 255, 0.95), rgba(225, 237, 252, 0.9)) !important;",
+  "  border: 1px solid rgba(181, 204, 232, 0.58) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__informChip--neg {",
+  "  color: #f3f8ff !important;",
+  "  background: linear-gradient(145deg, #1f66ad, #2b79c1) !important;",
+  "  border-color: rgba(24, 90, 158, 0.72) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__informChip--pos {",
+  "  color: #24568d !important;",
+  "  background: linear-gradient(145deg, rgba(224, 237, 252, 0.96), rgba(196, 218, 244, 0.94)) !important;",
+  "  border-color: rgba(130, 171, 216, 0.72) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__trkGaugeOverlay {",
   "  z-index: 7 !important;",
   "}",
-  ".kpiDash__trkGaugeHit {",
+  "#kpi-dashboard-ppccr .kpiDash__trkGaugeHit {",
   "  fill: none !important;",
-  "  stroke-width: 14 !important;",
   "  stroke-linecap: round !important;",
   "  pointer-events: none !important;",
   "}",
-  ".kpiDash__trkGaugeHit--delivered {",
-  "  stroke: #1a6db7 !important;",
+  "#kpi-dashboard-ppccr .kpiDash__trkGaugeHit--delivered {",
+  "  stroke: #1d69b3 !important;",
+  "  stroke-width: 14 !important;",
   "}",
-  ".kpiDash__trkGaugeHit--pending {",
-  "  stroke: #d7e7f6 !important;",
-  "}",
-  ".kpiDash__trkGaugeMarker {",
-  "  display: none !important;",
-  "}",
-  ".kpiDash__flowProgress {",
-  "  background: linear-gradient(180deg, #dce9f7, #c7dcf2) !important;",
-  "  border-color: rgba(107, 153, 205, 0.58) !important;",
-  "}",
-  ".kpiDash__flowProgressFill {",
-  "  background: linear-gradient(90deg, #155a9c, #4a96da) !important;",
+  "#kpi-dashboard-ppccr .kpiDash__trkGaugeHit--pending {",
+  "  stroke: #d7e6f4 !important;",
+  "  stroke-width: 14 !important;",
   "}",
 ].join("\n");
 
@@ -114,11 +136,8 @@ export async function exportPPCCRToPdf(options = {}) {
 
     const scaleHeader = computeSafeScale(headerEl, cfg.desiredScale, cfg.maxDimPx);
     const scaleDash = computeSafeScale(dashEl, cfg.desiredScale, cfg.maxDimPx);
-    const headerCloneCss = mergeCloneCss(cfg.extraCloneCss);
-    const dashboardCloneCss = mergeCloneCss(
-      cfg.extraCloneCss,
-      PDF_DASHBOARD_VISUAL_ENHANCE_CSS,
-    );
+    const headerCloneCss = mergeCloneCss(cfg.extraCloneCss, PDF_HEADER_VISUAL_ENHANCE_CSS);
+    const dashboardCloneCss = mergeCloneCss(cfg.extraCloneCss, PDF_DASHBOARD_VISUAL_ENHANCE_CSS);
 
     const headerCanvas = await captureElement(headerEl, {
       html2canvas: libs.html2canvas,
@@ -126,6 +145,10 @@ export async function exportPPCCRToPdf(options = {}) {
       backgroundColor: "#FFF",
       extraCloneCss: headerCloneCss,
       ignoreSelectors: cfg.ignoreSelectors,
+      debug: cfg.debug,
+      cloneMutator(clonedDoc) {
+        normalizeHeaderForPdfClone(clonedDoc, cfg.headerSelector);
+      },
     });
 
     const pageMetrics = createPageMetrics(cfg);
@@ -151,6 +174,10 @@ export async function exportPPCCRToPdf(options = {}) {
         backgroundColor: "#FFF",
         extraCloneCss: dashboardCloneCss,
         ignoreSelectors: cfg.ignoreSelectors,
+        debug: cfg.debug,
+        cloneMutator(clonedDoc) {
+          stabilizeTrkGaugeInClone(clonedDoc, cfg.dashboardSelector);
+        },
       });
     } catch (error) {
       primaryDashboardCaptureError = error;
@@ -177,6 +204,10 @@ export async function exportPPCCRToPdf(options = {}) {
         pageContentHeightMm: dashboardAvailMm,
         extraCloneCss: dashboardCloneCss,
         ignoreSelectors: cfg.ignoreSelectors,
+        debug: cfg.debug,
+        cloneMutator(clonedDoc) {
+          stabilizeTrkGaugeInClone(clonedDoc, cfg.dashboardSelector);
+        },
       });
 
       resultMeta.fallbackTilesUsed = true;
@@ -437,6 +468,8 @@ export async function captureElement(
     extraCloneCss = "",
     ignoreSelectors = [],
     crop = null,
+    cloneMutator = null,
+    debug = false,
   } = {},
 ) {
   if (typeof html2canvas !== "function") {
@@ -452,16 +485,16 @@ export async function captureElement(
     useCORS: true,
     allowTaint: false,
     logging: false,
+    foreignObjectRendering: true,
     removeContainer: true,
-    scrollX: 0,
-    scrollY: 0,
-    windowWidth: Math.ceil(Math.max(rect.width, document.documentElement.clientWidth || 0)),
-    windowHeight: Math.ceil(Math.max(rect.height, document.documentElement.clientHeight || 0)),
     onclone(clonedDoc) {
       injectCloneStyles(clonedDoc, {
         hiddenSelectors,
         extraCloneCss,
       });
+      if (typeof cloneMutator === "function") {
+        cloneMutator(clonedDoc);
+      }
     },
   };
 
@@ -472,7 +505,28 @@ export async function captureElement(
     options.height = Math.max(1, Math.ceil(crop.height));
   }
 
-  return html2canvas(element, options);
+  try {
+    const firstCanvas = await html2canvas(element, options);
+    if (!isLikelyBlankCanvas(firstCanvas)) {
+      return firstCanvas;
+    }
+    if (debug) {
+      console.warn(
+        "[PPCCR PDF] Captura potencialmente vacía con foreignObject. Reintentando sin foreignObjectRendering.",
+      );
+    }
+    const fallbackOptions = {
+      ...options,
+      foreignObjectRendering: false,
+    };
+    return html2canvas(element, fallbackOptions);
+  } catch (primaryError) {
+    const fallbackOptions = {
+      ...options,
+      foreignObjectRendering: false,
+    };
+    return html2canvas(element, fallbackOptions);
+  }
 }
 
 async function ensureExportLibs() {
@@ -643,6 +697,8 @@ async function captureDashboardTiles({
   pageContentHeightMm,
   extraCloneCss,
   ignoreSelectors,
+  cloneMutator,
+  debug,
 }) {
   const rect = element.getBoundingClientRect();
   const widthCss = Math.max(1, Math.ceil(rect.width));
@@ -674,6 +730,8 @@ async function captureDashboardTiles({
       backgroundColor: "#FFF",
       extraCloneCss,
       ignoreSelectors,
+      cloneMutator,
+      debug,
       crop: {
         x: 0,
         y,
@@ -737,38 +795,54 @@ function appendCanvasWithPaging({
       1,
       Math.min(sourceHeightPx - sourceY, Math.floor(availableMm / mmPerPx)),
     );
-
-    const sliceCanvas = document.createElement("canvas");
-    sliceCanvas.width = sourceWidthPx;
-    sliceCanvas.height = sliceHeightPx;
-
-    const ctx = sliceCanvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("No se pudo crear contexto 2D para paginado del dashboard.");
-    }
-
-    ctx.drawImage(
-      canvas,
-      0,
-      sourceY,
-      sourceWidthPx,
-      sliceHeightPx,
-      0,
-      0,
-      sourceWidthPx,
-      sliceHeightPx,
-    );
-
     const renderHeightMm = sliceHeightPx * mmPerPx;
+    const fullCanvasFitsSinglePage = sourceY === 0 && sliceHeightPx === sourceHeightPx;
 
-    doc.addImage(
-      sliceCanvas,
-      "PNG",
-      pageMetrics.margins.left,
-      contentStartY,
-      pageMetrics.contentWidthMm,
-      renderHeightMm,
-    );
+    if (fullCanvasFitsSinglePage) {
+      doc.addImage(
+        canvas,
+        "PNG",
+        pageMetrics.margins.left,
+        contentStartY,
+        pageMetrics.contentWidthMm,
+        renderHeightMm,
+      );
+    } else {
+      const sliceCanvas = document.createElement("canvas");
+      sliceCanvas.width = sourceWidthPx;
+      sliceCanvas.height = sliceHeightPx;
+
+      const ctx = sliceCanvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("No se pudo crear contexto 2D para paginado del dashboard.");
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      if ("imageSmoothingQuality" in ctx) {
+        ctx.imageSmoothingQuality = "high";
+      }
+
+      ctx.drawImage(
+        canvas,
+        0,
+        sourceY,
+        sourceWidthPx,
+        sliceHeightPx,
+        0,
+        0,
+        sourceWidthPx,
+        sliceHeightPx,
+      );
+
+      doc.addImage(
+        sliceCanvas,
+        "PNG",
+        pageMetrics.margins.left,
+        contentStartY,
+        pageMetrics.contentWidthMm,
+        renderHeightMm,
+      );
+    }
 
     sourceY += sliceHeightPx;
     renderState.pageIndex += 1;
@@ -786,7 +860,7 @@ function applyFooterPageNumbers(doc, pageMetrics, footerMm) {
     doc.setPage(i);
     const y = pageMetrics.pageHeightMm - Math.max(2, footerMm / 2);
     doc.text(
-      "Página " + i + " / " + total,
+      "Pag " + i + "/" + total,
       pageMetrics.pageWidthMm / 2,
       y,
       { align: "center" },
@@ -893,6 +967,132 @@ function injectCloneStyles(clonedDoc, { hiddenSelectors, extraCloneCss }) {
     .join("\n");
 
   clonedDoc.head.appendChild(style);
+}
+
+function normalizeHeaderForPdfClone(clonedDoc, headerSelector) {
+  const headerRoot = clonedDoc.querySelector(headerSelector) || clonedDoc.querySelector("#top");
+  if (!headerRoot) {
+    return;
+  }
+
+  headerRoot.classList.remove("is-scrolled", "is-compact", "partners-collapsed");
+  headerRoot.classList.add("partners-expanded");
+  headerRoot.style.setProperty("transform", "none", "important");
+  headerRoot.style.setProperty("top", "0", "important");
+
+  const partnersStrip = headerRoot.querySelector("#partner-logos.partners-strip");
+  if (partnersStrip) {
+    partnersStrip.style.setProperty("display", "flex", "important");
+    partnersStrip.style.setProperty("align-items", "center", "important");
+    partnersStrip.style.setProperty("flex-wrap", "nowrap", "important");
+    partnersStrip.style.setProperty("gap", "12px", "important");
+  }
+
+  headerRoot
+    .querySelectorAll("#partner-logos.partners-strip > *, #partner-logos.partners-strip img")
+    .forEach((node) => {
+      node.style.setProperty("transform", "none", "important");
+    });
+}
+
+function isLikelyBlankCanvas(canvas) {
+  if (!canvas || canvas.width <= 0 || canvas.height <= 0) {
+    return true;
+  }
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return false;
+  }
+
+  const width = canvas.width;
+  const height = canvas.height;
+  const stepX = Math.max(8, Math.floor(width / 42));
+  const stepY = Math.max(8, Math.floor(height / 42));
+  const lightThreshold = 248;
+  let samples = 0;
+  let nonBlank = 0;
+
+  for (let y = 0; y < height; y += stepY) {
+    for (let x = 0; x < width; x += stepX) {
+      const pixel = ctx.getImageData(x, y, 1, 1).data;
+      samples += 1;
+      if (
+        pixel[3] > 8 &&
+        (pixel[0] < lightThreshold || pixel[1] < lightThreshold || pixel[2] < lightThreshold)
+      ) {
+        nonBlank += 1;
+      }
+    }
+  }
+
+  if (samples === 0) {
+    return true;
+  }
+
+  const nonBlankRatio = nonBlank / samples;
+  return nonBlankRatio < 0.008;
+}
+
+function stabilizeTrkGaugeInClone(clonedDoc, dashboardSelector) {
+  const scope = clonedDoc.querySelector(dashboardSelector) || clonedDoc;
+  if (scope.classList && scope.classList.contains("kpiDash__reportRoot")) {
+    scope.classList.add("kpiDash--exporting");
+  }
+  scope.querySelectorAll(".kpiDash__reportRoot").forEach((node) => {
+    node.classList.add("kpiDash--exporting");
+  });
+
+  const gauges = Array.from(scope.querySelectorAll(".kpiDash__trkGauge"));
+
+  gauges.forEach((gauge) => {
+    const pct = readTrkPercentFromGauge(gauge, clonedDoc);
+    if (!Number.isFinite(pct)) {
+      return;
+    }
+
+    const pctClamped = Math.max(0, Math.min(100, pct));
+    const deliveredDeg = pctClamped * 3.6;
+    const midDeg = deliveredDeg * 0.55;
+
+    gauge.style.setProperty(
+      "background",
+      "conic-gradient(" +
+        "from -90deg," +
+        " #0a3f78 0deg," +
+        " #0f5c9f " +
+        midDeg.toFixed(2) +
+        "deg," +
+        " #2f82c5 " +
+        deliveredDeg.toFixed(2) +
+        "deg," +
+        " #d9e5f1 " +
+        deliveredDeg.toFixed(2) +
+        "deg," +
+        " #ebf1f8 360deg" +
+        ")",
+      "important",
+    );
+
+    gauge.style.setProperty(
+      "box-shadow",
+      "inset 0 0 0 1px rgba(14,72,127,0.2), 0 6px 14px rgba(14,55,98,0.2)",
+      "important",
+    );
+  });
+}
+
+function readTrkPercentFromGauge(gauge, clonedDoc) {
+  const inline = gauge.getAttribute("style") || "";
+  const inlineMatch = inline.match(/--trk-pct\s*:\s*([0-9]+(?:\.[0-9]+)?)/i);
+  if (inlineMatch) {
+    return Number(inlineMatch[1]);
+  }
+
+  const win = clonedDoc.defaultView || window;
+  const cssVar = win.getComputedStyle(gauge).getPropertyValue("--trk-pct");
+  const parsed = Number(String(cssVar).trim().replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : NaN;
 }
 
 function resolveElement(selector, label) {
