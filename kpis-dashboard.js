@@ -1341,15 +1341,29 @@
   }
 
   async function loadPpccrPdfModule() {
-    if (window.__ppccrPdfModulePromise) {
+    const isLocalDevHost = /^(localhost|127\.0\.0\.1)$/i.test(
+      String(window.location && window.location.hostname ? window.location.hostname : ""),
+    );
+
+    if (!isLocalDevHost && window.__ppccrPdfModulePromise) {
       return window.__ppccrPdfModulePromise;
     }
 
-    const candidates = [
+    const baseCandidates = [
       "/assets/js/export/ppccr-export-pdf.js",
       "./assets/js/export/ppccr-export-pdf.js",
       "assets/js/export/ppccr-export-pdf.js",
     ];
+    const moduleVersion = isLocalDevHost
+      ? String(Date.now())
+      : "20260217-ppccr-pdf-v3";
+    const candidates = baseCandidates
+      .map((path) => path + "?v=" + encodeURIComponent(moduleVersion))
+      .concat(baseCandidates);
+
+    if (isLocalDevHost) {
+      window.__ppccrPdfModulePromise = null;
+    }
 
     window.__ppccrPdfModulePromise = (async () => {
       let lastError = null;

@@ -54,6 +54,8 @@ const DEFAULT_CLONE_HIDE_SELECTORS = [
   ".loading-overlay",
 ];
 
+let createPatternGuardState = null;
+
 const PDF_HEADER_VISUAL_ENHANCE_CSS = [
   "#top .site-topbar__inner,",
   "#top .topbar {",
@@ -134,27 +136,101 @@ const PDF_DASHBOARD_VISUAL_ENHANCE_CSS = [
   "#kpi-dashboard-ppccr .kpiDash__summaryBadge {",
   "  align-content: center !important;",
   "}",
+  "#kpi-dashboard-ppccr .kpiDash__table--flow tbody td:nth-child(3),",
+  "#kpi-dashboard-ppccr .kpiDash__table--flow tbody td:nth-child(6) {",
+  "  vertical-align: middle !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__flowCell {",
+  "  grid-template-columns: 3ch minmax(4.35rem, 4.75rem) !important;",
+  "  align-items: center !important;",
+  "  column-gap: 0.22rem !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__flowPrimary {",
+  "  width: 3ch !important;",
+  "  min-width: 3ch !important;",
+  "  padding: 0 !important;",
+  "  border-radius: 0 !important;",
+  "  border: 0 !important;",
+  "  background: transparent !important;",
+  "  text-align: right !important;",
+  "  font-weight: 600 !important;",
+  "}",
   "#kpi-dashboard-ppccr .kpiDash__flowProgress {",
-  "  background: linear-gradient(180deg, rgba(227, 238, 251, 0.96), rgba(212, 228, 246, 0.92)) !important;",
-  "  border: 1px solid rgba(136, 173, 218, 0.45) !important;",
-  "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.88), 0 2px 6px rgba(33,81,132,0.14) !important;",
+  "  min-width: 4.35rem !important;",
+  "  width: 4.35rem !important;",
+  "  height: 0.88rem !important;",
+  "  background: linear-gradient(180deg, #dce9f7, #c7dcf2) !important;",
+  "  border: 1px solid rgba(107, 153, 205, 0.58) !important;",
+  "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.78) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__flowProgress::after {",
+  "  display: none !important;",
   "}",
   "#kpi-dashboard-ppccr .kpiDash__flowProgressFill {",
-  "  background: linear-gradient(90deg, rgba(26, 96, 168, 0.96), rgba(102, 164, 230, 0.95)) !important;",
-  "  box-shadow: inset 0 -1px 0 rgba(10, 70, 135, 0.24), 0 0 0 1px rgba(42,113,188,0.15) !important;",
-  "  filter: saturate(1.08) contrast(1.06) !important;",
+  "  background: linear-gradient(90deg, #155a9c, #4a96da) !important;",
+  "  box-shadow: none !important;",
+  "  filter: none !important;",
   "}",
   "#kpi-dashboard-ppccr .kpiDash__flowProgressLabel {",
   "  color: #18456f !important;",
-  "  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.42) !important;",
+  "  font-size: 0.59rem !important;",
+  "  letter-spacing: 0.02em !important;",
+  "  text-shadow: none !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__informCell {",
+  "  grid-template-columns: minmax(1.92rem, auto) minmax(4.85rem, auto) !important;",
+  "  align-items: center !important;",
+  "  justify-content: center !important;",
+  "  gap: 0.22rem !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__informTotal {",
+  "  min-width: 1.92rem !important;",
+  "  height: 1.14rem !important;",
+  "  padding: 0 0.42rem !important;",
+  "  border-radius: 7px !important;",
+  "  font-size: 0.79rem !important;",
+  "  font-weight: 760 !important;",
+  "  color: #0f3f72 !important;",
+  "  border-color: rgba(76, 134, 197, 0.66) !important;",
+  "  background: linear-gradient(160deg, rgba(230, 242, 255, 0.98), rgba(190, 217, 246, 0.95)) !important;",
+  "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.92) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__informDetail {",
+  "  min-width: 4.85rem !important;",
+  "  width: auto !important;",
+  "  justify-content: flex-start !important;",
   "}",
   "#kpi-dashboard-ppccr .kpiDash__informSplit {",
-  "  background: linear-gradient(145deg, rgba(244, 249, 255, 0.95), rgba(225, 237, 252, 0.9)) !important;",
+  "  width: 4.85rem !important;",
+  "  padding: 0.07rem 0.1rem !important;",
+  "  gap: 0.1rem !important;",
+  "  background: #f3f8fe !important;",
   "  border: 1px solid rgba(181, 204, 232, 0.58) !important;",
-  "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.86), 0 1px 3px rgba(33,81,132,0.1) !important;",
+  "  box-shadow: none !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__informSplitSep {",
+  "  height: 0.56rem !important;",
   "}",
   "#kpi-dashboard-ppccr .kpiDash__informChip {",
-  "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.52), 0 1px 2px rgba(14, 63, 110, 0.14) !important;",
+  "  min-width: 1.56rem !important;",
+  "  width: auto !important;",
+  "  height: 0.92rem !important;",
+  "  padding: 0 0.24rem !important;",
+  "  box-shadow: none !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__informChipSign {",
+  "  width: 0.66rem !important;",
+  "  height: 0.66rem !important;",
+  "  margin-right: 0.1rem !important;",
+  "  border-radius: 999px !important;",
+  "  background: rgba(255,255,255,0.18) !important;",
+  "  font-size: 0.54rem !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__informChip--pos .kpiDash__informChipSign {",
+  "  background: rgba(255,255,255,0.56) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__informChipValue {",
+  "  font-size: 0.64rem !important;",
   "}",
   "#kpi-dashboard-ppccr .kpiDash__informChip--neg {",
   "  color: #f3f8ff !important;",
@@ -213,10 +289,18 @@ export async function exportPPCCRToPdf(options = {}) {
     await waitForAssets(headerEl);
     await waitForAssets(dashEl);
 
-    resultMeta.canvasReport = await waitForCanvasStable(dashEl, {
-      timeoutMs: cfg.canvasStableTimeoutMs,
-      stableFrames: cfg.canvasStableFrames,
-    });
+    try {
+      resultMeta.canvasReport = await waitForCanvasStable(dashEl, {
+        timeoutMs: cfg.canvasStableTimeoutMs,
+        stableFrames: cfg.canvasStableFrames,
+      });
+    } catch (canvasError) {
+      resultMeta.canvasReport = [];
+      console.warn(
+        "[PPCCR PDF] Canvas no estable al iniciar captura. Se continúa con exportación resiliente.",
+        canvasError,
+      );
+    }
 
     const scaleHeader = computeSafeScale(headerEl, cfg.desiredScale, cfg.maxDimPx);
     const scaleDash = computeSafeScale(dashEl, cfg.desiredScale, cfg.maxDimPx);
@@ -232,17 +316,30 @@ export async function exportPPCCRToPdf(options = {}) {
         })
       : [];
 
-    const headerCanvas = await captureElement(headerEl, {
-      html2canvas: libs.html2canvas,
-      scale: scaleHeader,
-      backgroundColor: "#FFF",
-      extraCloneCss: headerCloneCss,
-      ignoreSelectors: cfg.ignoreSelectors,
-      debug: cfg.debug,
-      cloneMutator(clonedDoc) {
-        normalizeHeaderForPdfClone(clonedDoc, cfg.headerSelector);
-      },
-    });
+    let headerCanvas = null;
+    try {
+      headerCanvas = await captureElement(headerEl, {
+        html2canvas: libs.html2canvas,
+        scale: scaleHeader,
+        backgroundColor: "#FFF",
+        extraCloneCss: headerCloneCss,
+        ignoreSelectors: cfg.ignoreSelectors,
+        debug: cfg.debug,
+        cloneMutator(clonedDoc) {
+          normalizeHeaderForPdfClone(clonedDoc, cfg.headerSelector);
+        },
+      });
+    } catch (headerError) {
+      console.warn(
+        "[PPCCR PDF] Falló captura del encabezado. Se usa placeholder para continuar.",
+        headerError,
+      );
+      headerCanvas = createPlaceholderCanvasFromElement(
+        headerEl,
+        scaleHeader,
+        "Encabezado",
+      );
+    }
 
     const pageMetrics = createPageMetrics(cfg);
     const headerHeightMm =
@@ -290,23 +387,33 @@ export async function exportPPCCRToPdf(options = {}) {
       !dashboardCanvas || isCanvasOverLimits(dashboardCanvas, cfg.maxDimPx, cfg.maxAreaPx);
 
     if (shouldUseTiles) {
-      dashboardSlices = await captureDashboardTiles({
-        element: dashEl,
-        html2canvas: libs.html2canvas,
-        scale: scaleDash,
-        maxDimPx: cfg.maxDimPx,
-        maxAreaPx: cfg.maxAreaPx,
-        pageContentWidthMm: pageMetrics.contentWidthMm,
-        pageContentHeightMm: dashboardAvailMm,
-        extraCloneCss: dashboardCloneCss,
-        ignoreSelectors: cfg.ignoreSelectors,
-        debug: cfg.debug,
-        targetSelector: cfg.dashboardSelector,
-        snapshotReplacements,
-        cloneMutator(clonedDoc) {
-          stabilizeTrkGaugeInClone(clonedDoc, cfg.dashboardSelector);
-        },
-      });
+      try {
+        dashboardSlices = await captureDashboardTiles({
+          element: dashEl,
+          html2canvas: libs.html2canvas,
+          scale: scaleDash,
+          maxDimPx: cfg.maxDimPx,
+          maxAreaPx: cfg.maxAreaPx,
+          pageContentWidthMm: pageMetrics.contentWidthMm,
+          pageContentHeightMm: dashboardAvailMm,
+          extraCloneCss: dashboardCloneCss,
+          ignoreSelectors: cfg.ignoreSelectors,
+          debug: cfg.debug,
+          targetSelector: cfg.dashboardSelector,
+          snapshotReplacements,
+          cloneMutator(clonedDoc) {
+            stabilizeTrkGaugeInClone(clonedDoc, cfg.dashboardSelector);
+          },
+        });
+      } catch (tileError) {
+        console.warn(
+          "[PPCCR PDF] Falló captura por tiles. Se usa placeholder para completar exportación.",
+          tileError,
+        );
+        dashboardSlices = [
+          createPlaceholderCanvasFromElement(dashEl, scaleDash, "Dashboard"),
+        ];
+      }
 
       resultMeta.fallbackTilesUsed = true;
       resultMeta.tilesCount = dashboardSlices.length;
@@ -433,7 +540,15 @@ export function getVisibleCanvases(root) {
   return canvases.filter((canvas) => {
     const rect = canvas.getBoundingClientRect();
     const style = window.getComputedStyle(canvas);
-    return rect.width > 0 && rect.height > 0 && style.display !== "none";
+    const intrinsicWidth = Number(canvas.width) || 0;
+    const intrinsicHeight = Number(canvas.height) || 0;
+    return (
+      rect.width > 0 &&
+      rect.height > 0 &&
+      intrinsicWidth > 0 &&
+      intrinsicHeight > 0 &&
+      style.display !== "none"
+    );
   });
 }
 
@@ -598,7 +713,14 @@ export async function captureElement(
     logging: Boolean(debug),
     foreignObjectRendering: true,
     removeContainer: true,
+    ignoreElements(node) {
+      return shouldIgnoreElementForHtml2Canvas(node);
+    },
     onclone(clonedDoc) {
+      patchCreatePatternPrototypeForWindow(
+        clonedDoc && clonedDoc.defaultView ? clonedDoc.defaultView : null,
+        debug,
+      );
       injectCloneStyles(clonedDoc, {
         hiddenSelectors,
         extraCloneCss,
@@ -614,6 +736,10 @@ export async function captureElement(
           debug,
         });
       }
+      sanitizeCloneCanvases(clonedDoc, {
+        targetSelector,
+        debug,
+      });
     },
   };
 
@@ -624,8 +750,14 @@ export async function captureElement(
     options.height = Math.max(1, Math.ceil(crop.height));
   }
 
+  let firstCanvas = null;
   try {
-    const firstCanvas = await html2canvas(element, options);
+    firstCanvas = await runHtml2CanvasSafely(
+      html2canvas,
+      element,
+      options,
+      debug,
+    );
     if (!isLikelyBlankCanvas(firstCanvas)) {
       return firstCanvas;
     }
@@ -638,13 +770,54 @@ export async function captureElement(
       ...options,
       foreignObjectRendering: false,
     };
-    return html2canvas(element, fallbackOptions);
+    try {
+      return await runHtml2CanvasSafely(
+        html2canvas,
+        element,
+        fallbackOptions,
+        debug,
+      );
+    } catch (fallbackError) {
+      // Si el fallback falla, preservamos la primera captura (puede ser válida aunque muy clara).
+      if (firstCanvas) {
+        if (debug) {
+          console.warn(
+            "[PPCCR PDF] Fallback de captura falló. Se utiliza primera captura.",
+            fallbackError,
+          );
+        }
+        return firstCanvas;
+      }
+      throw fallbackError;
+    }
   } catch (primaryError) {
     const fallbackOptions = {
       ...options,
       foreignObjectRendering: false,
     };
-    return html2canvas(element, fallbackOptions);
+    try {
+      return await runHtml2CanvasSafely(
+        html2canvas,
+        element,
+        fallbackOptions,
+        debug,
+      );
+    } catch (fallbackError) {
+      if (isCreatePatternZeroSizeError(primaryError) || isCreatePatternZeroSizeError(fallbackError)) {
+        if (debug) {
+          console.warn(
+            "[PPCCR PDF] Error createPattern persistente. Se devuelve placeholder de captura.",
+            fallbackError,
+          );
+        }
+        return createPlaceholderCanvas(
+          Math.max(1, Math.round((rect.width || 1) * Math.max(1, Number(scale) || 1))),
+          Math.max(1, Math.round((rect.height || 1) * Math.max(1, Number(scale) || 1))),
+          "Captura",
+        );
+      }
+      throw fallbackError;
+    }
   }
 }
 
@@ -806,6 +979,244 @@ function loadScript(src, validator) {
   });
 }
 
+async function runHtml2CanvasSafely(renderer, node, options, debug) {
+  const releaseGuard = acquireSafeCreatePatternGuard(debug);
+  try {
+    return await renderer(node, options);
+  } finally {
+    releaseGuard();
+  }
+}
+
+function acquireSafeCreatePatternGuard(debug) {
+  const proto =
+    window.CanvasRenderingContext2D &&
+    window.CanvasRenderingContext2D.prototype;
+
+  if (!proto || typeof proto.createPattern !== "function") {
+    return function noopRelease() {};
+  }
+
+  if (createPatternGuardState && createPatternGuardState.proto === proto) {
+    createPatternGuardState.refs += 1;
+    return function releaseExistingGuard() {
+      releaseSafeCreatePatternGuard();
+    };
+  }
+
+  const original = proto.createPattern;
+  const fallbackCanvas = document.createElement("canvas");
+  fallbackCanvas.width = 1;
+  fallbackCanvas.height = 1;
+  const fallbackCtx = fallbackCanvas.getContext("2d");
+  if (fallbackCtx) {
+    fallbackCtx.clearRect(0, 0, 1, 1);
+  }
+
+  createPatternGuardState = {
+    proto,
+    original,
+    refs: 1,
+    warns: 0,
+    fallbackCanvas,
+  };
+
+  proto.createPattern = function guardedCreatePattern(image, repetition) {
+    const hasNumericSize =
+      image &&
+      typeof image.width === "number" &&
+      typeof image.height === "number";
+    const isZeroSized = hasNumericSize && (image.width <= 0 || image.height <= 0);
+    const repeatMode =
+      typeof repetition === "string" && repetition.length > 0
+        ? repetition
+        : "repeat";
+
+    if (isZeroSized) {
+      if (debug && createPatternGuardState && createPatternGuardState.warns < 5) {
+        createPatternGuardState.warns += 1;
+        console.warn(
+          "[PPCCR PDF] createPattern recibió imagen 0x0. Se aplica fallback 1x1.",
+          image,
+        );
+      }
+      try {
+        return original.call(this, fallbackCanvas, repeatMode);
+      } catch (fallbackError) {
+        return null;
+      }
+    }
+
+    try {
+      return original.call(this, image, repetition);
+    } catch (error) {
+      if (!isCreatePatternZeroSizeError(error)) {
+        throw error;
+      }
+      if (debug && createPatternGuardState && createPatternGuardState.warns < 5) {
+        createPatternGuardState.warns += 1;
+        console.warn(
+          "[PPCCR PDF] createPattern lanzó error por imagen inválida. Se aplica fallback 1x1.",
+          error,
+        );
+      }
+      try {
+        return original.call(this, fallbackCanvas, repeatMode);
+      } catch (fallbackError) {
+        return null;
+      }
+    }
+  };
+
+  return function releaseGuard() {
+    releaseSafeCreatePatternGuard();
+  };
+}
+
+function patchCreatePatternPrototypeForWindow(targetWindow, debug) {
+  if (!targetWindow || !targetWindow.CanvasRenderingContext2D) {
+    return;
+  }
+
+  const proto = targetWindow.CanvasRenderingContext2D.prototype;
+  if (!proto || typeof proto.createPattern !== "function") {
+    return;
+  }
+
+  if (proto.__ppccrCreatePatternGuardInstalled) {
+    return;
+  }
+
+  const original = proto.createPattern;
+  const ownerDocument = targetWindow.document || document;
+  const fallbackCanvas = ownerDocument.createElement("canvas");
+  fallbackCanvas.width = 1;
+  fallbackCanvas.height = 1;
+  const fallbackCtx = fallbackCanvas.getContext("2d");
+  if (fallbackCtx) {
+    fallbackCtx.clearRect(0, 0, 1, 1);
+  }
+
+  try {
+    Object.defineProperty(proto, "__ppccrCreatePatternGuardInstalled", {
+      value: true,
+      enumerable: false,
+      configurable: true,
+    });
+  } catch (error) {
+    proto.__ppccrCreatePatternGuardInstalled = true;
+  }
+
+  proto.createPattern = function guardedCreatePattern(image, repetition) {
+    const hasNumericSize =
+      image &&
+      typeof image.width === "number" &&
+      typeof image.height === "number";
+    const isZeroSized = hasNumericSize && (image.width <= 0 || image.height <= 0);
+    const repeatMode =
+      typeof repetition === "string" && repetition.length > 0
+        ? repetition
+        : "repeat";
+
+    if (isZeroSized) {
+      if (debug) {
+        console.warn(
+          "[PPCCR PDF] [clone] createPattern recibió imagen 0x0. Se aplica fallback 1x1.",
+        );
+      }
+      try {
+        return original.call(this, fallbackCanvas, repeatMode);
+      } catch (fallbackError) {
+        return null;
+      }
+    }
+
+    try {
+      return original.call(this, image, repetition);
+    } catch (error) {
+      if (!isCreatePatternZeroSizeError(error)) {
+        throw error;
+      }
+      if (debug) {
+        console.warn(
+          "[PPCCR PDF] [clone] createPattern lanzó error por imagen inválida. Se aplica fallback 1x1.",
+          error,
+        );
+      }
+      try {
+        return original.call(this, fallbackCanvas, repeatMode);
+      } catch (fallbackError) {
+        return null;
+      }
+    }
+  };
+}
+
+function releaseSafeCreatePatternGuard() {
+  if (!createPatternGuardState) {
+    return;
+  }
+
+  createPatternGuardState.refs -= 1;
+  if (createPatternGuardState.refs > 0) {
+    return;
+  }
+
+  const state = createPatternGuardState;
+  createPatternGuardState = null;
+  state.proto.createPattern = state.original;
+}
+
+function isCreatePatternZeroSizeError(error) {
+  const message =
+    error && error.message ? String(error.message).toLowerCase() : "";
+
+  return (
+    message.indexOf("createpattern") >= 0 &&
+    message.indexOf("width or height of 0") >= 0
+  );
+}
+
+function createPlaceholderCanvas(widthPx, heightPx, label) {
+  const canvas = document.createElement("canvas");
+  const w = Math.max(1, Math.round(Number(widthPx) || 1));
+  const h = Math.max(1, Math.round(Number(heightPx) || 1));
+
+  canvas.width = w;
+  canvas.height = h;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return canvas;
+  }
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "#d6e4f4";
+  ctx.lineWidth = Math.max(1, Math.round(Math.min(w, h) * 0.004));
+  ctx.strokeRect(0, 0, w, h);
+
+  const text = String(label || "PPCCR");
+  const fontSize = Math.max(10, Math.round(Math.min(w, h) * 0.065));
+  ctx.fillStyle = "#4b6b90";
+  ctx.font = "600 " + fontSize + "px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, Math.round(w / 2), Math.round(h / 2));
+
+  return canvas;
+}
+
+function createPlaceholderCanvasFromElement(element, scale, label) {
+  const rect = element.getBoundingClientRect();
+  const safeScale = Math.max(1, Number(scale) || 1);
+  return createPlaceholderCanvas(
+    Math.max(1, Math.round((rect.width || 1) * safeScale)),
+    Math.max(1, Math.round((rect.height || 1) * safeScale)),
+    label,
+  );
+}
+
 async function captureDashboardTiles({
   element,
   html2canvas,
@@ -845,23 +1256,36 @@ async function captureDashboardTiles({
 
   for (let y = 0; y < heightCss; y += sliceHeightCss) {
     const currentHeight = Math.min(sliceHeightCss, heightCss - y);
-    const canvas = await captureElement(element, {
-      html2canvas,
-      scale,
-      backgroundColor: "#FFF",
-      extraCloneCss,
-      ignoreSelectors,
-      cloneMutator,
-      debug,
-      targetSelector,
-      snapshotReplacements,
-      crop: {
-        x: 0,
-        y,
-        width: widthCss,
-        height: currentHeight,
-      },
-    });
+    let canvas = null;
+    try {
+      canvas = await captureElement(element, {
+        html2canvas,
+        scale,
+        backgroundColor: "#FFF",
+        extraCloneCss,
+        ignoreSelectors,
+        cloneMutator,
+        debug,
+        targetSelector,
+        snapshotReplacements,
+        crop: {
+          x: 0,
+          y,
+          width: widthCss,
+          height: currentHeight,
+        },
+      });
+    } catch (sliceError) {
+      console.warn(
+        "[PPCCR PDF] Slice con error de captura. Se reemplaza por placeholder.",
+        sliceError,
+      );
+      canvas = createPlaceholderCanvas(
+        Math.max(1, Math.round(widthCss * scale)),
+        Math.max(1, Math.round(currentHeight * scale)),
+        "Slice",
+      );
+    }
 
     slices.push(canvas);
     await raf();
@@ -1150,6 +1574,65 @@ function injectCloneStyles(clonedDoc, { hiddenSelectors, extraCloneCss }) {
   clonedDoc.head.appendChild(style);
 }
 
+function shouldIgnoreElementForHtml2Canvas(node) {
+  if (!node || node.nodeType !== 1) {
+    return false;
+  }
+
+  if (node.hasAttribute("data-html2canvas-ignore")) {
+    return true;
+  }
+
+  if (String(node.tagName || "").toUpperCase() !== "CANVAS") {
+    return false;
+  }
+
+  const intrinsicWidth = Number(node.width) || 0;
+  const intrinsicHeight = Number(node.height) || 0;
+  if (intrinsicWidth <= 0 || intrinsicHeight <= 0) {
+    return true;
+  }
+
+  try {
+    const rect = node.getBoundingClientRect();
+    return rect.width <= 0 || rect.height <= 0;
+  } catch (error) {
+    return false;
+  }
+}
+
+function sanitizeCloneCanvases(clonedDoc, { targetSelector = "", debug = false } = {}) {
+  const root =
+    (targetSelector && clonedDoc.querySelector(targetSelector)) ||
+    clonedDoc.body ||
+    clonedDoc.documentElement;
+
+  if (!root) {
+    return;
+  }
+
+  let sanitizedCount = 0;
+
+  Array.from(root.querySelectorAll("canvas")).forEach((canvas) => {
+    const intrinsicWidth = Number(canvas.width) || 0;
+    const intrinsicHeight = Number(canvas.height) || 0;
+    if (intrinsicWidth > 0 && intrinsicHeight > 0) {
+      return;
+    }
+
+    canvas.setAttribute("data-html2canvas-ignore", "true");
+    canvas.style.setProperty("display", "none", "important");
+    canvas.style.setProperty("visibility", "hidden", "important");
+    canvas.style.setProperty("width", "0px", "important");
+    canvas.style.setProperty("height", "0px", "important");
+    sanitizedCount += 1;
+  });
+
+  if (debug && sanitizedCount > 0) {
+    console.warn("[PPCCR PDF] Canvases inválidos sanitizados en clon:", sanitizedCount);
+  }
+}
+
 async function captureSnapshotReplacements({
   root,
   html2canvas,
@@ -1228,10 +1711,18 @@ async function captureLiveNodeSnapshot({ node, html2canvas, scale, debug }) {
     logging: Boolean(debug),
     foreignObjectRendering: !isTrkNode,
     removeContainer: true,
+    ignoreElements(nodeCandidate) {
+      return shouldIgnoreElementForHtml2Canvas(nodeCandidate);
+    },
   };
 
   try {
-    const firstCanvas = await html2canvas(node, options);
+    const firstCanvas = await runHtml2CanvasSafely(
+      html2canvas,
+      node,
+      options,
+      debug,
+    );
     if (!isLikelyBlankCanvas(firstCanvas)) {
       return firstCanvas;
     }
@@ -1239,10 +1730,27 @@ async function captureLiveNodeSnapshot({ node, html2canvas, scale, debug }) {
     // fallback below
   }
 
-  return html2canvas(node, {
-    ...options,
-    foreignObjectRendering: isTrkNode,
-  });
+  try {
+    return await runHtml2CanvasSafely(
+      html2canvas,
+      node,
+      {
+        ...options,
+        foreignObjectRendering: isTrkNode,
+      },
+      debug,
+    );
+  } catch (error) {
+    const rect = node && node.getBoundingClientRect ? node.getBoundingClientRect() : null;
+    if (isCreatePatternZeroSizeError(error)) {
+      return createPlaceholderCanvas(
+        Math.max(1, Math.round((rect && rect.width ? rect.width : 1) * resolvedScale)),
+        Math.max(1, Math.round((rect && rect.height ? rect.height : 1) * resolvedScale)),
+        "Snapshot",
+      );
+    }
+    throw error;
+  }
 }
 
 function applySnapshotReplacements({
