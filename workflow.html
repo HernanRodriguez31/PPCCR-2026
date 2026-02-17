@@ -9,7 +9,7 @@
     <title>Workflow operativo | PPCCR 2026</title>
     <meta
       name="description"
-      content="Workflow operativo PPCCR 2026 en Estaciones Saludables (CABA): etapas, decisión clínica, ruta FIT, derivación y cierre operativo."
+      content="Workflow operativo PPCCR 2026 en Estaciones Saludables (CABA): etapas, tamizaje, ruta FIT y cierre operativo."
     />
     <link rel="canonical" href="https://programadeprevencion.com/workflow.html" />
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
@@ -25,41 +25,101 @@
     <a class="wf-skip-link" href="#workflow-main">Saltar al contenido</a>
 
     <header class="wf-hero site-header site-topbar">
-      <div class="container wf-hero__inner">
-        <div class="wf-brand" aria-label="Programa PPCCR">
-          <img
-            class="wf-brand__logo"
-            src="assets/logo-cinta-azul.png"
-            alt="Cinta azul de concientización"
-            width="58"
-            height="58"
-            decoding="async"
-          />
-          <p class="wf-brand__title">Programa de Prevención de Cáncer Colorrectal</p>
+      <div class="topbar site-topbar__inner wf-topbar">
+        <div class="brand" aria-label="Identidad del programa">
+          <div class="brand-mark brand-mark--left">
+            <img
+              class="brand-ribbon"
+              src="assets/logo%20cinta%20azul.png"
+              alt="Listón azul de concientización"
+              decoding="async"
+            />
+          </div>
+          <div class="brand-copy">
+            <p class="brand-title wf-topbar__title">
+              Programa de Prevención de Cáncer Colorrectal
+            </p>
+          </div>
         </div>
-
-        <h1 class="wf-hero__title">Workflow operativo</h1>
-        <p class="wf-hero__subtitle">
-          Operativo PPCCR 2026 – Estaciones Saludables (CABA). Alcance: desde
-          entrevista de inclusión hasta comunicación del resultado FIT y emisión
-          de derivación.
-        </p>
-
-        <aside class="wf-note" role="note" aria-label="Alcance y vigencia">
-          <p>
-            Vigencia: 9 de marzo – 1 de abril. (Difusión/Educación: 9–22 marzo.
-            Operativo qFIT: 23 marzo – 1 abril).
-          </p>
-          <p>
-            Fuera de alcance: coordinación/seguimiento con gastro-colonoscopía
-            luego de la derivación.
-          </p>
-        </aside>
       </div>
+
+      <div class="logo-strip partners-bar" aria-label="Partners del programa">
+        <div class="container">
+          <div class="logo-strip__inner partners-strip partners-grid">
+            <span class="partner-logo partner-pill" data-partner="fep">
+              <img
+                src="assets/logo-fep.png?v=20260208"
+                alt="Fundación Enfermeros Protagonistas"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Fundación Enfermeros Protagonistas</span>
+            </span>
+            <span class="partner-logo partner-pill" data-partner="gedyt">
+              <img
+                src="assets/logo-gedyt.png"
+                alt="Fundación GEDyT"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Fundación GEDyT</span>
+            </span>
+            <span class="partner-logo partner-pill" data-partner="merck">
+              <img
+                src="assets/logo-merck.png"
+                alt="Merck Foundation"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Merck Foundation</span>
+            </span>
+            <span class="partner-logo partner-pill" data-partner="gcba">
+              <img
+                src="assets/logo-gcba.png"
+                alt="Gobierno de la Ciudad de Buenos Aires"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Gobierno de la Ciudad de Buenos Aires</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
     </header>
 
     <main id="workflow-main" class="wf-main site-main">
       <div class="container">
+        <section class="wf-section wf-section--intro" aria-labelledby="wf-page-title">
+          <div class="wf-hero__inner">
+            <h1 class="wf-hero__title" id="wf-page-title">Workflow operativo</h1>
+            <p class="wf-hero__subtitle">
+              Operativo PPCCR 2026 – Estaciones Saludables (CABA). Alcance: desde
+              captación y tamizaje hasta información del resultado FIT y orientación
+              a consulta a salud cuando corresponde.
+            </p>
+
+            <aside class="wf-note" role="note" aria-label="Alcance y vigencia">
+              <p>
+                Vigencia: 9 de marzo – 1 de abril. (Difusión/Educación: 9–22 marzo.
+                Operativo qFIT: 23 marzo – 1 abril).
+              </p>
+              <p>
+                Fuera de alcance: estudios y circuitos asistenciales posteriores a
+                la orientación a consulta a salud.
+              </p>
+            </aside>
+          </div>
+        </section>
+
         <section class="wf-section" aria-labelledby="wf-process-title">
           <header class="section-header wf-section-header">
             <div class="wf-section-head">
@@ -70,7 +130,7 @@
                     type="button"
                     class="wf-info-btn"
                     id="wf-role-legend-trigger"
-                    aria-label="Referencia de roles (CO, EN, ME, LO)"
+                    aria-label="Referencia de roles (CO, EN, LO)"
                     aria-expanded="false"
                     aria-controls="roleLegendPopover"
                   >
@@ -86,8 +146,7 @@
                     <p class="wf-role-popover__title">Referencia de roles</p>
                     <ul class="wf-role-popover__list">
                       <li><strong>CO:</strong> Coordinación</li>
-                      <li><strong>EN:</strong> Enfermería / Navegación</li>
-                      <li><strong>ME:</strong> Médico/a</li>
+                      <li><strong>EN:</strong> Enfermería / Navegación / Facilitación</li>
                       <li><strong>LO:</strong> Logística</li>
                     </ul>
                   </div>
@@ -95,8 +154,8 @@
               </div>
             </div>
             <p class="section-subtitle">
-              El programa finaliza cuando se comunica el resultado FIT y se emite
-              derivación a colonoscopía cuando corresponde.
+              El programa finaliza cuando se informa el resultado del test FIT y
+              se orienta la consulta a salud cuando corresponde.
             </p>
           </header>
 
@@ -106,10 +165,9 @@
         <section class="wf-section wf-section--actions" aria-label="Accesos relacionados">
           <div class="wf-actions">
             <a class="btn btn-secondary" href="/index.html#guias">Volver al portal</a>
-            <a class="btn btn-primary" href="/index.html#algoritmo"
+            <a class="btn btn-primary" href="/index.html#algoritmo-section"
               >Ir al algoritmo de riesgo</a
             >
-            <a class="btn btn-ghost" href="/index.html#registro">Abrir formularios de registro</a>
           </div>
         </section>
       </div>
@@ -190,6 +248,39 @@
 
     <footer class="site-footer" aria-label="Pie de página">
       <div class="container footer-grid">
+        <div class="footer-partners" aria-label="Partners del programa">
+          <p class="footer-title">Partners</p>
+          <div class="footer-logos">
+            <img
+              src="assets/logo-fep.png?v=20260208"
+              alt="Fundación Enfermeros Protagonistas"
+              loading="lazy"
+              decoding="async"
+              data-partner="fep"
+            />
+            <img
+              src="assets/logo-gedyt.png"
+              alt="Fundación GEDyT"
+              loading="lazy"
+              decoding="async"
+              data-partner="gedyt"
+            />
+            <img
+              src="assets/logo-merck.png"
+              alt="Merck Foundation"
+              loading="lazy"
+              decoding="async"
+              data-partner="merck"
+            />
+            <img
+              src="assets/logo-gcba.png"
+              alt="Gobierno de la Ciudad de Buenos Aires"
+              loading="lazy"
+              decoding="async"
+              data-partner="gcba"
+            />
+          </div>
+        </div>
         <p class="footer-meta">© PPCCR 2026 | © Derechos Reservados.</p>
       </div>
     </footer>

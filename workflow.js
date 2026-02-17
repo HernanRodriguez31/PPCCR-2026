@@ -1,8 +1,7 @@
 "use strict";
 
 const ROLE_LABELS = {
-  EN: "Navegación/Enfermería",
-  ME: "Médico/a",
+  EN: "Enfermería / Navegación / Facilitación de Pacientes",
   LO: "Logística",
   CO: "Coordinación",
 };
@@ -27,18 +26,19 @@ const WORKFLOW_PHASES = [
       {
         id: "paso-2",
         number: 2,
-        title: "Registro de interesados / Base operativa",
-        desc: "Consolidar base (nombre, contacto, elegibilidad inicial).",
-        details: ["Usar formularios digitales del portal."],
+        title: "Planificación y preparación operativa",
+        desc: "Planificación y programación del operativo. Diseño y ajustes de la plataforma y circuitos de trabajo.",
+        details: ["Definición de roles, circuitos y criterios operativos."],
         roles: ["CO", "EN"],
         routeTags: ["fit", "primary", "noapply"],
       },
       {
         id: "paso-3",
         number: 3,
-        title: "Programación de entrevista",
-        desc: "Contacto y coordinación para entrevista presencial.",
-        roles: ["EN", "CO"],
+        title: "Instrucción al equipo y alistamiento",
+        desc: "Instrucción al equipo EN sobre el flujo de trabajo y ultimar detalles para la etapa operativa.",
+        details: ["Checklist operativo y materiales."],
+        roles: ["CO", "EN"],
         routeTags: ["fit", "primary", "noapply"],
       },
     ],
@@ -51,44 +51,44 @@ const WORKFLOW_PHASES = [
       {
         id: "paso-4",
         number: 4,
-        title: "Entrevista médica de tamizaje (Algoritmo)",
-        desc: "Evaluar inclusión/exclusión y riesgo.",
+        title: "NODO CLAVE — Entrevista de tamizaje (Algoritmo)",
+        desc: "Evaluar criterios de tamizaje y clasificar riesgo.",
         details: [
-          "Determinar conducta: No aplica / Derivación primaria / Test FIT.",
+          "Determinar conducta: criterio para test FIT / sin criterio por edad o seguimiento vigente / sin criterio por riesgo elevado. En casos sin criterio, brindar orientación a consulta a salud.",
         ],
-        roles: ["ME"],
+        roles: ["EN"],
         routeTags: ["fit", "primary", "noapply"],
         type: "decision",
         decisionTitle: "Bloque de decisión",
         branches: [
           {
             id: "ruta-a",
-            routeTag: "noapply",
-            tone: "neutral",
-            title: "Ruta A — No aplica al programa",
-            desc: "Motivos: no inclusión / seguimiento vigente / colonoscopía reciente, etc.",
-            action: "Acción: registrar decisión y finalizar.",
-            roles: ["ME"],
-            status: "Fin",
+            routeTag: "fit",
+            tone: "success",
+            title: "Ruta A — Criterio para tamizaje → Test FIT",
+            desc: "Cumple criterio para tamizaje con test FIT. Continuar a educación y entrega de kit.",
+            roles: ["EN"],
+            status: "Continúa",
           },
           {
             id: "ruta-b",
-            routeTag: "primary",
-            tone: "warning",
-            title: "Ruta B — Riesgo elevado → Derivación primaria",
-            desc: "Acción: emitir orden/derivación a colonoscopía (primaria) y registrar.",
-            action: "Fin del operativo para ese paciente.",
-            roles: ["ME"],
+            routeTag: "noapply",
+            tone: "neutral",
+            title: "Ruta B — Sin criterio para tamizaje",
+            desc: "Motivos: fuera de rango etario / seguimiento vigente por profesional de la salud / colonoscopía reciente, etc.",
+            action: "Acción: brindar orientación a consulta a salud, registrar y finalizar.",
+            roles: ["EN"],
             status: "Fin",
           },
           {
             id: "ruta-c",
-            routeTag: "fit",
-            tone: "success",
-            title: "Ruta C — Riesgo promedio → Test FIT",
-            desc: "Continuar a entrega de kit.",
-            roles: ["ME", "EN"],
-            status: "Continúa",
+            routeTag: "primary",
+            tone: "warning",
+            title: "Ruta C — Riesgo elevado → Orientación a consulta a salud",
+            desc: "Detección de antecedentes personales o familiares, signos o síntomas que confieren mayor riesgo de cáncer colorrectal.",
+            action: "Acción: brindar orientación a consulta a salud, registrar y finalizar.",
+            roles: ["EN"],
+            status: "Fin",
           },
         ],
       },
@@ -96,15 +96,19 @@ const WORKFLOW_PHASES = [
   },
   {
     id: "etapa-3",
-    title: "Etapa 3 — Test FIT (Ruta C)",
+    title: "Etapa 3 — Test FIT (Ruta A)",
     range: "23 marzo – 1 abril",
     steps: [
       {
         id: "paso-5",
         number: 5,
         title: "Educación + entrega de kit FIT",
-        desc: "Instrucción: toma de muestra, rotulado, conservación y plazos.",
-        details: ["Registrar entrega."],
+        desc: "Educación a la población y entrega de test FIT.",
+        details: [
+          "Instrucción: toma de muestra y rotulado.",
+          "Se informa sobre los plazos y la importancia de realizar el FIT.",
+          "Registrar entrega.",
+        ],
         roles: ["EN"],
         routeTags: ["fit"],
       },
@@ -112,7 +116,7 @@ const WORKFLOW_PHASES = [
         id: "paso-6",
         number: 6,
         title: "Recepción de muestra en estación",
-        desc: "Verificación básica (rotulado/integridad) + registro.",
+        desc: "Verificación del rotulado, indemnidad del producto y se registra la recepción.",
         roles: ["EN"],
         routeTags: ["fit"],
       },
@@ -120,7 +124,8 @@ const WORKFLOW_PHASES = [
         id: "paso-7",
         number: 7,
         title: "Traslado a laboratorio",
-        desc: "Cadena de custodia / trazabilidad operativa.",
+        desc: "Se retiran las muestras de la estación saludable y se trasladan al laboratorio.",
+        details: ["Cadena de custodia y trazabilidad operativa. Registro de la entrega de muestras."],
         roles: ["LO", "CO"],
         routeTags: ["fit"],
       },
@@ -128,16 +133,16 @@ const WORKFLOW_PHASES = [
         id: "paso-8",
         number: 8,
         title: "Recepción de resultado FIT (canal definido)",
-        desc: "Resultado llega por canal asignado (mail operativo).",
-        roles: ["ME", "CO"],
+        desc: "Los resultados del test FIT llegan a la coordinación operativa del programa y directamente al participante por correo.",
+        roles: ["CO"],
         routeTags: ["fit"],
       },
       {
         id: "paso-9",
         number: 9,
-        title: "Devolución médica del resultado",
-        desc: "Cierre clínico del operativo para cada paciente.",
-        roles: ["ME"],
+        title: "Información al participante sobre el resultado FIT",
+        desc: "Cierre operativo para cada paciente/participante.",
+        roles: ["EN"],
         routeTags: ["fit"],
         type: "decision",
         decisionTitle: "Sub-ramas de resultado FIT",
@@ -147,9 +152,9 @@ const WORKFLOW_PHASES = [
             routeTag: "fit",
             tone: "success",
             title: "FIT negativo",
-            desc: "Informar resultado, reforzar educación breve y registrar.",
-            action: "Fin del programa para ese paciente.",
-            roles: ["ME"],
+            desc: "Informar el resultado y reforzar la educación y concientización sobre prevención de cáncer colorrectal.",
+            action: "Fin del programa para ese participante.",
+            roles: ["EN"],
             status: "Fin",
           },
           {
@@ -157,9 +162,9 @@ const WORKFLOW_PHASES = [
             routeTag: "fit",
             tone: "warning",
             title: "FIT positivo",
-            desc: "Informar, brindar contención clínica y emitir derivación secundaria a colonoscopía.",
-            action: "Registrar y finalizar programa para ese paciente.",
-            roles: ["ME"],
+            desc: "Informar el resultado, tranquilizar y brindar contención.",
+            action: "Recomendar orientación a consulta a salud por mayor riesgo. Fin del programa para ese participante.",
+            roles: ["EN"],
             status: "Fin",
           },
         ],
@@ -174,8 +179,8 @@ const WORKFLOW_PHASES = [
       {
         id: "paso-10",
         number: 10,
-        title: "Cierre y consolidación de métricas",
-        desc: "Consolidación de registros y reporte.",
+        title: "Cierre y consolidación de parámetros y métricas",
+        desc: "Consolidación de registros y reporte operativo.",
         roles: ["CO"],
         routeTags: ["fit", "primary", "noapply"],
       },
@@ -186,6 +191,7 @@ const WORKFLOW_PHASES = [
 document.addEventListener("DOMContentLoaded", () => {
   const root = document.getElementById("workflow-root");
 
+  initFixedHeaderOffset();
   initRoleLegendPopover();
   initBackToTopButton();
   if (!root) return;
@@ -352,7 +358,8 @@ function createRoleMeta(roles) {
   roleList.className = "wf-role-list";
   roleList.setAttribute("aria-label", "Roles involucrados");
 
-  (roles || []).forEach((role) => {
+  const uniqueRoles = Array.from(new Set(roles || []));
+  uniqueRoles.forEach((role) => {
     const chip = document.createElement("abbr");
     chip.className = "wf-role-chip";
     chip.textContent = role;
@@ -372,69 +379,127 @@ function initRoleLegendPopover() {
   const popover = document.getElementById("roleLegendPopover");
   if (!wrap || !trigger || !popover) return;
 
-  let lockedOpen = false;
+  let isOpen = false;
+  let frame = 0;
 
-  function closePopover({ force = false, returnFocus = false } = {}) {
-    if (!force && lockedOpen) return;
-    popover.hidden = true;
-    trigger.setAttribute("aria-expanded", "false");
-    if (force) lockedOpen = false;
-    if (returnFocus) trigger.focus();
+  function setPopoverPosition() {
+    if (popover.hidden) return;
+
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    if (isMobile) {
+      popover.style.top = "auto";
+      popover.style.left = "16px";
+      popover.style.right = "16px";
+      popover.style.bottom = "90px";
+      popover.style.transform = "none";
+      return;
+    }
+
+    const gap = 12;
+    const viewportMargin = 16;
+    const triggerRect = trigger.getBoundingClientRect();
+    const popRect = popover.getBoundingClientRect();
+
+    let left = triggerRect.left - popRect.width - gap;
+    let top = triggerRect.top + triggerRect.height / 2;
+
+    const minLeft = viewportMargin;
+    const maxLeft = window.innerWidth - popRect.width - viewportMargin;
+    if (left < minLeft) left = minLeft;
+    if (left > maxLeft) left = maxLeft;
+
+    const minTop = viewportMargin + popRect.height / 2;
+    const maxTop = window.innerHeight - viewportMargin - popRect.height / 2;
+    if (top < minTop) top = minTop;
+    if (top > maxTop) top = maxTop;
+
+    popover.style.left = `${Math.round(left)}px`;
+    popover.style.top = `${Math.round(top)}px`;
+    popover.style.right = "auto";
+    popover.style.bottom = "auto";
+    popover.style.transform = "translateY(-50%)";
   }
 
-  function openPopover({ lock = false } = {}) {
-    if (lock) lockedOpen = true;
+  function schedulePosition() {
+    if (frame) window.cancelAnimationFrame(frame);
+    frame = window.requestAnimationFrame(() => {
+      frame = 0;
+      setPopoverPosition();
+    });
+  }
+
+  function openPopover() {
+    if (isOpen) return;
+    isOpen = true;
     popover.hidden = false;
     trigger.setAttribute("aria-expanded", "true");
+    schedulePosition();
+    window.addEventListener("resize", schedulePosition, { passive: true });
+    window.addEventListener("scroll", schedulePosition, true);
+  }
+
+  function closePopover({ returnFocus = false } = {}) {
+    if (!isOpen) return;
+    isOpen = false;
+    popover.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+    window.removeEventListener("resize", schedulePosition);
+    window.removeEventListener("scroll", schedulePosition, true);
+    if (returnFocus) trigger.focus();
   }
 
   trigger.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    const expanded = trigger.getAttribute("aria-expanded") === "true";
-    if (expanded && lockedOpen) {
-      closePopover({ force: true });
+    if (isOpen) {
+      closePopover();
       return;
     }
-    openPopover({ lock: true });
-  });
-
-  wrap.addEventListener("mouseenter", () => {
-    if (!lockedOpen) openPopover();
-  });
-
-  wrap.addEventListener("mouseleave", () => {
-    if (!lockedOpen) closePopover({ force: true });
-  });
-
-  trigger.addEventListener("focus", () => {
     openPopover();
   });
 
-  trigger.addEventListener("blur", () => {
-    window.setTimeout(() => {
-      const activeInside = wrap.contains(document.activeElement);
-      if (!activeInside && !wrap.matches(":hover") && !lockedOpen) {
-        closePopover({ force: true });
-      }
-    }, 0);
-  });
-
   document.addEventListener("click", (event) => {
-    if (popover.hidden) return;
+    if (!isOpen) return;
     const target = event.target;
-    if (target instanceof Node && (wrap.contains(target) || popover.contains(target))) {
-      return;
-    }
-    closePopover({ force: true });
+    if (!(target instanceof Node)) return;
+    if (wrap.contains(target) || popover.contains(target)) return;
+    closePopover();
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape") return;
-    if (popover.hidden) return;
+    if (event.key !== "Escape" || !isOpen) return;
     event.preventDefault();
-    closePopover({ force: true, returnFocus: true });
+    closePopover({ returnFocus: true });
   });
+}
+
+function initFixedHeaderOffset() {
+  const header = document.querySelector(".wf-hero.site-header.site-topbar");
+  if (!(header instanceof HTMLElement)) return;
+
+  const root = document.documentElement;
+  let raf = 0;
+
+  const sync = () => {
+    raf = 0;
+    const height = Math.max(0, Math.round(header.getBoundingClientRect().height));
+    root.style.setProperty("--wf-fixed-header-h", `${height}px`);
+  };
+
+  const schedule = () => {
+    if (raf) return;
+    raf = window.requestAnimationFrame(sync);
+  };
+
+  schedule();
+  window.addEventListener("resize", schedule, { passive: true });
+  window.addEventListener("orientationchange", schedule, { passive: true });
+  window.addEventListener("load", schedule, { once: true });
+
+  if ("ResizeObserver" in window) {
+    const observer = new ResizeObserver(() => schedule());
+    observer.observe(header);
+  }
 }
 
 function initBackToTopButton() {
