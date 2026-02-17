@@ -14,17 +14,24 @@ const DEFAULT_OPTIONS = {
   headerSelector: "#top",
   dashboardSelector: "#kpi-dashboard-ppccr",
   filenamePrefix: "PPCCR_Reporte",
-  desiredScale: 3,
+  desiredScale: 3.2,
+  snapshotScale: 4,
   maxDimPx: 15000,
   maxAreaPx: 160000000,
   marginsMm: { top: 10, right: 10, bottom: 10, left: 10 },
   contentGapMm: 4,
   footerMm: 8,
-  headerHeightMultiplier: 1.34,
+  headerHeightMultiplier: 1,
+  fitSinglePage: true,
+  minSinglePageScale: 0.9,
   repeatHeaderOnEachPage: true,
+  enableSnapshotSwap: true,
+  snapshotSelectors: [
+    ".kpiDash__trkGauge",
+  ],
   ignoreSelectors: [],
   extraCloneCss: "",
-  debug: true,
+  debug: false,
 };
 
 const DEFAULT_CLONE_HIDE_SELECTORS = [
@@ -48,6 +55,28 @@ const DEFAULT_CLONE_HIDE_SELECTORS = [
 ];
 
 const PDF_HEADER_VISUAL_ENHANCE_CSS = [
+  "#top .site-topbar__inner,",
+  "#top .topbar {",
+  "  padding-top: 14px !important;",
+  "  padding-bottom: 12px !important;",
+  "}",
+  "#top .brand-mark,",
+  "#top .brand-mark--left {",
+  "  width: clamp(78px, 8.8vw, 110px) !important;",
+  "  height: clamp(78px, 8.8vw, 110px) !important;",
+  "  min-width: 78px !important;",
+  "  display: flex !important;",
+  "  align-items: center !important;",
+  "  justify-content: center !important;",
+  "  aspect-ratio: 1 / 1 !important;",
+  "}",
+  "#top .brand-ribbon {",
+  "  width: clamp(64px, 7vw, 90px) !important;",
+  "  max-width: none !important;",
+  "  height: auto !important;",
+  "  object-fit: contain !important;",
+  "  transform: none !important;",
+  "}",
   "#top .partners-bar,",
   "#top .logo-strip.partners-bar {",
   "  padding-top: 10px !important;",
@@ -62,24 +91,70 @@ const PDF_HEADER_VISUAL_ENHANCE_CSS = [
 ].join("\n");
 
 const PDF_DASHBOARD_VISUAL_ENHANCE_CSS = [
+  "#kpi-dashboard-ppccr .kpiDash__reportUpdated {",
+  "  display: block !important;",
+  "  visibility: visible !important;",
+  "  opacity: 1 !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__reportStatus {",
+  "  display: inline-flex !important;",
+  "  visibility: visible !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__reportExportedAt {",
+  "  display: none !important;",
+  "}",
   "#kpi-dashboard-ppccr .kpiDash__summaryBar {",
   "  overflow: hidden !important;",
+  "  border-radius: 999px !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment {",
+  "  overflow: hidden !important;",
+  "  border-radius: inherit !important;",
+  "  clip-path: inset(0 0 0 0 round 999px) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment + .kpiDash__summaryBarSegment {",
+  "  box-shadow: inset 2px 0 0 rgba(255, 255, 255, 0.95) !important;",
   "}",
   "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment::before,",
   "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment::after {",
   "  content: none !important;",
   "  display: none !important;",
   "}",
+  "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment--fit {",
+  "  background: #0f5fa6 !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment--outside {",
+  "  background: #79b3ea !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__summaryBadgeLabel {",
+  "  width: 100% !important;",
+  "  text-align: center !important;",
+  "  justify-self: center !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__summaryBadge {",
+  "  align-content: center !important;",
+  "}",
   "#kpi-dashboard-ppccr .kpiDash__flowProgress {",
   "  background: linear-gradient(180deg, rgba(227, 238, 251, 0.96), rgba(212, 228, 246, 0.92)) !important;",
   "  border: 1px solid rgba(136, 173, 218, 0.45) !important;",
+  "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.88), 0 2px 6px rgba(33,81,132,0.14) !important;",
   "}",
   "#kpi-dashboard-ppccr .kpiDash__flowProgressFill {",
   "  background: linear-gradient(90deg, rgba(26, 96, 168, 0.96), rgba(102, 164, 230, 0.95)) !important;",
+  "  box-shadow: inset 0 -1px 0 rgba(10, 70, 135, 0.24), 0 0 0 1px rgba(42,113,188,0.15) !important;",
+  "  filter: saturate(1.08) contrast(1.06) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__flowProgressLabel {",
+  "  color: #18456f !important;",
+  "  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.42) !important;",
   "}",
   "#kpi-dashboard-ppccr .kpiDash__informSplit {",
   "  background: linear-gradient(145deg, rgba(244, 249, 255, 0.95), rgba(225, 237, 252, 0.9)) !important;",
   "  border: 1px solid rgba(181, 204, 232, 0.58) !important;",
+  "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.86), 0 1px 3px rgba(33,81,132,0.1) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__informChip {",
+  "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.52), 0 1px 2px rgba(14, 63, 110, 0.14) !important;",
   "}",
   "#kpi-dashboard-ppccr .kpiDash__informChip--neg {",
   "  color: #f3f8ff !important;",
@@ -93,6 +168,15 @@ const PDF_DASHBOARD_VISUAL_ENHANCE_CSS = [
   "}",
   "#kpi-dashboard-ppccr .kpiDash__trkGaugeOverlay {",
   "  z-index: 7 !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__fitFlowPanel--trk .kpiDash__trkGauge {",
+  "  width: 68px !important;",
+  "  height: 68px !important;",
+  "  background: conic-gradient(from -90deg, #0a3f78 0deg, #125fa8 calc(var(--trk-pct) * 2deg), #2f82c5 calc(var(--trk-pct) * 3.6deg), #d9e5f1 calc(var(--trk-pct) * 3.6deg), #ebf1f8 360deg) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__fitFlowPanel--trk .kpiDash__trkGaugeWrap {",
+  "  align-items: end !important;",
+  "  justify-items: end !important;",
   "}",
   "#kpi-dashboard-ppccr .kpiDash__trkGaugeHit {",
   "  fill: none !important;",
@@ -138,6 +222,15 @@ export async function exportPPCCRToPdf(options = {}) {
     const scaleDash = computeSafeScale(dashEl, cfg.desiredScale, cfg.maxDimPx);
     const headerCloneCss = mergeCloneCss(cfg.extraCloneCss, PDF_HEADER_VISUAL_ENHANCE_CSS);
     const dashboardCloneCss = mergeCloneCss(cfg.extraCloneCss, PDF_DASHBOARD_VISUAL_ENHANCE_CSS);
+    const snapshotReplacements = cfg.enableSnapshotSwap
+      ? await captureSnapshotReplacements({
+          root: dashEl,
+          html2canvas: libs.html2canvas,
+          selectors: cfg.snapshotSelectors,
+          scale: cfg.snapshotScale,
+          debug: cfg.debug,
+        })
+      : [];
 
     const headerCanvas = await captureElement(headerEl, {
       html2canvas: libs.html2canvas,
@@ -166,6 +259,7 @@ export async function exportPPCCRToPdf(options = {}) {
 
     let dashboardCanvas = null;
     let primaryDashboardCaptureError = null;
+    let dashboardRenderWidthMm = pageMetrics.contentWidthMm;
 
     try {
       dashboardCanvas = await captureElement(dashEl, {
@@ -175,6 +269,8 @@ export async function exportPPCCRToPdf(options = {}) {
         extraCloneCss: dashboardCloneCss,
         ignoreSelectors: cfg.ignoreSelectors,
         debug: cfg.debug,
+        targetSelector: cfg.dashboardSelector,
+        snapshotReplacements,
         cloneMutator(clonedDoc) {
           stabilizeTrkGaugeInClone(clonedDoc, cfg.dashboardSelector);
         },
@@ -205,6 +301,8 @@ export async function exportPPCCRToPdf(options = {}) {
         extraCloneCss: dashboardCloneCss,
         ignoreSelectors: cfg.ignoreSelectors,
         debug: cfg.debug,
+        targetSelector: cfg.dashboardSelector,
+        snapshotReplacements,
         cloneMutator(clonedDoc) {
           stabilizeTrkGaugeInClone(clonedDoc, cfg.dashboardSelector);
         },
@@ -228,11 +326,20 @@ export async function exportPPCCRToPdf(options = {}) {
     const renderState = { pageIndex: 0 };
 
     if (dashboardCanvas) {
+      dashboardRenderWidthMm = resolveDashboardRenderWidthMm({
+        canvas: dashboardCanvas,
+        pageMetrics,
+        cfg,
+        headerHeightMm,
+        dashboardAvailMm,
+      });
+
       appendCanvasWithPaging({
         doc,
         canvas: dashboardCanvas,
         headerCanvas,
         headerHeightMm,
+        renderWidthMm: dashboardRenderWidthMm,
         cfg,
         pageMetrics,
         renderState,
@@ -251,6 +358,7 @@ export async function exportPPCCRToPdf(options = {}) {
           canvas: dashboardSlices[i],
           headerCanvas,
           headerHeightMm,
+          renderWidthMm: dashboardRenderWidthMm,
           cfg,
           pageMetrics,
           renderState,
@@ -280,6 +388,7 @@ export async function exportPPCCRToPdf(options = {}) {
       console.log("dashboardCapture:", resultMeta.dashboardCapture);
       console.log("fallbackTilesUsed:", resultMeta.fallbackTilesUsed);
       console.log("tilesCount:", resultMeta.tilesCount);
+      console.log("snapshotReplacements:", snapshotReplacements.length);
       console.groupEnd();
     }
 
@@ -470,6 +579,8 @@ export async function captureElement(
     crop = null,
     cloneMutator = null,
     debug = false,
+    targetSelector = "",
+    snapshotReplacements = [],
   } = {},
 ) {
   if (typeof html2canvas !== "function") {
@@ -483,8 +594,8 @@ export async function captureElement(
     backgroundColor,
     scale,
     useCORS: true,
-    allowTaint: false,
-    logging: false,
+    allowTaint: true,
+    logging: Boolean(debug),
     foreignObjectRendering: true,
     removeContainer: true,
     onclone(clonedDoc) {
@@ -494,6 +605,14 @@ export async function captureElement(
       });
       if (typeof cloneMutator === "function") {
         cloneMutator(clonedDoc);
+      }
+      if (Array.isArray(snapshotReplacements) && snapshotReplacements.length > 0) {
+        applySnapshotReplacements({
+          clonedDoc,
+          targetSelector,
+          replacements: snapshotReplacements,
+          debug,
+        });
       }
     },
   };
@@ -699,6 +818,8 @@ async function captureDashboardTiles({
   ignoreSelectors,
   cloneMutator,
   debug,
+  targetSelector,
+  snapshotReplacements,
 }) {
   const rect = element.getBoundingClientRect();
   const widthCss = Math.max(1, Math.ceil(rect.width));
@@ -732,6 +853,8 @@ async function captureDashboardTiles({
       ignoreSelectors,
       cloneMutator,
       debug,
+      targetSelector,
+      snapshotReplacements,
       crop: {
         x: 0,
         y,
@@ -752,13 +875,20 @@ function appendCanvasWithPaging({
   canvas,
   headerCanvas,
   headerHeightMm,
+  renderWidthMm,
   cfg,
   pageMetrics,
   renderState,
 }) {
   const sourceWidthPx = Math.max(1, canvas.width);
   const sourceHeightPx = Math.max(1, canvas.height);
-  const mmPerPx = pageMetrics.contentWidthMm / sourceWidthPx;
+  const targetWidthMm = Math.max(
+    40,
+    Math.min(pageMetrics.contentWidthMm, Number(renderWidthMm) || pageMetrics.contentWidthMm),
+  );
+  const contentOffsetMm = (pageMetrics.contentWidthMm - targetWidthMm) / 2;
+  const contentX = pageMetrics.margins.left + contentOffsetMm;
+  const mmPerPx = targetWidthMm / sourceWidthPx;
 
   let sourceY = 0;
 
@@ -802,9 +932,9 @@ function appendCanvasWithPaging({
       doc.addImage(
         canvas,
         "PNG",
-        pageMetrics.margins.left,
+        contentX,
         contentStartY,
-        pageMetrics.contentWidthMm,
+        targetWidthMm,
         renderHeightMm,
       );
     } else {
@@ -837,9 +967,9 @@ function appendCanvasWithPaging({
       doc.addImage(
         sliceCanvas,
         "PNG",
-        pageMetrics.margins.left,
+        contentX,
         contentStartY,
-        pageMetrics.contentWidthMm,
+        targetWidthMm,
         renderHeightMm,
       );
     }
@@ -893,6 +1023,44 @@ function getDashboardAvailableMm({
   return pageMetrics.pageHeightMm - pageMetrics.margins.bottom - footerMm - startY;
 }
 
+function resolveDashboardRenderWidthMm({
+  canvas,
+  pageMetrics,
+  cfg,
+  headerHeightMm,
+  dashboardAvailMm,
+}) {
+  const baseWidthMm = pageMetrics.contentWidthMm;
+  if (!canvas || !cfg.fitSinglePage) {
+    return baseWidthMm;
+  }
+
+  const currentHeightMm = toHeightMm(canvas, baseWidthMm);
+  if (currentHeightMm <= dashboardAvailMm) {
+    return baseWidthMm;
+  }
+
+  const requiredScale = dashboardAvailMm / Math.max(1, currentHeightMm);
+  const minAllowed = Math.max(0.7, Math.min(1, Number(cfg.minSinglePageScale) || 0.9));
+
+  if (requiredScale < minAllowed) {
+    return baseWidthMm;
+  }
+
+  const nextWidthMm = Math.max(40, baseWidthMm * requiredScale);
+  if (cfg.debug) {
+    console.log("[PPCCR PDF] Ajuste fit-one-page aplicado:", {
+      requiredScale,
+      nextWidthMm,
+      currentHeightMm,
+      dashboardAvailMm,
+      headerHeightMm,
+    });
+  }
+
+  return nextWidthMm;
+}
+
 function toHeightMm(canvas, targetWidthMm) {
   return (Math.max(1, canvas.height) * targetWidthMm) / Math.max(1, canvas.width);
 }
@@ -918,9 +1086,22 @@ function normalizeOptions(options) {
   merged.canvasStableTimeoutMs = Number(options.canvasStableTimeoutMs) || 4000;
   merged.canvasStableFrames = Number(options.canvasStableFrames) || 2;
   merged.headerHeightMultiplier = Math.max(
-    1,
+    0.9,
     Number(options.headerHeightMultiplier) || DEFAULT_OPTIONS.headerHeightMultiplier,
   );
+  merged.fitSinglePage = options.fitSinglePage !== false;
+  merged.minSinglePageScale = Math.max(
+    0.7,
+    Math.min(1, Number(options.minSinglePageScale) || DEFAULT_OPTIONS.minSinglePageScale),
+  );
+  merged.snapshotScale = Math.max(
+    2,
+    Number(options.snapshotScale) || DEFAULT_OPTIONS.snapshotScale,
+  );
+  merged.enableSnapshotSwap = options.enableSnapshotSwap !== false;
+  merged.snapshotSelectors = Array.isArray(options.snapshotSelectors)
+    ? options.snapshotSelectors.filter(Boolean)
+    : DEFAULT_OPTIONS.snapshotSelectors.slice();
 
   return merged;
 }
@@ -969,6 +1150,194 @@ function injectCloneStyles(clonedDoc, { hiddenSelectors, extraCloneCss }) {
   clonedDoc.head.appendChild(style);
 }
 
+async function captureSnapshotReplacements({
+  root,
+  html2canvas,
+  selectors,
+  scale,
+  debug,
+}) {
+  if (!root || !Array.isArray(selectors) || selectors.length === 0) {
+    return [];
+  }
+
+  const replacements = [];
+  const seenPaths = new Set();
+
+  for (let s = 0; s < selectors.length; s += 1) {
+    const selector = selectors[s];
+    const nodes = Array.from(root.querySelectorAll(selector));
+
+    for (let i = 0; i < nodes.length; i += 1) {
+      const node = nodes[i];
+      const rect = node.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        continue;
+      }
+
+      const path = getNodePathWithinRoot(node, root);
+      if (!path || path.length === 0) {
+        continue;
+      }
+
+      const pathKey = path.join(".");
+      if (seenPaths.has(pathKey)) {
+        continue;
+      }
+
+      try {
+        const canvas = await captureLiveNodeSnapshot({
+          node,
+          html2canvas,
+          scale,
+          debug,
+        });
+        replacements.push({
+          selector,
+          path,
+          width: rect.width,
+          height: rect.height,
+          dataUrl: canvas.toDataURL("image/png", 1),
+        });
+        seenPaths.add(pathKey);
+      } catch (error) {
+        if (debug) {
+          console.warn("[PPCCR PDF] Snapshot selectivo omitido:", selector, error);
+        }
+      }
+    }
+  }
+
+  return replacements;
+}
+
+async function captureLiveNodeSnapshot({ node, html2canvas, scale, debug }) {
+  const isTrkNode = Boolean(
+    node &&
+      (node.matches(".kpiDash__trkGauge, .kpiDash__trkGaugeWrap, .apexcharts-canvas, .apexcharts-svg") ||
+        node.closest(".kpiDash__trk")),
+  );
+  const resolvedScale = isTrkNode
+    ? Math.max(4, Number(scale) || 4)
+    : Math.max(3, Number(scale) || 3);
+  const options = {
+    backgroundColor: null,
+    scale: resolvedScale,
+    useCORS: true,
+    allowTaint: true,
+    logging: Boolean(debug),
+    foreignObjectRendering: !isTrkNode,
+    removeContainer: true,
+  };
+
+  try {
+    const firstCanvas = await html2canvas(node, options);
+    if (!isLikelyBlankCanvas(firstCanvas)) {
+      return firstCanvas;
+    }
+  } catch (error) {
+    // fallback below
+  }
+
+  return html2canvas(node, {
+    ...options,
+    foreignObjectRendering: isTrkNode,
+  });
+}
+
+function applySnapshotReplacements({
+  clonedDoc,
+  targetSelector,
+  replacements,
+  debug,
+}) {
+  const clonedRoot = clonedDoc.querySelector(targetSelector);
+  if (!clonedRoot) {
+    return;
+  }
+
+  const ordered = replacements
+    .slice()
+    .sort((a, b) => b.path.length - a.path.length);
+
+  ordered.forEach((replacement) => {
+    const target = resolveNodeByPath(clonedRoot, replacement.path);
+    if (!target || !target.parentElement) {
+      return;
+    }
+
+    const targetStyle =
+      clonedDoc.defaultView && target
+        ? clonedDoc.defaultView.getComputedStyle(target)
+        : null;
+    const widthPx = Number(replacement.width) > 0 ? Number(replacement.width) : target.offsetWidth;
+    const heightPx = Number(replacement.height) > 0
+      ? Number(replacement.height)
+      : target.offsetHeight;
+
+    const img = clonedDoc.createElement("img");
+    img.src = replacement.dataUrl;
+    img.alt = "";
+    img.setAttribute("aria-hidden", "true");
+    img.className = "kpiDash__pdfSwapImage";
+    img.style.display =
+      targetStyle && targetStyle.display && targetStyle.display !== "inline"
+        ? targetStyle.display
+        : "inline-block";
+    img.style.width = widthPx > 0 ? widthPx + "px" : "100%";
+    img.style.height = heightPx > 0 ? heightPx + "px" : "auto";
+    img.style.maxWidth = "100%";
+    img.style.objectFit = "contain";
+    img.style.verticalAlign = "middle";
+    img.style.borderRadius = (targetStyle && targetStyle.borderRadius) || "";
+    img.style.boxShadow = (targetStyle && targetStyle.boxShadow) || "";
+
+    target.parentElement.replaceChild(img, target);
+  });
+
+  if (debug) {
+    console.log("[PPCCR PDF] Snapshot replacements aplicados:", ordered.length);
+  }
+}
+
+function getNodePathWithinRoot(node, root) {
+  if (!node || !root) {
+    return null;
+  }
+
+  const path = [];
+  let current = node;
+
+  while (current && current !== root) {
+    const parent = current.parentElement;
+    if (!parent) {
+      return null;
+    }
+
+    const index = Array.prototype.indexOf.call(parent.children, current);
+    if (index < 0) {
+      return null;
+    }
+
+    path.unshift(index);
+    current = parent;
+  }
+
+  return current === root ? path : null;
+}
+
+function resolveNodeByPath(root, path) {
+  let current = root;
+  for (let i = 0; i < path.length; i += 1) {
+    const idx = path[i];
+    if (!current || !current.children || idx >= current.children.length) {
+      return null;
+    }
+    current = current.children[idx];
+  }
+  return current || null;
+}
+
 function normalizeHeaderForPdfClone(clonedDoc, headerSelector) {
   const headerRoot = clonedDoc.querySelector(headerSelector) || clonedDoc.querySelector("#top");
   if (!headerRoot) {
@@ -993,6 +1362,32 @@ function normalizeHeaderForPdfClone(clonedDoc, headerSelector) {
     .forEach((node) => {
       node.style.setProperty("transform", "none", "important");
     });
+
+  const ribbonWrap = headerRoot.querySelector(".brand-mark--left");
+  if (ribbonWrap) {
+    ribbonWrap.style.setProperty("width", "clamp(78px, 8.8vw, 110px)", "important");
+    ribbonWrap.style.setProperty("height", "clamp(78px, 8.8vw, 110px)", "important");
+    ribbonWrap.style.setProperty("min-width", "78px", "important");
+    ribbonWrap.style.setProperty("display", "flex", "important");
+    ribbonWrap.style.setProperty("align-items", "center", "important");
+    ribbonWrap.style.setProperty("justify-content", "center", "important");
+    ribbonWrap.style.setProperty("aspect-ratio", "1 / 1", "important");
+  }
+
+  const brandMark = headerRoot.querySelector(".brand-mark");
+  if (brandMark) {
+    brandMark.style.setProperty("width", "clamp(78px, 8.8vw, 110px)", "important");
+    brandMark.style.setProperty("height", "clamp(78px, 8.8vw, 110px)", "important");
+  }
+
+  const ribbon = headerRoot.querySelector(".brand-ribbon");
+  if (ribbon) {
+    ribbon.style.setProperty("width", "clamp(64px, 7vw, 90px)", "important");
+    ribbon.style.setProperty("max-width", "none", "important");
+    ribbon.style.setProperty("height", "auto", "important");
+    ribbon.style.setProperty("object-fit", "contain", "important");
+    ribbon.style.setProperty("transform", "none", "important");
+  }
 }
 
 function isLikelyBlankCanvas(canvas) {

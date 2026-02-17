@@ -1325,7 +1325,7 @@
         headerSelector: "#top",
         dashboardSelector: "#kpi-dashboard-ppccr",
         filenamePrefix: "PPCCR_Reporte",
-        debug: true,
+        debug: false,
       });
     } catch (err) {
       console.error("[KPI Dashboard] Falló exportPPCCRToPdf.", err);
