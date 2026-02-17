@@ -26,9 +26,7 @@ const DEFAULT_OPTIONS = {
   minSinglePageScale: 0.9,
   repeatHeaderOnEachPage: true,
   enableSnapshotSwap: true,
-  snapshotSelectors: [
-    ".kpiDash__trkGauge",
-  ],
+  snapshotSelectors: [],
   ignoreSelectors: [],
   extraCloneCss: "",
   debug: false,
@@ -248,7 +246,13 @@ const PDF_DASHBOARD_VISUAL_ENHANCE_CSS = [
   "#kpi-dashboard-ppccr .kpiDash__fitFlowPanel--trk .kpiDash__trkGauge {",
   "  width: 68px !important;",
   "  height: 68px !important;",
-  "  background: conic-gradient(from -90deg, #0a3f78 0deg, #125fa8 calc(var(--trk-pct) * 2deg), #2f82c5 calc(var(--trk-pct) * 3.6deg), #d9e5f1 calc(var(--trk-pct) * 3.6deg), #ebf1f8 360deg) !important;",
+  "  background: #d9e5f1 !important;",
+  "  background-image: none !important;",
+  "  box-shadow: inset 0 0 0 1px rgba(14,72,127,0.2), 0 5px 12px rgba(14,55,98,0.14) !important;",
+  "}",
+  "#kpi-dashboard-ppccr .kpiDash__trkGauge::before,",
+  "#kpi-dashboard-ppccr .kpiDash__trkGauge::after {",
+  "  display: none !important;",
   "}",
   "#kpi-dashboard-ppccr .kpiDash__fitFlowPanel--trk .kpiDash__trkGaugeWrap {",
   "  align-items: end !important;",
@@ -1407,7 +1411,7 @@ function applyFooterPageNumbers(doc, pageMetrics, footerMm) {
   const total = doc.getNumberOfPages();
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
+  doc.setFontSize(6.4);
   doc.setTextColor(110, 122, 141);
 
   for (let i = 1; i <= total; i += 1) {
@@ -1955,33 +1959,74 @@ function stabilizeTrkGaugeInClone(clonedDoc, dashboardSelector) {
     }
 
     const pctClamped = Math.max(0, Math.min(100, pct));
-    const deliveredDeg = pctClamped * 3.6;
-    const midDeg = deliveredDeg * 0.55;
+    const deliveredNode = gauge.querySelector(".kpiDash__trkGaugeHit--delivered");
+    const pendingNode = gauge.querySelector(".kpiDash__trkGaugeHit--pending");
+    const targetCx = 50;
+    const targetCy = 50;
+    // Con gauge de 68px y stroke de 14 (en viewBox 100), r=43 alinea exacto con la base.
+    const targetRadius = 43;
+    const radius =
+      targetRadius ||
+      (deliveredNode && Number(deliveredNode.getAttribute("r"))) ||
+      (pendingNode && Number(pendingNode.getAttribute("r"))) ||
+      44;
+    const safeRadius = Number.isFinite(radius) && radius > 0 ? radius : 44;
+    const circumference = 2 * Math.PI * safeRadius;
+    const deliveredLength = (circumference * pctClamped) / 100;
+    const pendingLength = Math.max(0, circumference - deliveredLength);
 
     gauge.style.setProperty(
       "background",
-      "conic-gradient(" +
-        "from -90deg," +
-        " #0a3f78 0deg," +
-        " #0f5c9f " +
-        midDeg.toFixed(2) +
-        "deg," +
-        " #2f82c5 " +
-        deliveredDeg.toFixed(2) +
-        "deg," +
-        " #d9e5f1 " +
-        deliveredDeg.toFixed(2) +
-        "deg," +
-        " #ebf1f8 360deg" +
-        ")",
+      "#d9e5f1",
+      "important",
+    );
+    gauge.style.setProperty(
+      "background-image",
+      "none",
+      "important",
+    );
+    gauge.style.setProperty(
+      "box-shadow",
+      "inset 0 0 0 1px rgba(14,72,127,0.2), 0 5px 12px rgba(14,55,98,0.14)",
       "important",
     );
 
-    gauge.style.setProperty(
-      "box-shadow",
-      "inset 0 0 0 1px rgba(14,72,127,0.2), 0 6px 14px rgba(14,55,98,0.2)",
-      "important",
-    );
+    if (deliveredNode) {
+      deliveredNode.setAttribute("cx", String(targetCx));
+      deliveredNode.setAttribute("cy", String(targetCy));
+      deliveredNode.setAttribute("r", String(safeRadius));
+      deliveredNode.setAttribute(
+        "stroke-dasharray",
+        deliveredLength.toFixed(2) + " " + circumference.toFixed(2),
+      );
+      deliveredNode.setAttribute("stroke-dashoffset", "0");
+      deliveredNode.style.setProperty("fill", "none", "important");
+      deliveredNode.style.setProperty("stroke", "#1d69b3", "important");
+      deliveredNode.style.setProperty("stroke-width", "14", "important");
+      deliveredNode.style.setProperty("stroke-linecap", "round", "important");
+      deliveredNode.style.setProperty("opacity", "1", "important");
+      deliveredNode.style.setProperty("pointer-events", "none", "important");
+    }
+
+    if (pendingNode) {
+      pendingNode.setAttribute("cx", String(targetCx));
+      pendingNode.setAttribute("cy", String(targetCy));
+      pendingNode.setAttribute("r", String(safeRadius));
+      pendingNode.setAttribute(
+        "stroke-dasharray",
+        pendingLength.toFixed(2) + " " + circumference.toFixed(2),
+      );
+      pendingNode.setAttribute(
+        "stroke-dashoffset",
+        (-deliveredLength).toFixed(2),
+      );
+      pendingNode.style.setProperty("fill", "none", "important");
+      pendingNode.style.setProperty("stroke", "#d7e6f4", "important");
+      pendingNode.style.setProperty("stroke-width", "14", "important");
+      pendingNode.style.setProperty("stroke-linecap", "round", "important");
+      pendingNode.style.setProperty("opacity", "1", "important");
+      pendingNode.style.setProperty("pointer-events", "none", "important");
+    }
   });
 }
 
