@@ -21,7 +21,7 @@
     <script src="mobile-shell.js" defer></script>
     <script src="auth-gate.js" defer></script>
   </head>
-  <body class="page-workflow page-internal" id="top">
+  <body class="workflow-page page-workflow page-internal" id="top">
     <a class="wf-skip-link" href="#workflow-main">Saltar al contenido</a>
 
     <header class="wf-hero site-header site-topbar">
@@ -98,61 +98,64 @@
 
     <main id="workflow-main" class="wf-main site-main">
       <div class="container">
-        <section class="wf-section wf-section--intro" aria-labelledby="wf-page-title">
-          <div class="wf-hero__inner">
+        <section class="wf-overview wf-section" aria-labelledby="wf-page-title">
+          <header class="wf-overview__header">
             <h1 class="wf-hero__title" id="wf-page-title">Workflow operativo</h1>
             <p class="wf-hero__subtitle">
-              Operativo PPCCR 2026 – Estaciones Saludables (CABA). Alcance: desde
-              captación y tamizaje hasta información del resultado FIT y orientación
-              a consulta a salud cuando corresponde.
+              Secuencia operativa integral para captación, tamizaje, circuito FIT,
+              información de resultados y cierre de métricas del programa.
             </p>
+          </header>
 
-            <aside class="wf-note" role="note" aria-label="Alcance y vigencia">
-              <p>
-                Vigencia: 9 de marzo – 1 de abril. (Difusión/Educación: 9–22 marzo.
-                Operativo qFIT: 23 marzo – 1 abril).
+          <div class="wf-overview__meta" role="list" aria-label="Resumen operativo">
+            <article class="wf-meta-card" role="listitem">
+              <h2 class="wf-meta-card__title">Vigencia</h2>
+              <p class="wf-meta-card__text">
+                Del 9 de marzo al 1 de abril.
+                <strong>Difusión y educación:</strong> del 9 al 22 de marzo.
+                <strong>Operativo FIT:</strong> del 23 de marzo al 1 de abril.
               </p>
-              <p>
-                Fuera de alcance: estudios y circuitos asistenciales posteriores a
-                la orientación a consulta a salud.
+            </article>
+            <article class="wf-meta-card" role="listitem">
+              <h2 class="wf-meta-card__title">Alcance</h2>
+              <p class="wf-meta-card__text">
+                Captación, tamizaje, educación, entrega/recepción de test FIT,
+                traslado, recepción de resultados e información al participante.
               </p>
-            </aside>
+            </article>
+            <article class="wf-meta-card" role="listitem">
+              <h2 class="wf-meta-card__title">Fuera de alcance</h2>
+              <p class="wf-meta-card__text">
+                Estudios y circuitos asistenciales posteriores a la orientación a
+                consulta a salud.
+              </p>
+            </article>
           </div>
+
+          <details class="wf-roles" id="wf-roles-details">
+            <summary aria-label="Ver referencia de roles operativos">
+              <span class="wf-roles__icon" aria-hidden="true">i</span>
+              <span class="wf-roles__summary-text">Roles operativos</span>
+            </summary>
+            <div class="wf-roles__panel">
+              <ul class="wf-roles__list">
+                <li><strong>CO:</strong> Coordinación</li>
+                <li><strong>EN:</strong> Enfermería / Navegación / Facilitación</li>
+                <li><strong>LO:</strong> Logística</li>
+              </ul>
+            </div>
+          </details>
+
+          <nav class="wf-stage-nav" aria-label="Línea de tiempo del proceso">
+            <ol class="wf-stage-nav__list" id="wf-stage-timeline">
+              <!-- Render dinámico desde workflow.js -->
+            </ol>
+          </nav>
         </section>
 
         <section class="wf-section" aria-labelledby="wf-process-title">
           <header class="section-header wf-section-header">
-            <div class="wf-section-head">
-              <h2 class="section-title" id="wf-process-title">Mapa de proceso 2026</h2>
-              <div class="wf-section-head__actions">
-                <div class="wf-role-legend">
-                  <button
-                    type="button"
-                    class="wf-info-btn"
-                    id="wf-role-legend-trigger"
-                    aria-label="Referencia de roles (CO, EN, LO)"
-                    aria-expanded="false"
-                    aria-controls="roleLegendPopover"
-                  >
-                    <span aria-hidden="true">i</span>
-                  </button>
-                  <div
-                    class="wf-role-popover"
-                    id="roleLegendPopover"
-                    role="tooltip"
-                    hidden
-                    tabindex="-1"
-                  >
-                    <p class="wf-role-popover__title">Referencia de roles</p>
-                    <ul class="wf-role-popover__list">
-                      <li><strong>CO:</strong> Coordinación</li>
-                      <li><strong>EN:</strong> Enfermería / Navegación / Facilitación</li>
-                      <li><strong>LO:</strong> Logística</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <h2 class="section-title" id="wf-process-title">Mapa de proceso 2026</h2>
             <p class="section-subtitle">
               El programa finaliza cuando se informa el resultado del test FIT y
               se orienta la consulta a salud cuando corresponde.
