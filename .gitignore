@@ -66,6 +66,12 @@ node_modules/
 # dotenv environment variables file
 .env
 
+# Sensitive files
+secrets-jaas/
+*.pem
+*.key
+*.p12
+
 # dataconnect generated files
 .dataconnect
 .DS_Store

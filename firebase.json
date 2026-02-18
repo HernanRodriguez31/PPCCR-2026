@@ -19,7 +19,13 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "secrets-jaas/**",
+      "**/*.pem",
+      "**/*.key",
+      "**/*.p12",
+      "**/*.log",
+      "firestore-debug.log"
     ],
     "rewrites": [
       {
