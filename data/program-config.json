@@ -1,0 +1,9 @@
+{
+  "algorithm": {
+    "minAge": 45,
+    "texts": {
+      "ageExcludedOutcome": "No incluye (<{minAge})",
+      "ageExcludedReason": "Motivo de cierre: edad {age} (<{minAge})."
+    }
+  }
+}

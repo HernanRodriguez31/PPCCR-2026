@@ -264,7 +264,7 @@ const STATION_NAME_BY_ID = Object.freeze({
 let stationBridgeBound = false;
 let stationBridgeLastSignature = "";
 
-const ALGORITHM_HOME = Object.freeze({
+const ALGORITHM_HOME = {
   minAge: 45,
   steps: Object.freeze({
     AGE: 1,
@@ -278,7 +278,7 @@ const ALGORITHM_HOME = Object.freeze({
     "Parque Chacabuco",
     "Aristóbulo del Valle",
   ]),
-});
+};
 
 const HOME_ALGO_STORAGE_KEY = "ppccr_home_algorithm_interview_v1";
 const HOME_ALGO_PARTICIPANT_COUNTER_KEY = "ppccr_home_algorithm_counter_v1";
@@ -292,8 +292,27 @@ const HOME_ALGO_OUTCOME = Object.freeze({
   FIT_CANDIDATE: "FIT_CANDIDATE",
 });
 
+const PROGRAM_CONFIG_DEFAULT = Object.freeze({
+  algorithm: Object.freeze({
+    minAge: 45,
+    texts: Object.freeze({
+      ageExcludedOutcome: "No incluye (<{minAge})",
+      ageExcludedReason: "Motivo de cierre: edad {age} (<{minAge}).",
+    }),
+  }),
+});
+
+let programRuntimeConfig = {
+  algorithm: {
+    minAge: PROGRAM_CONFIG_DEFAULT.algorithm.minAge,
+    texts: {
+      ageExcludedOutcome: PROGRAM_CONFIG_DEFAULT.algorithm.texts.ageExcludedOutcome,
+      ageExcludedReason: PROGRAM_CONFIG_DEFAULT.algorithm.texts.ageExcludedReason,
+    },
+  },
+};
+
 const HOME_ALGO_OUTCOME_TEXT = Object.freeze({
-  [HOME_ALGO_OUTCOME.AGE_EXCLUDED]: "No incluye (<45)",
   [HOME_ALGO_OUTCOME.ACTIVE_SURVEILLANCE_EXCLUDED]:
     "Seguimiento vigente. No se considera candidato a campaña de screening poblacional. En estos casos la recomendación es que la persona realice una consulta médica. No entregar FIT.",
   [HOME_ALGO_OUTCOME.HIGH_RISK_REFERRAL]:
@@ -1419,7 +1438,24 @@ function createHomeAlgorithmInterview(stationDetail = {}) {
   return interview;
 }
 
+function getHomeAlgoService() {
+  return window.PPCCR?.app?.homeAlgorithm || null;
+}
+
+function isHomeAlgorithmIncludedByAge(age) {
+  const service = getHomeAlgoService();
+  if (service?.isIncludedByAge) {
+    return service.isIncludedByAge(age, getAlgorithmMinAge());
+  }
+  return Number.isFinite(age) && age >= getAlgorithmMinAge();
+}
+
 function sanitizeHomeAlgorithmCodeList(value) {
+  const service = getHomeAlgoService();
+  if (service?.normalizeCodeList) {
+    return service.normalizeCodeList(value);
+  }
+
   if (!Array.isArray(value)) return [];
   const codes = [];
   value.forEach((item) => {
@@ -1431,6 +1467,10 @@ function sanitizeHomeAlgorithmCodeList(value) {
 }
 
 function isHomeAlgorithmOutcome(value) {
+  const service = getHomeAlgoService();
+  if (service?.isOutcome) {
+    return service.isOutcome(value);
+  }
   return Object.values(HOME_ALGO_OUTCOME).includes(value);
 }
 
@@ -1459,24 +1499,33 @@ function normalizeHomeAlgorithmInterview(rawInterview, stationDetail = {}) {
     }
   }
 
-  const rawAge = Number.parseInt(String(source?.step1?.age ?? ""), 10);
-  normalized.step1.age =
-    Number.isFinite(rawAge) && rawAge >= 0 && rawAge <= 120 ? rawAge : null;
-  const sourceSex = String(source?.step1?.sex || "").trim().toUpperCase();
-  normalized.step1.sex =
-    sourceSex === HOME_ALGO_SEX.MALE ||
-    sourceSex === HOME_ALGO_SEX.FEMALE ||
-    sourceSex === HOME_ALGO_SEX.OTHER
-      ? sourceSex
-      : "";
-  normalized.step1.sexOtherDetail = String(source?.step1?.sexOtherDetail || "").trim();
-  if (normalized.step1.sex !== HOME_ALGO_SEX.OTHER) {
-    normalized.step1.sexOtherDetail = "";
+  const service = getHomeAlgoService();
+  if (service?.normalizeStep1Input) {
+    normalized.step1 = service.normalizeStep1Input(source?.step1, {
+      minAge: getAlgorithmMinAge(),
+      allowedSex: [HOME_ALGO_SEX.MALE, HOME_ALGO_SEX.FEMALE, HOME_ALGO_SEX.OTHER],
+      otherSex: HOME_ALGO_SEX.OTHER,
+    });
+  } else {
+    const rawAge = Number.parseInt(String(source?.step1?.age ?? ""), 10);
+    normalized.step1.age =
+      Number.isFinite(rawAge) && rawAge >= 0 && rawAge <= 120 ? rawAge : null;
+    const sourceSex = String(source?.step1?.sex || "").trim().toUpperCase();
+    normalized.step1.sex =
+      sourceSex === HOME_ALGO_SEX.MALE ||
+      sourceSex === HOME_ALGO_SEX.FEMALE ||
+      sourceSex === HOME_ALGO_SEX.OTHER
+        ? sourceSex
+        : "";
+    normalized.step1.sexOtherDetail = String(source?.step1?.sexOtherDetail || "").trim();
+    if (normalized.step1.sex !== HOME_ALGO_SEX.OTHER) {
+      normalized.step1.sexOtherDetail = "";
+    }
+    normalized.step1.includedByAge =
+      typeof source?.step1?.includedByAge === "boolean"
+        ? source.step1.includedByAge
+        : isHomeAlgorithmIncludedByAge(normalized.step1.age);
   }
-  normalized.step1.includedByAge =
-    typeof source?.step1?.includedByAge === "boolean"
-      ? source.step1.includedByAge
-      : Number.isFinite(normalized.step1.age) && normalized.step1.age >= ALGORITHM_HOME.minAge;
 
   normalized.step2.exclusions = sanitizeHomeAlgorithmCodeList(source?.step2?.exclusions);
   normalized.step2.hasExclusion =
@@ -1749,7 +1798,112 @@ function refreshHomeAlgorithmOverflowHints() {
   updateHomeAlgorithmPanelOverflowHints(container);
 }
 
+function resolveProgramMinAge(value, fallback = PROGRAM_CONFIG_DEFAULT.algorithm.minAge) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 120) {
+    return { value: fallback, valid: false };
+  }
+  return { value: parsed, valid: true };
+}
+
+function resolveProgramText(value, fallback) {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function formatProgramConfigText(template, replacements) {
+  return String(template || "").replace(/\{(\w+)\}/g, (token, key) => {
+    if (!Object.prototype.hasOwnProperty.call(replacements, key)) return token;
+    return String(replacements[key]);
+  });
+}
+
+function getAlgorithmMinAge() {
+  return resolveProgramMinAge(ALGORITHM_HOME.minAge).value;
+}
+
+function getAgeExcludedOutcomeText() {
+  const template = programRuntimeConfig.algorithm.texts.ageExcludedOutcome;
+  return formatProgramConfigText(template, {
+    minAge: getAlgorithmMinAge(),
+  });
+}
+
+function buildAgeExcludedReason(age) {
+  const template = programRuntimeConfig.algorithm.texts.ageExcludedReason;
+  return formatProgramConfigText(template, {
+    age: Number.isFinite(age) ? age : "-",
+    minAge: getAlgorithmMinAge(),
+  });
+}
+
+function applyProgramRuntimeConfig(rawConfig) {
+  const minAge = resolveProgramMinAge(rawConfig?.algorithm?.minAge);
+  const rawTexts = rawConfig?.algorithm?.texts;
+  const hasTextObject = rawTexts && typeof rawTexts === "object";
+
+  programRuntimeConfig = {
+    algorithm: {
+      minAge: minAge.value,
+      texts: {
+        ageExcludedOutcome: resolveProgramText(
+          hasTextObject ? rawTexts.ageExcludedOutcome : "",
+          PROGRAM_CONFIG_DEFAULT.algorithm.texts.ageExcludedOutcome,
+        ),
+        ageExcludedReason: resolveProgramText(
+          hasTextObject ? rawTexts.ageExcludedReason : "",
+          PROGRAM_CONFIG_DEFAULT.algorithm.texts.ageExcludedReason,
+        ),
+      },
+    },
+  };
+
+  ALGORITHM_HOME.minAge = minAge.value;
+  return minAge;
+}
+
+async function loadProgramConfigOnInit() {
+  const configUrl = "/data/program-config.json";
+
+  try {
+    const response = await fetch(configUrl, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const config = await response.json();
+    const minAge = applyProgramRuntimeConfig(config);
+
+    if (!minAge.valid) {
+      console.warn(
+        `[app-config] minAge inválido en ${configUrl}. Se usa default ${PROGRAM_CONFIG_DEFAULT.algorithm.minAge}.`,
+      );
+      return;
+    }
+
+    console.info(`[app-config] Config cargada. minAge=${getAlgorithmMinAge()}.`);
+  } catch (error) {
+    applyProgramRuntimeConfig(null);
+    console.warn(
+      `[app-config] No se pudo cargar ${configUrl}. Se usa default ${PROGRAM_CONFIG_DEFAULT.algorithm.minAge}.`,
+      error,
+    );
+  }
+}
+
 function getHomeAlgorithmOutcomeText(outcome) {
+  const service = getHomeAlgoService();
+  if (service?.getOutcomeLabel) {
+    return service.getOutcomeLabel(outcome, {
+      ageExcludedLabel: getAgeExcludedOutcomeText(),
+      fallbackLabel: "-",
+    });
+  }
+
+  if (outcome === HOME_ALGO_OUTCOME.AGE_EXCLUDED) {
+    return getAgeExcludedOutcomeText();
+  }
+
   return HOME_ALGO_OUTCOME_TEXT[outcome] || "-";
 }
 
@@ -1810,8 +1964,8 @@ function getHomeAlgorithmCodeItems(codes, labelMap) {
 
 function buildHomeAlgorithmModalReason(outcome, interview, labelMaps) {
   if (outcome === HOME_ALGO_OUTCOME.AGE_EXCLUDED) {
-    const age = Number.isFinite(interview?.step1?.age) ? interview.step1.age : "-";
-    return `Motivo de cierre: edad ${age} (<45).`;
+    const age = Number.isFinite(interview?.step1?.age) ? interview.step1.age : null;
+    return buildAgeExcludedReason(age);
   }
 
   if (outcome === HOME_ALGO_OUTCOME.ACTIVE_SURVEILLANCE_EXCLUDED) {
@@ -2618,6 +2772,7 @@ function getHomeAlgorithmStep1Values() {
     return { ok: false, message: "No se pudo iniciar el Paso 1." };
   }
 
+  const service = getHomeAlgoService();
   const invalidFields = [];
 
   const stationName = String(homeAlgorithmState.interview.stationName || "").trim();
@@ -2627,23 +2782,36 @@ function getHomeAlgorithmStep1Values() {
   }
 
   const ageRaw = String(homeAlgorithmState.ageInput.value || "").trim();
-  const age = Number.parseInt(ageRaw, 10);
-  if (ageRaw === "" || !Number.isFinite(age) || age < 0 || age > 120) {
+  const normalizedAge = service?.normalizeAge
+    ? service.normalizeAge(ageRaw, { min: 0, max: 120 })
+    : (() => {
+        const parsed = Number.parseInt(ageRaw, 10);
+        const valid = Number.isFinite(parsed) && parsed >= 0 && parsed <= 120;
+        return { valid, value: valid ? parsed : null };
+      })();
+  if (!normalizedAge.valid) {
     invalidFields.push(HOME_ALGO_STEP1_FIELDS.age);
   }
 
-  const sex = String(
+  const selectedSex = String(
     homeAlgorithmState.sexRadios.find((radio) => radio.checked)?.value || "",
   )
     .trim()
     .toUpperCase();
-  if (
-    !(
-      sex === HOME_ALGO_SEX.MALE ||
-      sex === HOME_ALGO_SEX.FEMALE ||
-      sex === HOME_ALGO_SEX.OTHER
-    )
-  ) {
+  const normalizedSex = service?.normalizeSex
+    ? service.normalizeSex(selectedSex, {
+        allowed: [HOME_ALGO_SEX.MALE, HOME_ALGO_SEX.FEMALE, HOME_ALGO_SEX.OTHER],
+      })
+    : (() => {
+        const valid =
+          selectedSex === HOME_ALGO_SEX.MALE ||
+          selectedSex === HOME_ALGO_SEX.FEMALE ||
+          selectedSex === HOME_ALGO_SEX.OTHER;
+        return { valid, value: valid ? selectedSex : "" };
+      })();
+  const sex = normalizedSex.value;
+
+  if (!normalizedSex.valid) {
     invalidFields.push(HOME_ALGO_STEP1_FIELDS.sex);
   }
 
@@ -2668,7 +2836,7 @@ function getHomeAlgorithmStep1Values() {
     values: {
       stationName,
       stationId,
-      age,
+      age: normalizedAge.value,
       sex,
       sexOtherDetail,
     },
@@ -2797,6 +2965,14 @@ function clearInterviewAfterStep3() {
 }
 
 function getFinalResultLabel(outcome) {
+  const service = getHomeAlgoService();
+  if (service?.getOutcomeFinalLabel) {
+    return service.getOutcomeFinalLabel(outcome, {
+      ageExcludedFinalLabel: "Excluido por edad",
+      fallbackLabel: getHomeAlgorithmOutcomeText(outcome),
+    });
+  }
+
   if (outcome === HOME_ALGO_OUTCOME.AGE_EXCLUDED) return "Excluido por edad";
   if (outcome === HOME_ALGO_OUTCOME.ACTIVE_SURVEILLANCE_EXCLUDED) return "Excluido Paso 2";
   if (outcome === HOME_ALGO_OUTCOME.HIGH_RISK_REFERRAL) return "Excluido Paso 3";
@@ -2994,7 +3170,9 @@ function onHomeAlgorithmConfirmStep1() {
   homeAlgorithmState.interview.step1.sex = result.values.sex;
   homeAlgorithmState.interview.step1.sexOtherDetail =
     result.values.sex === HOME_ALGO_SEX.OTHER ? result.values.sexOtherDetail : "";
-  homeAlgorithmState.interview.step1.includedByAge = result.values.age >= ALGORITHM_HOME.minAge;
+  homeAlgorithmState.interview.step1.includedByAge = isHomeAlgorithmIncludedByAge(
+    result.values.age,
+  );
   syncInterviewStateFromInterview({ status: "pending" });
 
   if (homeAlgorithmState.deviceTimeInput) {
@@ -4385,9 +4563,9 @@ function initHomeAlgorithm() {
     );
     homeAlgorithmState.interview.step1.age =
       Number.isFinite(parsedAge) && parsedAge >= 0 && parsedAge <= 120 ? parsedAge : null;
-    homeAlgorithmState.interview.step1.includedByAge =
-      Number.isFinite(homeAlgorithmState.interview.step1.age) &&
-      homeAlgorithmState.interview.step1.age >= ALGORITHM_HOME.minAge;
+    homeAlgorithmState.interview.step1.includedByAge = isHomeAlgorithmIncludedByAge(
+      homeAlgorithmState.interview.step1.age,
+    );
     homeAlgorithmState.interview.deviceTimestamp = "";
 
     homeAlgorithmState.step1Confirmed = false;
@@ -5171,7 +5349,8 @@ function setupLookerModal() {
 
 /* ----------------------------- Init ----------------------------- */
 
-function init() {
+async function init() {
+  await loadProgramConfigOnInit();
   setupStationBridge();
   setMetaText();
   renderPartnerLogos();
@@ -5235,4 +5414,6 @@ function init() {
   if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 }
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", () => {
+  void init();
+});

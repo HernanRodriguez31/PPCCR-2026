@@ -1,7 +1,7 @@
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
-import { defineSecret } from "firebase-functions/params";
+import { defineSecret, defineString } from "firebase-functions/params";
 import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import jwt from "jsonwebtoken";
 
@@ -9,7 +9,10 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const STAGE1_MIN_AGE = 45;
+const STAGE1_MIN_AGE_DEFAULT = 45;
+const STAGE1_MIN_AGE_PARAM = defineString("PPCCR_STAGE1_MIN_AGE", {
+  default: String(STAGE1_MIN_AGE_DEFAULT),
+});
 const PARTICIPANT_SEQUENCE_PADDING = 6;
 const FIRESTORE_COUNTERS_COLLECTION = "ppccr_stage1_counters";
 const FIRESTORE_RECORDS_COLLECTION = "ppccr_stage1_records";
@@ -174,6 +177,29 @@ const STATION_INDEX = (() => {
 })();
 
 const ALLOWED_STATIONS_TEXT = STATIONS.map((station) => station.stationName).join(", ");
+let lastLoggedStage1MinAgeSignature = "";
+
+function getStage1MinAge(): number {
+  const raw = String(STAGE1_MIN_AGE_PARAM.value() || "").trim();
+  const parsed = Number.parseInt(raw, 10);
+  const valid = Number.isFinite(parsed) && parsed >= 0 && parsed <= 120;
+  const effective = valid ? parsed : STAGE1_MIN_AGE_DEFAULT;
+  const signature = `${raw}|${effective}|${valid ? "ok" : "fallback"}`;
+
+  if (signature !== lastLoggedStage1MinAgeSignature) {
+    if (valid) {
+      logger.info("PPCCR_STAGE1_MIN_AGE efectivo.", { minAge: effective });
+    } else {
+      logger.warn("PPCCR_STAGE1_MIN_AGE inválido. Se usa default.", {
+        provided: raw || null,
+        fallback: STAGE1_MIN_AGE_DEFAULT,
+      });
+    }
+    lastLoggedStage1MinAgeSignature = signature;
+  }
+
+  return effective;
+}
 
 function normalizeStation(value: unknown): NormalizedStation | null {
   const normalized = foldText(value);
@@ -775,8 +801,9 @@ function buildRecordForSheet(
   const ageRaw = Number.parseInt(String(data.age ?? "").trim(), 10);
   const age = Number.isFinite(ageRaw) ? ageRaw : Number.NaN;
 
-  const criterionRaw = Number.parseInt(String(data.criterionAge ?? STAGE1_MIN_AGE).trim(), 10);
-  const criterionAge = Number.isFinite(criterionRaw) ? criterionRaw : STAGE1_MIN_AGE;
+  const stage1MinAge = getStage1MinAge();
+  const criterionRaw = Number.parseInt(String(data.criterionAge ?? stage1MinAge).trim(), 10);
+  const criterionAge = Number.isFinite(criterionRaw) ? criterionRaw : stage1MinAge;
 
   const sex = normalizeSex(data.sex) || String(data.sex || "").trim().toUpperCase();
   if (!sex) {
@@ -952,7 +979,8 @@ export const submitAlgorithmStage1 = onRequest(
       minute: "2-digit",
       hour12: false,
     }).replace(",", "");
-    const ageMeetsInclusion = age >= STAGE1_MIN_AGE;
+    const stage1MinAge = getStage1MinAge();
+    const ageMeetsInclusion = age >= stage1MinAge;
     const outcome = finalResult || (ageMeetsInclusion ? "cumple_criterio_edad" : "sin_criterio_inclusion_edad");
 
     const step1Result = step1ResultInput || (ageMeetsInclusion ? "Cumple criterio por edad" : "No incluye por edad");
@@ -995,7 +1023,7 @@ export const submitAlgorithmStage1 = onRequest(
       clientParticipantId: participantId,
       sex,
       age,
-      criterionAge: STAGE1_MIN_AGE,
+      criterionAge: stage1MinAge,
       ageMeetsInclusion,
       outcome,
       stageReached,
