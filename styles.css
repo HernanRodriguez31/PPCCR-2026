@@ -11176,3 +11176,40 @@ body.page-home #kpis .embed-shell--looker .embed-fallback--overlay {
     clip-path: inset(0 0 18px 0);
   }
 }
+
+/* Page transitions (MPA app-like) */
+html.is-ready body {
+  animation: ppccr-page-enter 170ms ease both;
+}
+
+html.is-leaving body {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+@keyframes ppccr-page-enter {
+  from {
+    opacity: 0.98;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.is-ready body {
+    animation: none !important;
+  }
+
+  html.is-leaving body {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
