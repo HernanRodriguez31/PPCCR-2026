@@ -890,7 +890,7 @@
         followPct,
       ),
       summaryReasonBadge(
-        "Mayor riesgo (orientación)",
+        "Mayor riesgo",
         totals.mayorRiesgo,
         riskPct,
       ),

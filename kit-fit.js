@@ -1,6 +1,7 @@
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
+  initFixedHeaderOffset();
   initBackToTopButton();
   initTogglePopover({
     wrapSelector: ".kf-inline-hint",
@@ -15,6 +16,40 @@ document.addEventListener("DOMContentLoaded", () => {
   initStepAccordion();
   initMediaModal();
 });
+
+function initFixedHeaderOffset() {
+  const header = document.querySelector(".kf-hero.site-header.site-topbar");
+  if (!(header instanceof HTMLElement)) return;
+
+  const root = document.documentElement;
+  let raf = 0;
+
+  const sync = () => {
+    raf = 0;
+    const measured = Math.max(
+      Math.round(header.getBoundingClientRect().height),
+      header.offsetHeight || 0,
+      header.scrollHeight || 0,
+    );
+    const height = Math.min(320, Math.max(120, measured));
+    root.style.setProperty("--kf-fixed-header-h", `${height}px`);
+  };
+
+  const schedule = () => {
+    if (raf) return;
+    raf = window.requestAnimationFrame(sync);
+  };
+
+  schedule();
+  window.addEventListener("resize", schedule, { passive: true });
+  window.addEventListener("orientationchange", schedule, { passive: true });
+  window.addEventListener("load", schedule, { once: true });
+
+  if ("ResizeObserver" in window) {
+    const observer = new ResizeObserver(() => schedule());
+    observer.observe(header);
+  }
+}
 
 function initStepAccordion() {
   const steps = Array.from(document.querySelectorAll(".kf-steps .kf-step"));

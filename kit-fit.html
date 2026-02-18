@@ -28,52 +28,122 @@
     <a class="kf-skip-link" href="#kit-fit-main">Saltar al contenido</a>
 
     <header class="kf-hero site-header site-topbar">
-      <div class="container kf-hero__inner">
-        <div class="kf-brand" aria-label="Programa PPCCR">
-          <img
-            class="kf-brand__logo"
-            src="assets/logo-cinta-azul.png"
-            alt="Cinta azul de concientización"
-            width="58"
-            height="58"
-            decoding="async"
-          />
-          <p class="kf-brand__title">
-            Programa de Prevención de Cáncer Colorrectal
-          </p>
+      <div class="topbar site-topbar__inner kf-topbar">
+        <div class="brand" aria-label="Identidad del programa">
+          <div class="brand-mark brand-mark--left">
+            <img
+              class="brand-ribbon"
+              src="assets/logo%20cinta%20azul.png"
+              alt="Listón azul de concientización"
+              decoding="async"
+            />
+          </div>
+          <div class="brand-copy">
+            <p class="brand-title kf-topbar__title">
+              Programa de Prevención de Cáncer Colorrectal
+            </p>
+          </div>
         </div>
+      </div>
 
-        <h1 class="kf-hero__title">Manejo de kit FIT</h1>
-        <p class="kf-hero__subtitle">
-          Guía de procedimientos en estación (entrega, instrucciones,
-          conservación y recepción).
-        </p>
-
-        <aside
-          class="kf-note"
-          role="note"
-          aria-label="Vigencia y alcance operativo"
-        >
-          <p>Vigencia: Operativo PPCCR 2026 – Estaciones Saludables (CABA).</p>
-          <p>
-            Alcance: educación al participante, entrega de kit, rotulado,
-            conservación, recepción de muestra y registro digital.
-          </p>
-          <p>
-            Nota: el programa finaliza con la comunicación del resultado FIT por
-            médico/a y la emisión de derivación a colonoscopía cuando
-            corresponda.
-          </p>
-          <p>
-            Fuera de alcance: coordinación/seguimiento con gastro/colonoscopía
-            posterior a la derivación.
-          </p>
-        </aside>
+      <div class="logo-strip partners-bar" aria-label="Partners del programa">
+        <div class="container">
+          <div class="logo-strip__inner partners-strip partners-grid">
+            <span class="partner-logo partner-pill" data-partner="fep">
+              <img
+                src="assets/logo-fep.png?v=20260208"
+                alt="Fundación Enfermeros Protagonistas"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Fundación Enfermeros Protagonistas</span>
+            </span>
+            <span class="partner-logo partner-pill" data-partner="gedyt">
+              <img
+                src="assets/logo-gedyt.png"
+                alt="Fundación GEDyT"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Fundación GEDyT</span>
+            </span>
+            <span class="partner-logo partner-pill" data-partner="merck">
+              <img
+                src="assets/logo-merck.png"
+                alt="Merck Foundation"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Merck Foundation</span>
+            </span>
+            <span class="partner-logo partner-pill" data-partner="gcba">
+              <img
+                src="assets/logo-gcba.png"
+                alt="Gobierno de la Ciudad de Buenos Aires"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Gobierno de la Ciudad de Buenos Aires</span>
+            </span>
+          </div>
+        </div>
       </div>
     </header>
 
     <main id="kit-fit-main" class="kf-main site-main">
       <div class="container">
+        <section class="kf-page-heading kf-section" aria-labelledby="kf-page-title">
+          <div class="kf-page-heading__bar">
+            <h1 class="kf-page-heading__title" id="kf-page-title">
+              Manejo de kit FIT
+            </h1>
+          </div>
+          <p class="kf-page-heading__subtitle">
+            Guía de procedimientos en estación (entrega, instrucciones,
+            conservación y recepción).
+          </p>
+          <aside class="kf-note kf-page-heading__meta" role="note" aria-label="Marco operativo">
+            <dl class="kf-meta-grid">
+              <div class="kf-meta-item kf-meta-item--vigencia">
+                <dt class="kf-meta-item__term">Vigencia</dt>
+                <dd class="kf-meta-item__desc">
+                  Operativo PPCCR 2026 – Estaciones Saludables (CABA).
+                </dd>
+              </div>
+              <div class="kf-meta-item kf-meta-item--alcance">
+                <dt class="kf-meta-item__term">Alcance</dt>
+                <dd class="kf-meta-item__desc">
+                  Educación al participante, entrega de kit, rotulado,
+                  conservación, recepción de muestra y registro digital.
+                </dd>
+              </div>
+              <div class="kf-meta-item kf-meta-item--nota">
+                <dt class="kf-meta-item__term">Nota</dt>
+                <dd class="kf-meta-item__desc">
+                  Los resultados FIT se reciben por el canal definido del
+                  programa y son comunicados al participante por Navegador según
+                  protocolo operativo.
+                </dd>
+              </div>
+              <div class="kf-meta-item kf-meta-item--fuera">
+                <dt class="kf-meta-item__term">Fuera de alcance</dt>
+                <dd class="kf-meta-item__desc">
+                  Seguimiento especializado posterior a la orientación para
+                  estudios complementarios.
+                </dd>
+              </div>
+            </dl>
+          </aside>
+        </section>
+
         <section class="kf-section" aria-labelledby="kf-access-title">
           <article class="kf-panel">
             <header class="section-header kf-section-header">
@@ -134,25 +204,12 @@
             </p>
           </header>
 
-          <div class="kf-grid">
-            <article class="kf-card">
-              <h3 class="kf-card__title">Componentes</h3>
-              <ul class="kf-list">
-                <li>
-                  Tubo FIT (tapón verde) con espacio para etiqueta/rotulado.
-                </li>
-                <li>Bolsa de bioseguridad (zip).</li>
-                <li>Gel refrigerante para conservación en traslado.</li>
-                <li>Folleto instructivo (GEDYT).</li>
-                <li>Colector/papel recolector cuando el kit lo incluya.</li>
-              </ul>
-            </article>
-
-            <article class="kf-card">
-              <h3 class="kf-card__title">Foto del kit</h3>
-              <figure class="kf-figure">
+          <div class="kf-grid kf-grid--kit">
+            <article class="kf-card kf-kit-merged">
+              <h3 class="kf-card__title">Foto del kit FIT y componentes</h3>
+              <figure class="kf-figure kf-kit-merged__media">
                 <a
-                  class="kf-figure__link"
+                  class="kf-figure__link kf-kit-merged__frame"
                   href="assets/img/kit-fit-foto.webp"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -174,6 +231,21 @@
                   nueva pestaña.
                 </figcaption>
               </figure>
+
+              <div class="kf-kit-merged__components">
+                <h4 class="kf-kit-merged__components-title">
+                  Componentes del kit
+                </h4>
+                <ul class="kf-list">
+                  <li>
+                    Tubo FIT (tapón verde) con espacio para etiqueta/rotulado.
+                  </li>
+                  <li>Bolsa de bioseguridad (zip).</li>
+                  <li>Gel refrigerante para conservación en traslado.</li>
+                  <li>Folleto instructivo (GEDYT).</li>
+                  <li>Colector/papel recolector cuando el kit lo incluya.</li>
+                </ul>
+              </div>
             </article>
           </div>
         </section>
@@ -191,7 +263,7 @@
                       type="button"
                       class="kf-info-btn"
                       id="kf-role-legend-trigger"
-                      aria-label="Referencia de roles EN, ME, LO y CO"
+                      aria-label="Referencia de roles NAV, LO y CO"
                       aria-expanded="false"
                       aria-controls="kf-role-legend-popover"
                     >
@@ -206,10 +278,9 @@
                     >
                       <p class="kf-role-popover__title">Referencia de roles</p>
                       <ul class="kf-role-popover__list">
-                        <li><strong>EN:</strong> Enfermería / Navigator</li>
-                        <li><strong>ME:</strong> Médico/a</li>
+                        <li><strong>NAV:</strong> Navegador</li>
                         <li><strong>LO:</strong> Logística</li>
-                        <li><strong>CO:</strong> Coordinación</li>
+                        <li><strong>CO:</strong> Coordinación operativa</li>
                       </ul>
                     </div>
                   </div>
@@ -239,13 +310,13 @@
                       objetivo.
                     </li>
                     <li>
-                      Si aparecen dudas clínicas o criterios de alarma, escalar
-                      a médico/a.
+                      Si aparecen incidencias o criterios de alarma, escalar a
+                      Coordinación Operativa según protocolo.
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
-                    <abbr title="Médico/a">ME</abbr>
+                    <abbr title="Navegador">NAV</abbr>
+                    <abbr title="Coordinación">CO</abbr>
                   </div>
                 </details>
               </li>
@@ -269,7 +340,7 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                   </div>
                 </details>
               </li>
@@ -289,7 +360,7 @@
                     <li>Señalar el folleto instructivo dentro del paquete.</li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                   </div>
                 </details>
               </li>
@@ -313,7 +384,7 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
                 </details>
@@ -342,7 +413,7 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                   </div>
                 </details>
               </li>
@@ -389,7 +460,7 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
                 </details>
@@ -414,7 +485,7 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                   </div>
                 </details>
               </li>
@@ -438,7 +509,7 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                     <abbr title="Logística">LO</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
@@ -459,8 +530,9 @@
                       participante.
                     </li>
                     <li>
-                      Si es positivo: devolución médica, contención clínica y
-                      derivación a colonoscopía.
+                      Si es positivo: informar al participante y activar el
+                      circuito de orientación del programa según protocolo
+                      operativo.
                     </li>
                     <li>
                       Si es negativo: se comunica resultado y se refuerza
@@ -468,8 +540,8 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Médico/a">ME</abbr>
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
+                    <abbr title="Coordinación">CO</abbr>
                   </div>
                 </details>
               </li>
@@ -490,14 +562,14 @@
                   muestra.
                 </p>
               </article>
-              <article class="kf-critical-card kf-critical-card--warn">
+              <article class="kf-critical-card kf-critical-card--warn kf-critical-card--cold">
                 <h3>Cadena de frío 2-8°C</h3>
                 <p>
                   Conservación en heladera con gel refrigerante y sin
                   congelación.
                 </p>
               </article>
-              <article class="kf-critical-card kf-critical-card--warn">
+              <article class="kf-critical-card kf-critical-card--warn kf-critical-card--time">
                 <h3>≤ 72 horas</h3>
                 <p>
                   La recepción debe ocurrir dentro del plazo operativo desde la
@@ -510,7 +582,7 @@
 
         <section class="kf-section" aria-labelledby="kf-faq-title">
           <article class="kf-panel">
-            <h2 class="kf-panel__title" id="kf-faq-title">
+            <h2 class="kf-panel__title kf-panel__title--faq" id="kf-faq-title">
               Errores frecuentes
             </h2>
             <div class="kf-faq">
@@ -561,15 +633,6 @@
               aria-label="Descargas de apoyo"
             >
               <a
-                class="btn btn-primary"
-                href="assets/docs/instructivo-fit-gedyt.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Abrir instructivo oficial GEDYT en PDF (nueva pestaña)"
-              >
-                Instructivo oficial GEDYT (PDF)
-              </a>
-              <a
                 class="btn btn-secondary"
                 href="assets/img/instructivo-fit-gedyt.webp"
                 target="_blank"
@@ -583,43 +646,28 @@
               </a>
             </div>
 
-            <details class="kf-pdf-preview" id="kf-pdf-preview">
-              <summary>Vista previa del instructivo (PDF)</summary>
-              <div class="kf-pdf-preview__frame">
-                <iframe
-                  src="assets/docs/instructivo-fit-gedyt.pdf#view=FitH"
-                  title="Vista previa del instructivo oficial GEDYT"
-                  loading="lazy"
-                ></iframe>
-              </div>
-              <p class="kf-pdf-preview__fallback">
-                Si no ves la vista previa, abrilo directamente en
-                <a
-                  href="assets/docs/instructivo-fit-gedyt.pdf"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  nueva pestaña
-                </a>
-                .
-              </p>
-            </details>
-
             <div class="kf-results" aria-label="Comunicación de resultados FIT">
               <h3 class="kf-results__title">Resultados</h3>
-              <p>
-                Se informa al participante que el resultado del FIT se
-                comunicará durante la semana siguiente.
-              </p>
-              <p>
-                Si el resultado es positivo, el/la médico/a realizará la
-                devolución clínica y emitirá la derivación a colonoscopía según
-                protocolo.
-              </p>
-              <p>
-                Si es negativo, se comunica el resultado y se refuerza educación
-                breve.
-              </p>
+              <ul class="kf-results__list">
+                <li>
+                  <strong>Comunicación prevista:</strong> El laboratorio envía el
+                  informe de resultado FIT por correo electrónico al
+                  participante, y el Navegador también notifica el resultado por
+                  correo electrónico durante la semana siguiente.
+                </li>
+                <li>
+                  <strong>Si es positivo:</strong> El laboratorio envía el
+                  resultado positivo por correo electrónico; el Navegador
+                  notifica por correo al participante y activa la orientación
+                  según protocolo del programa.
+                </li>
+                <li>
+                  <strong>Si es negativo:</strong> El laboratorio envía el
+                  resultado negativo por correo electrónico; el Navegador
+                  notifica por correo al participante y refuerza educación
+                  breve.
+                </li>
+              </ul>
             </div>
           </article>
         </section>
