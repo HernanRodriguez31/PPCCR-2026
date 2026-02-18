@@ -1,6 +1,27 @@
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
+  const root = document.documentElement;
+  const header = document.querySelector(".roles-hero.site-header.site-topbar");
+
+  const syncHeaderHeight = () => {
+    if (!root || !header) return;
+    const headerHeight = Math.max(0, Math.round(header.getBoundingClientRect().height));
+    root.style.setProperty("--rr-fixed-header-h", `${headerHeight}px`);
+  };
+
+  if (header) {
+    syncHeaderHeight();
+    window.addEventListener("resize", syncHeaderHeight, { passive: true });
+    window.addEventListener("orientationchange", syncHeaderHeight, { passive: true });
+    window.addEventListener("load", syncHeaderHeight, { once: true });
+
+    if ("ResizeObserver" in window) {
+      const headerObserver = new ResizeObserver(() => syncHeaderHeight());
+      headerObserver.observe(header);
+    }
+  }
+
   const wrap = document.querySelector(".raci-tooltip-wrap");
   const trigger = document.getElementById("raci-info-trigger");
   const tooltip = document.getElementById("raci-tooltip");

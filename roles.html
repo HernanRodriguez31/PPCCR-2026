@@ -21,53 +21,116 @@
     <script src="mobile-shell.js" defer></script>
     <script src="auth-gate.js" defer></script>
   </head>
-  <body class="page-roles page-internal" id="top">
+  <body class="page-roles roles-page page-internal" id="top">
     <header class="roles-hero site-header site-topbar">
-      <div class="container roles-hero__inner">
-        <div class="roles-brand" aria-label="Programa PPCCR">
-          <img
-            class="roles-brand__logo"
-            src="assets/logo-cinta-azul.png"
-            alt="Cinta azul de concientización"
-            width="58"
-            height="58"
-            decoding="async"
-          />
-          <p class="roles-brand__title">
-            Programa de Prevención de Cáncer Colorrectal
-          </p>
+      <div class="topbar site-topbar__inner roles-topbar">
+        <div class="brand" aria-label="Identidad del programa">
+          <div class="brand-mark brand-mark--left">
+            <img
+              class="brand-ribbon"
+              src="assets/logo%20cinta%20azul.png"
+              alt="Listón azul de concientización"
+              decoding="async"
+            />
+          </div>
+          <div class="brand-copy">
+            <p class="brand-title roles-topbar__title">
+              Programa de Prevención de Cáncer Colorrectal
+            </p>
+          </div>
         </div>
+      </div>
 
-        <h1 class="roles-hero__title">Roles y responsabilidades</h1>
-        <p class="roles-hero__subtitle">
-          Operativo PPCCR 2026 — Estaciones Saludables (CABA)
-        </p>
-        <p class="roles-hero__meta">
-          Vigencia: 1 de marzo – 1 de abril. Alcance: desde entrevista de
-          inclusión hasta comunicación de resultado FIT y emisión de derivación.
-        </p>
+      <div class="logo-strip partners-bar" aria-label="Partners del programa">
+        <div class="container">
+          <div class="logo-strip__inner partners-strip partners-grid">
+            <span class="partner-logo partner-pill" data-partner="fep">
+              <img
+                src="assets/logo-fep.png?v=20260208"
+                alt="Fundación Enfermeros Protagonistas"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Fundación Enfermeros Protagonistas</span>
+            </span>
+            <span class="partner-logo partner-pill" data-partner="gedyt">
+              <img
+                src="assets/logo-gedyt.png"
+                alt="Fundación GEDyT"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Fundación GEDyT</span>
+            </span>
+            <span class="partner-logo partner-pill" data-partner="merck">
+              <img
+                src="assets/logo-merck.png"
+                alt="Merck Foundation"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Merck Foundation</span>
+            </span>
+            <span class="partner-logo partner-pill" data-partner="gcba">
+              <img
+                src="assets/logo-gcba.png"
+                alt="Gobierno de la Ciudad de Buenos Aires"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Gobierno de la Ciudad de Buenos Aires</span>
+            </span>
+          </div>
+        </div>
       </div>
     </header>
 
     <main id="roles-main" class="roles-main site-main">
       <div class="container">
+        <section class="roles-section roles-intro" aria-labelledby="roles-page-title">
+          <h1 class="roles-intro__title" id="roles-page-title">
+            Roles y responsabilidades
+          </h1>
+          <p class="roles-intro__subtitle">
+            Operativo PPCCR 2026 — Estaciones Saludables (CABA)
+          </p>
+          <p class="roles-intro__meta">
+            Vigencia: 1 de marzo – 1 de abril. Alcance: desde entrevista de salud
+            hasta comunicación del resultado FIT.
+          </p>
+        </section>
+
         <section class="roles-section" aria-labelledby="alcance-title">
           <article class="roles-panel">
             <h2 class="roles-panel__title" id="alcance-title">
               Alcance del operativo
             </h2>
             <ul class="roles-list">
-              <li>Entrevista de elegibilidad clínica.</li>
+              <li>
+                Entrevista de salud (tamizaje) realizada por Navegación/Enfermería
+                (Navigator).
+              </li>
               <li>Educación al participante y entrega de kit FIT.</li>
               <li>Recepción y registro de muestras.</li>
               <li>Entrega a logística/traslado con trazabilidad operativa.</li>
               <li>Recepción de resultados FIT por canal definido.</li>
-              <li>Comunicación del resultado al paciente por médico/a.</li>
+              <li>
+                Comunicación del resultado al participante por Navegación/Enfermería
+                (Navigator).
+              </li>
               <li>Registro de datos para métricas de gestión del operativo.</li>
             </ul>
             <p class="roles-outscope">
-              Fuera de alcance: coordinación con gastro/colonoscopía y
-              seguimiento posterior al cierre operativo.
+              Fuera de alcance: coordinación con gastroenterología y seguimiento
+              posterior al cierre operativo.
             </p>
           </article>
         </section>
@@ -81,93 +144,82 @@
             </p>
           </header>
 
-          <div class="roles-grid">
-            <article class="roles-card" aria-labelledby="rol-enfermeria-title">
+          <div class="roles-grid roles-grid--main">
+            <article class="roles-card" aria-labelledby="rol-navigator-title">
               <h3
                 class="roles-card__title section-header-blue"
-                id="rol-enfermeria-title"
+                id="rol-navigator-title"
               >
-                A) Enfermería / Navegación (Estación)
+                A) Navegación / Enfermería (Navigator) — Estación
               </h3>
               <p class="roles-purpose">
-                Propósito: ejecutar educación, trazabilidad y registro operativo
-                de kits y muestras en estación.
+                Propósito: realizar entrevista de salud (tamizaje), definir
+                conducta (criterio para FIT / sin criterio / riesgo elevado),
+                educar al participante y asegurar trazabilidad y registros
+                operativos de kits y muestras en estación.
               </p>
 
               <h4 class="roles-card__subtitle">Responsabilidades clave</h4>
               <ul class="roles-list">
                 <li>
-                  Educación al paciente sobre uso FIT, toma de muestra, rotulado,
-                  conservación, entrega y plazos.
+                  Entrevista de salud (tamizaje): inclusión/exclusión, criterios de
+                  tamizaje y clasificación de riesgo.
                 </li>
-                <li>Entrega de kit y registro de entrega.</li>
-                <li>Recepción de muestra con verificación básica y registro.</li>
+                <li>
+                  Definir conducta: criterio para FIT y continuidad con entrega de
+                  kit.
+                </li>
+                <li>
+                  Sin criterio por edad/seguimiento vigente: orientar a consulta
+                  con médico/a de cabecera.
+                </li>
+                <li>
+                  Riesgo elevado (antecedentes personales/familiares,
+                  signos/síntomas): orientar a consulta con médico/a de cabecera.
+                </li>
+                <li>
+                  Educación al participante sobre uso del FIT, toma de muestra,
+                  rotulado, conservación, plazos y canal de contacto.
+                </li>
+                <li>Entrega de kit FIT y registro de entrega.</li>
+                <li>
+                  Recepción de muestra con verificación de rotulado e integridad +
+                  registro.
+                </li>
                 <li>Custodia operativa de la muestra hasta su retiro.</li>
                 <li>
-                  Entrega a personal de traslado/laboratorio con registro de
-                  trazabilidad.
+                  Entrega a logística/traslado con registro de trazabilidad
+                  (cadena de custodia).
                 </li>
                 <li>
-                  Responder dudas operativas y escalar al médico cuando
-                  corresponda.
+                  Comunicación del resultado FIT (cuando aplique): informar
+                  negativo/positivo, reforzar prevención y recomendar consulta con
+                  médico/a de cabecera cuando corresponda.
                 </li>
+                <li>Escalar incidencias a Coordinación Operativa.</li>
               </ul>
 
               <h4 class="roles-card__subtitle">Registros mínimos obligatorios</h4>
               <ul class="roles-list">
-                <li>Identificador del paciente y fecha/hora de entrega de kit.</li>
-                <li>Fecha/hora de recepción de muestra.</li>
                 <li>
-                  Estado básico de muestra al recibir (rotulado/integridad).
-                </li>
-                <li>Fecha/hora y responsable de entrega a traslado.</li>
-              </ul>
-            </article>
-
-            <article class="roles-card" aria-labelledby="rol-medico-title">
-              <h3
-                class="roles-card__title section-header-blue"
-                id="rol-medico-title"
-              >
-                B) Médico/a (Estación)
-              </h3>
-              <p class="roles-purpose">
-                Propósito: determinar elegibilidad, resolver conducta clínica de
-                entrada y cerrar la comunicación del resultado FIT.
-              </p>
-
-              <h4 class="roles-card__subtitle">Responsabilidades clave</h4>
-              <ul class="roles-list">
-                <li>
-                  Entrevista clínica de inclusión/exclusión al programa
-                  dirigiendo al paciente a realizacion de Test FIT, derivacion a
-                  colonoscopia o sin criterios de inclusion al programa.
+                  Identificación del participante y fecha/hora de entrevista de
+                  salud.
                 </li>
                 <li>
-                  Definir candidato a FIT, derivación primaria por alto riesgo o
-                  no inclusión por seguimiento previo.
+                  Conducta definida (FIT / sin criterio / riesgo elevado) y
+                  observaciones relevantes.
                 </li>
+                <li>Fecha/hora de entrega de kit (si aplica).</li>
                 <li>
-                  Emitir orden/derivación correspondiente dentro del alcance del
-                  operativo.
+                  Fecha/hora de recepción de muestra y estado al recibir
+                  (rotulado/integridad).
                 </li>
-                <li>Recibir resultados FIT por el canal asignado.</li>
+                <li>Fecha/hora y responsable de entrega a traslado/laboratorio.</li>
                 <li>
-                  Comunicar resultado FIT negativo/positivo con explicación y
-                  contención clínica.
+                  Resultado FIT registrado (si aplica) y fecha/hora de
+                  comunicación al participante.
                 </li>
-                <li>
-                  Emitir derivación secundaria ante FIT positivo y dejar
-                  constancia.
-                </li>
-              </ul>
-
-              <h4 class="roles-card__subtitle">Registros mínimos obligatorios</h4>
-              <ul class="roles-list">
-                <li>Resultado de entrevista clínica y criterio aplicado.</li>
-                <li>Conducta definida (FIT, derivación primaria o no inclusión).</li>
-                <li>Resultado FIT comunicado y fecha/hora de devolución.</li>
-                <li>Derivación emitida cuando corresponda.</li>
+                <li>Incidencias / no conformidades.</li>
               </ul>
             </article>
 
@@ -176,20 +228,23 @@
                 class="roles-card__title section-header-blue"
                 id="rol-logistica-title"
               >
-                C) Logística / Traslado de muestras
+                B) Logística / Traslado de muestras
               </h3>
               <p class="roles-purpose">
-                Propósito: asegurar traslado oportuno y cadena de custodia
-                operativa de las muestras.
+                Propósito: asegurar traslado oportuno, trazabilidad y cadena de
+                custodia operativa de las muestras.
               </p>
               <ul class="roles-list">
-                <li>Retiro programado en estación según cronograma operativo.</li>
+                <li>Retiro programado de muestras en estación según cronograma.</li>
                 <li>
-                  Verificación de lote y documentación de cadena de custodia.
+                  Verificación de lote, integridad y documentación de cadena de
+                  custodia.
                 </li>
-                <li>Entrega a laboratorio y confirmación de recepción.</li>
                 <li>
-                  Registro y comunicación inmediata de incidentes operativos.
+                  Entrega a laboratorio y confirmación de recepción de muestras.
+                </li>
+                <li>
+                  Registro y comunicación inmediata de incidencias operativas.
                 </li>
               </ul>
             </article>
@@ -199,18 +254,19 @@
                 class="roles-card__title section-header-blue"
                 id="rol-coordinacion-title"
               >
-                D) Coordinación operativa
+                C) Coordinación operativa y gestión — Programa
               </h3>
               <p class="roles-purpose">
-                Propósito: garantizar estandarización, soporte y control de
-                calidad del operativo en estación.
+                Propósito: coordinar integralmente el programa, asegurar
+                estandarización, soporte operativo, control de calidad, gestión de
+                insumos/datos y cierre de métricas.
               </p>
               <ul class="roles-list">
-                <li>Capacitación de equipos y actualización de lineamientos.</li>
+                <li>Coordinación del cronograma y recursos operativos.</li>
                 <li>Gestión de stock de kits e insumos críticos.</li>
                 <li>Control de calidad de registros y completitud de datos.</li>
-                <li>Consolidación de métricas y reporte ejecutivo de cierre.</li>
-                <li>Soporte operativo en sitio ante desvíos o contingencias.</li>
+                <li>Consolidación de métricas y reporte ejecutivo.</li>
+                <li>Soporte en sitio ante contingencias.</li>
               </ul>
             </article>
           </div>
@@ -225,8 +281,8 @@
               <li class="roles-step">
                 <span class="roles-step__index" aria-hidden="true">1</span>
                 <p>
-                  <strong>Entrevista médica:</strong> decisión de FIT, derivación
-                  primaria o no inclusión.
+                  <strong>Entrevista de salud:</strong> definición de conducta
+                  (criterio para FIT / sin criterio / riesgo elevado).
                 </p>
               </li>
               <li class="roles-step">
@@ -253,8 +309,8 @@
               <li class="roles-step">
                 <span class="roles-step__index" aria-hidden="true">5</span>
                 <p>
-                  <strong>Resultado FIT y devolución médica:</strong> comunicación
-                  de resultado y derivación secundaria si corresponde.
+                  <strong>Resultado FIT:</strong> comunicación del resultado y
+                  recomendaciones al participante según corresponda.
                 </p>
               </li>
               <li class="roles-step">
@@ -341,20 +397,19 @@
               hidden
             >
               <p class="roles-raci-legend">
-                EN: Enfermería/Navegación | ME: Médico/a | LO: Logística | CO:
+                EN: Navegación/Enfermería (Navigator) | LO: Logística | CO:
                 Coordinación
               </p>
               <div class="roles-table-wrap">
                 <table class="roles-table">
                   <caption class="sr-only">
-                    Matriz RACI del operativo con roles EN, ME, LO y CO por
-                    tarea clave.
+                    Matriz RACI del operativo con roles EN, LO y CO por tarea
+                    clave.
                   </caption>
                   <thead>
                     <tr>
                       <th scope="col">Tarea clave</th>
                       <th scope="col">EN</th>
-                      <th scope="col">ME</th>
                       <th scope="col">LO</th>
                       <th scope="col">CO</th>
                     </tr>
@@ -362,7 +417,6 @@
                   <tbody>
                     <tr>
                       <th scope="row">Entrevista de inclusión/exclusión</th>
-                      <td><span class="raci-chip raci-chip--i">I</span></td>
                       <td>
                         <span class="raci-chip raci-chip--r">R</span>
                         <span class="raci-chip raci-chip--a">A</span>
@@ -376,7 +430,6 @@
                         <span class="raci-chip raci-chip--r">R</span>
                         <span class="raci-chip raci-chip--a">A</span>
                       </td>
-                      <td><span class="raci-chip raci-chip--c">C</span></td>
                       <td><span class="raci-chip raci-chip--i">I</span></td>
                       <td><span class="raci-chip raci-chip--i">I</span></td>
                     </tr>
@@ -386,14 +439,12 @@
                         <span class="raci-chip raci-chip--r">R</span>
                         <span class="raci-chip raci-chip--a">A</span>
                       </td>
-                      <td><span class="raci-chip raci-chip--i">I</span></td>
                       <td><span class="raci-chip raci-chip--c">C</span></td>
                       <td><span class="raci-chip raci-chip--i">I</span></td>
                     </tr>
                     <tr>
                       <th scope="row">Retiro y entrega a laboratorio</th>
                       <td><span class="raci-chip raci-chip--c">C</span></td>
-                      <td><span class="raci-chip raci-chip--i">I</span></td>
                       <td>
                         <span class="raci-chip raci-chip--r">R</span>
                         <span class="raci-chip raci-chip--a">A</span>
@@ -402,7 +453,6 @@
                     </tr>
                     <tr>
                       <th scope="row">Comunicación de resultado FIT</th>
-                      <td><span class="raci-chip raci-chip--i">I</span></td>
                       <td>
                         <span class="raci-chip raci-chip--r">R</span>
                         <span class="raci-chip raci-chip--a">A</span>
@@ -412,7 +462,6 @@
                     </tr>
                     <tr>
                       <th scope="row">Consolidación de métricas</th>
-                      <td><span class="raci-chip raci-chip--c">C</span></td>
                       <td><span class="raci-chip raci-chip--c">C</span></td>
                       <td><span class="raci-chip raci-chip--c">C</span></td>
                       <td>
@@ -516,6 +565,39 @@
 
     <footer class="site-footer" aria-label="Pie de página">
       <div class="container footer-grid">
+        <div class="footer-partners" aria-label="Partners del programa">
+          <p class="footer-title">Partners</p>
+          <div class="footer-logos">
+            <img
+              src="assets/logo-fep.png?v=20260208"
+              alt="Fundación Enfermeros Protagonistas"
+              loading="lazy"
+              decoding="async"
+              data-partner="fep"
+            />
+            <img
+              src="assets/logo-gedyt.png"
+              alt="Fundación GEDyT"
+              loading="lazy"
+              decoding="async"
+              data-partner="gedyt"
+            />
+            <img
+              src="assets/logo-merck.png"
+              alt="Merck Foundation"
+              loading="lazy"
+              decoding="async"
+              data-partner="merck"
+            />
+            <img
+              src="assets/logo-gcba.png"
+              alt="Gobierno de la Ciudad de Buenos Aires"
+              loading="lazy"
+              decoding="async"
+              data-partner="gcba"
+            />
+          </div>
+        </div>
         <p class="footer-meta">© PPCCR 2026 | © Derechos Reservados.</p>
       </div>
     </footer>
