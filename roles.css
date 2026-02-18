@@ -91,27 +91,44 @@ body.page-roles .roles-hero .partners-bar::before {
   letter-spacing: -0.012em;
 }
 
-.page-roles .roles-intro {
+.page-roles .roles-page-heading {
   margin-bottom: 12px;
 }
 
-.page-roles .roles-intro__title {
+.page-roles .roles-page-heading__bar {
+  width: 100%;
+  padding: 18px 22px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(20, 92, 155, 0.38);
+  background: linear-gradient(150deg, #1f6eb7, #145b9a);
+  box-shadow: 0 8px 18px rgba(9, 34, 65, 0.12);
+  display: grid;
+  place-items: center;
+}
+
+.page-roles .roles-page-heading__title {
   margin: 0;
-  font-size: clamp(1.98rem, 3.2vw, 2.44rem);
-  line-height: 1.15;
-  font-weight: 700;
-  color: var(--rr-brand-800);
+  color: #fff;
+  text-align: center;
+  font-size: clamp(1.62rem, 2.08vw, 2.02rem);
+  line-height: 1.12;
+  letter-spacing: -0.016em;
+  font-weight: 770;
+}
+
+.page-roles .roles-intro {
+  margin-bottom: 10px;
 }
 
 .page-roles .roles-intro__subtitle {
-  margin: 10px 0 0;
-  font-size: clamp(1.04rem, 1.45vw, 1.16rem);
+  margin: 0;
+  font-size: clamp(1rem, 1.2vw, 1.1rem);
   color: var(--rr-muted);
-  font-weight: 500;
+  font-weight: 560;
 }
 
 .page-roles .roles-intro__meta {
-  margin: 12px 0 0;
+  margin: 10px 0 0;
   padding: 12px 14px;
   border-radius: var(--rr-radius-md);
   border: 1px solid var(--rr-border);
@@ -126,6 +143,10 @@ body.page-roles .roles-hero .partners-bar::before {
 
 .page-roles .roles-section {
   margin-bottom: 18px;
+}
+
+.page-roles section[aria-labelledby="roles-title"] {
+  margin-bottom: 14px;
 }
 
 .page-roles .roles-panel,
@@ -147,11 +168,13 @@ body.page-roles .roles-hero .partners-bar::before {
 }
 
 .page-roles .section-title {
-  font-size: clamp(1.5rem, 2vw, 1.74rem);
+  font-size: clamp(1.42rem, 1.86vw, 1.62rem);
   font-weight: 600;
 }
 
 .page-roles .section-subtitle {
+  font-size: clamp(0.96rem, 1.05vw, 1.02rem);
+  line-height: 1.42;
   font-weight: 500;
 }
 
@@ -212,6 +235,33 @@ body.page-roles .roles-hero .partners-bar::before {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+}
+
+.page-roles .roles-grid--stack {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.page-roles .roles-grid--stack .roles-card {
+  padding-left: 26px;
+  padding-right: 26px;
+}
+
+.page-roles .roles-grid--stack .section-header-blue {
+  margin-bottom: 14px;
+}
+
+.page-roles .roles-grid--stack .roles-purpose {
+  margin-bottom: 14px;
+}
+
+.page-roles .roles-grid--stack .roles-card__subtitle {
+  margin-top: 16px;
+  margin-bottom: 9px;
+}
+
+.page-roles .roles-grid--stack .roles-list {
+  gap: 9px;
 }
 
 .page-roles .roles-steps {
@@ -626,11 +676,19 @@ body.page-roles .roles-hero .partners-bar::before {
   .page-roles .roles-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .page-roles .roles-grid--stack {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 980px) {
   .page-roles .roles-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .page-roles .roles-grid--stack {
+    grid-template-columns: 1fr;
   }
 
   .page-roles .roles-panel,
@@ -648,6 +706,10 @@ body.page-roles .roles-hero .partners-bar::before {
   .page-roles .roles-grid {
     grid-template-columns: 1fr;
   }
+
+  .page-roles .roles-grid--stack {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -655,8 +717,13 @@ body.page-roles .roles-hero .partners-bar::before {
     font-size: clamp(1.2rem, 4.8vw, 1.52rem);
   }
 
-  .page-roles .roles-intro__title {
-    font-size: clamp(1.62rem, 7vw, 2.06rem);
+  .page-roles .roles-page-heading__bar {
+    padding: 14px 14px 16px;
+    border-radius: 14px;
+  }
+
+  .page-roles .roles-page-heading__title {
+    font-size: clamp(1.48rem, 5.2vw, 1.9rem);
   }
 
   .page-roles .roles-panel,
@@ -692,6 +759,11 @@ body.page-roles .roles-hero .partners-bar::before {
 
   .page-roles .roles-actions .btn {
     width: 100%;
+  }
+
+  .page-roles .roles-grid--stack .roles-card {
+    padding-left: 18px;
+    padding-right: 18px;
   }
 }
 
