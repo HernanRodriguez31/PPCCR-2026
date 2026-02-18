@@ -177,7 +177,7 @@ const CONFIG = {
   timeline: {
     title: "Línea de tiempo operativa",
     subtitle:
-      "Resumen ejecutivo por etapas con foco en períodos críticos del despliegue qFIT.",
+      "Secuencia ejecutiva por etapas críticas del despliegue qFIT 2026.",
     phases: [
       {
         id: "etapa-1",
@@ -193,10 +193,10 @@ const CONFIG = {
           "Circuito de registro y derivación validado y comunicado.",
         ],
         details: [
-          "Capacitación técnica dictada por Fundación GEDyT para el personal de estaciones.",
-          "Cobertura de prevención general de cáncer colorrectal.",
-          "Práctica de uso operativo del test qFIT en terreno.",
-          "Alineamiento de roles, trazabilidad y criterios de derivación.",
+          "Capacitación técnica operativa para equipos de estación y referentes.",
+          "Cobertura del circuito preventivo y criterios de elegibilidad.",
+          "Práctica supervisada del uso operativo del test qFIT en terreno.",
+          "Alineamiento de roles, trazabilidad y circuito de derivación.",
         ],
       },
       {
@@ -214,10 +214,10 @@ const CONFIG = {
           "Webinars breves con Q&A para equipos y población objetivo.",
         ],
         details: [
-          "9 al 15 de marzo: campaña intensiva en redes (Fundación, LALCEC, Bienestar Ciudadano, Ministerio de Salud, AAOC y SAGE).",
-          "16 al 22 de marzo: educación presencial en estaciones, reparto de folletería y formularios digitales para personas interesadas.",
-          "Webinars Estaciones Saludables Clic: charlas de 35 minutos con Q&A por Zoom junto a especialista médico.",
-          "31 de marzo (Día Mundial del Cáncer de Colon): evento presencial en la estación de mayor concurrencia con charlas y actividades de prevención.",
+          "9 al 15 de marzo: campaña digital coordinada con aliados institucionales.",
+          "16 al 22 de marzo: acciones presenciales en estaciones con material impreso y digital.",
+          "Webinars de 35 minutos con Q&A para equipos y población objetivo.",
+          "31 de marzo: activación territorial por Día Mundial del Cáncer de Colon.",
         ],
       },
       {
@@ -235,11 +235,11 @@ const CONFIG = {
           "Consolidación de resultados y seguimiento según protocolo.",
         ],
         details: [
-          "Stock operativo: 300 qFIT para despliegue en estaciones de mayor concurrencia.",
+          "Stock operativo: 300 qFIT para estaciones priorizadas.",
           "Estaciones priorizadas: Parque Saavedra, Aristóbulo del Valle, Parque Rivadavia y Parque Chacabuco.",
-          "Entrega de kits: del lunes 23 al sábado 28 de marzo.",
-          "Recepción y devolución de muestras: del domingo 29 de marzo al miércoles 1 de abril.",
-          "Navegadores: 1 por estación para entrega, recepción y seguimiento virtual paralelo.",
+          "Entrega de kits: 23 al 28 de marzo.",
+          "Recepción y devolución de muestras: 29 de marzo al 1 de abril.",
+          "Dotación: 1 Navegador por estación para entrega, recepción y seguimiento.",
         ],
       },
     ],
@@ -1040,6 +1040,39 @@ function renderTimelinePlaceholder() {
 
   wrap.hidden = false;
 
+  function syncPhaseDetailsState(detailsEl) {
+    if (!(detailsEl instanceof HTMLDetailsElement)) return;
+    const summary = detailsEl.querySelector(".phase-details__summary");
+    if (!(summary instanceof HTMLElement)) return;
+
+    const isOpen = detailsEl.open;
+    const collapsedLabel = summary.dataset.labelCollapsed || "Ver detalle operativo";
+    const expandedLabel = summary.dataset.labelExpanded || "Ocultar detalle operativo";
+    summary.textContent = isOpen ? expandedLabel : collapsedLabel;
+    summary.setAttribute("aria-expanded", String(isOpen));
+
+    const phaseCard = detailsEl.closest(".phase-card");
+    if (phaseCard) phaseCard.classList.toggle("is-expanded", isOpen);
+  }
+
+  function bindTimelineAccordion(listEl) {
+    const detailBlocks = Array.from(listEl.querySelectorAll(".phase-details"));
+    if (detailBlocks.length === 0) return;
+
+    detailBlocks.forEach((detailsEl) => {
+      syncPhaseDetailsState(detailsEl);
+      detailsEl.addEventListener("toggle", () => {
+        if (detailsEl.open) {
+          detailBlocks.forEach((otherDetails) => {
+            if (otherDetails === detailsEl || !otherDetails.open) return;
+            otherDetails.open = false;
+          });
+        }
+        detailBlocks.forEach((detailBlock) => syncPhaseDetailsState(detailBlock));
+      });
+    });
+  }
+
   phases.forEach((phaseCfg, index) => {
     const item = document.createElement("li");
     item.className = "phase-card";
@@ -1105,7 +1138,10 @@ function renderTimelinePlaceholder() {
 
       const summary = document.createElement("summary");
       summary.className = "phase-details__summary";
-      summary.textContent = "Ver detalle operativo";
+      summary.dataset.labelCollapsed = "Ver detalle operativo";
+      summary.dataset.labelExpanded = "Ocultar detalle operativo";
+      summary.setAttribute("aria-expanded", "false");
+      summary.textContent = summary.dataset.labelCollapsed;
       details.appendChild(summary);
 
       const detailList = document.createElement("ul");
@@ -1118,11 +1154,14 @@ function renderTimelinePlaceholder() {
       });
 
       details.appendChild(detailList);
+      if (index === 0) details.open = true;
       item.appendChild(details);
     }
 
     list.appendChild(item);
   });
+
+  bindTimelineAccordion(list);
 }
 
 function renderEmbeds() {
