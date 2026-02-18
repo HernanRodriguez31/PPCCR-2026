@@ -28,50 +28,108 @@
   <body class="page-kit-fit page-entrega-muestras page-internal" id="top">
     <a class="kf-skip-link" href="#entrega-main">Saltar al contenido</a>
 
-    <header class="kf-hero site-header site-topbar">
-      <div class="container kf-hero__inner">
-        <div class="kf-brand" aria-label="Programa PPCCR">
-          <img
-            class="kf-brand__logo"
-            src="assets/logo-cinta-azul.png"
-            alt="Cinta azul de concientización"
-            width="58"
-            height="58"
-            decoding="async"
-          />
-          <p class="kf-brand__title">
-            Programa de Prevención de Cáncer Colorrectal
-          </p>
+    <header class="em-hero site-header site-topbar">
+      <div class="topbar site-topbar__inner em-topbar">
+        <div class="brand" aria-label="Identidad del programa">
+          <div class="brand-mark brand-mark--left">
+            <img
+              class="brand-ribbon"
+              src="assets/logo%20cinta%20azul.png"
+              alt="Listón azul de concientización"
+              decoding="async"
+            />
+          </div>
+          <div class="brand-copy">
+            <p class="brand-title em-topbar__title">
+              Programa de Prevención de Cáncer Colorrectal
+            </p>
+          </div>
         </div>
+      </div>
 
-        <h1 class="kf-hero__title">Entrega / Recepción de muestras FIT</h1>
-        <p class="kf-hero__subtitle">
-          Recepción en Estación Saludable: control, registro digital y
-          conservación en cadena de frío hasta retiro logístico.
-        </p>
-
-        <aside class="kf-note" role="note" aria-label="Alcance operativo">
-          <p>Vigencia: Operativo PPCCR 2026 – Estaciones Saludables (CABA).</p>
-          <p>
-            Alcance: recepción de muestra, control de rotulado e integridad,
-            verificación de cadena de frío, registro digital, almacenamiento en
-            heladera de estación y preparación para retiro por logística.
-          </p>
-          <p>
-            Nota: los resultados se procesan en laboratorio; el equipo informa
-            FIT la semana siguiente y, si es positivo, se emite derivación a
-            colonoscopía según protocolo.
-          </p>
-          <p>
-            Fuera de alcance: coordinación/seguimiento con
-            gastro/colonoscopía posterior a la derivación.
-          </p>
-        </aside>
+      <div class="logo-strip partners-bar" aria-label="Partners del programa">
+        <div class="container">
+          <div class="logo-strip__inner partners-strip partners-grid">
+            <span class="partner-logo partner-pill" data-partner="fep">
+              <img
+                src="assets/logo-fep.png?v=20260208"
+                alt="Fundación Enfermeros Protagonistas"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Fundación Enfermeros Protagonistas</span>
+            </span>
+            <span class="partner-logo partner-pill" data-partner="gedyt">
+              <img
+                src="assets/logo-gedyt.png"
+                alt="Fundación GEDyT"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Fundación GEDyT</span>
+            </span>
+            <span class="partner-logo partner-pill" data-partner="merck">
+              <img
+                src="assets/logo-merck.png"
+                alt="Merck Foundation"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Merck Foundation</span>
+            </span>
+            <span class="partner-logo partner-pill" data-partner="gcba">
+              <img
+                src="assets/logo-gcba.png"
+                alt="Gobierno de la Ciudad de Buenos Aires"
+                loading="eager"
+                decoding="async"
+                width="290"
+                height="110"
+              />
+              <span>Gobierno de la Ciudad de Buenos Aires</span>
+            </span>
+          </div>
+        </div>
       </div>
     </header>
 
     <main id="entrega-main" class="kf-main site-main">
       <div class="container">
+        <section class="em-page-heading kf-section" aria-labelledby="em-page-title">
+          <div class="em-page-heading__bar">
+            <h1 class="em-page-heading__title" id="em-page-title">
+              Entrega / Recepción de muestras FIT
+            </h1>
+          </div>
+          <p class="em-page-heading__subtitle">
+            Recepción en Estación Saludable: control, registro digital y
+            conservación en cadena de frío hasta retiro logístico.
+          </p>
+          <aside class="kf-note em-page-heading__meta" role="note" aria-label="Alcance operativo">
+            <p>Vigencia: Operativo PPCCR 2026 – Estaciones Saludables (CABA).</p>
+            <p>
+              Alcance: recepción de muestra, control de rotulado e integridad,
+              verificación de cadena de frío, registro digital, almacenamiento en
+              heladera de estación y preparación para retiro por logística.
+            </p>
+            <p>
+              Nota: los resultados FIT se reciben por el canal definido del
+              programa y son comunicados al participante por Navegador según
+              protocolo operativo.
+            </p>
+            <p>
+              Fuera de alcance: seguimiento especializado posterior a la
+              orientación para estudios complementarios.
+            </p>
+          </aside>
+        </section>
+
         <section class="kf-section" aria-labelledby="em-access-title">
           <article class="kf-panel">
             <header class="section-header kf-section-header">
@@ -248,7 +306,7 @@
                       type="button"
                       class="kf-info-btn"
                       id="em-role-legend-trigger"
-                      aria-label="Referencia de roles EN, LO, ME y CO"
+                      aria-label="Referencia de roles NAV, LO y CO"
                       aria-expanded="false"
                       aria-controls="em-role-legend-popover"
                     >
@@ -263,10 +321,9 @@
                     >
                       <p class="kf-role-popover__title">Referencia de roles</p>
                       <ul class="kf-role-popover__list">
-                        <li><strong>EN:</strong> Enfermería / Navigators</li>
-                        <li><strong>ME:</strong> Médico/a</li>
+                        <li><strong>NAV:</strong> Navegador</li>
                         <li><strong>LO:</strong> Logística</li>
-                        <li><strong>CO:</strong> Coordinación</li>
+                        <li><strong>CO:</strong> Coordinación operativa</li>
                       </ul>
                     </div>
                   </div>
@@ -316,7 +373,7 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                   </div>
                 </div>
               </article>
@@ -359,7 +416,7 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
                 </div>
@@ -407,7 +464,7 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
                 </div>
@@ -476,7 +533,7 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
                 </div>
@@ -518,7 +575,7 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                   </div>
                 </div>
               </article>
@@ -561,7 +618,7 @@
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Enfermería / Navegación">EN</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
                 </div>
@@ -666,7 +723,7 @@
                   >
                     <span class="kf-step__badge">Paso 9</span>
                     <span class="kf-step__title"
-                      >Resultado y comunicación al paciente</span
+                      >Resultado FIT y comunicación al participante</span
                     >
                     <span class="em-accordion__chevron" aria-hidden="true">
                       <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
@@ -688,15 +745,15 @@
                       la semana siguiente.
                     </li>
                     <li>
-                      Si es positivo: devolución clínica y derivación a
-                      colonoscopía según protocolo.
+                      Si es positivo: informar al participante y orientar según
+                      protocolo operativo del programa.
                     </li>
                     <li>
                       Si es negativo: comunicación de resultado y educación breve.
                     </li>
                   </ul>
                   <div class="kf-role-list" aria-label="Roles involucrados">
-                    <abbr title="Médico/a">ME</abbr>
+                    <abbr title="Navegador">NAV</abbr>
                     <abbr title="Coordinación">CO</abbr>
                   </div>
                 </div>
