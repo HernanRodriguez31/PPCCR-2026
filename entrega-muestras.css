@@ -90,20 +90,57 @@ body.page-entrega-muestras .em-hero .partners-bar::before {
 }
 
 .page-entrega-muestras .em-page-heading__subtitle {
-  margin: 10px 0 0;
+  max-width: 78ch;
+  margin: 14px auto 0;
   color: var(--kf-muted);
   font-size: clamp(1rem, 1.2vw, 1.1rem);
   line-height: 1.42;
   font-weight: 540;
+  text-align: center;
+  text-wrap: balance;
 }
 
 .page-entrega-muestras .em-page-heading__meta {
-  margin: 10px 0 0;
-  padding: 12px 14px;
-  border-radius: var(--kf-radius-md);
+  margin-top: 14px;
+  padding: 18px 20px 20px;
+  border-radius: 16px;
   border: 1px solid var(--kf-border);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: var(--kf-shadow-sm);
+}
+
+.page-entrega-muestras .em-meta-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.page-entrega-muestras .em-meta-item {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(20, 92, 155, 0.2);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  display: grid;
+  gap: 6px;
+}
+
+.page-entrega-muestras .em-meta-item__term {
+  margin: 0;
+  font-size: 0.83rem;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--kf-primary-900);
+}
+
+.page-entrega-muestras .em-meta-item__desc {
+  margin: 0;
+  font-size: clamp(0.98rem, 1.02vw, 1.03rem);
+  line-height: 1.5;
+  color: var(--kf-muted);
+  overflow-wrap: anywhere;
 }
 
 .page-entrega-muestras [id] {
@@ -504,6 +541,16 @@ body.page-entrega-muestras .em-hero .partners-bar::before {
   }
 }
 
+@media (max-width: 980px) {
+  .page-entrega-muestras .em-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-entrega-muestras .em-page-heading__meta {
+    padding: 14px 14px 16px;
+  }
+}
+
 @media (max-width: 900px) {
   .page-entrega-muestras .em-checklist-grid,
   .page-entrega-muestras .em-criteria-grid,
@@ -537,7 +584,13 @@ body.page-entrega-muestras .em-hero .partners-bar::before {
   }
 
   .page-entrega-muestras .em-page-heading__subtitle {
+    max-width: 34ch;
     margin-top: 8px;
+    font-size: clamp(0.98rem, 4.2vw, 1.06rem);
+  }
+
+  .page-entrega-muestras .em-meta-item {
+    padding: 12px 13px;
   }
 
   .page-entrega-muestras .em-critical-grid {
