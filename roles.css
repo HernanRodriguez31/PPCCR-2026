@@ -188,6 +188,33 @@ body.page-roles .roles-hero .partners-bar::before {
   font-size: clamp(1.12rem, 1.45vw, 1.22rem);
   line-height: 1.25;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.page-roles .roles-card__title-text {
+  min-width: 0;
+}
+
+.page-roles .roles-card__role-code {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 0.76rem;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .page-roles .roles-purpose {
@@ -764,6 +791,12 @@ body.page-roles .roles-hero .partners-bar::before {
   .page-roles .roles-grid--stack .roles-card {
     padding-left: 18px;
     padding-right: 18px;
+  }
+
+  .page-roles .roles-card__role-code {
+    min-width: 42px;
+    padding: 4px 8px;
+    font-size: 0.72rem;
   }
 }
 
