@@ -11213,3 +11213,69 @@ html.is-leaving body {
     transition: none !important;
   }
 }
+
+/* Auth Gate Layout Guard: centrar y mantener visible */
+#auth-gate.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  padding:
+    max(12px, env(safe-area-inset-top, 0px))
+    12px
+    max(12px, env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#auth-gate.auth-gate[hidden] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+#auth-gate.auth-gate .auth-card.pp-modal__card {
+  margin: 0;
+  align-self: center;
+  flex: 0 1 auto;
+  width: min(92vw, 560px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+}
+
+#auth-gate[data-mode="login"] .auth-card.pp-modal__card {
+  width: min(92vw, 520px);
+}
+
+#auth-gate[data-mode="station"] .auth-card.pp-modal__card {
+  width: min(92vw, 600px);
+}
+
+@supports not (height: 100dvh) {
+  #auth-gate.auth-gate {
+    height: 100vh;
+    min-height: 100vh;
+    max-height: 100vh;
+  }
+
+  #auth-gate.auth-gate .auth-card.pp-modal__card {
+    max-height: calc(100vh - 24px);
+  }
+}
+
+@media (max-width: 767.98px) {
+  #auth-gate.auth-gate .auth-card.pp-modal__card {
+    width: min(100vw - 12px, 520px);
+    max-height: calc(100dvh - 20px);
+  }
+}

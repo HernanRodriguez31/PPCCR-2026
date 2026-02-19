@@ -7,6 +7,7 @@
 (() => {
   const AUTH_MODAL_ID = "auth-gate";
   const AUTH_PASS = "marzo31";
+  const AUTH_GATE_BUILD = "2026-02-19-authfix2";
   const AUTH_CLOSE_CLASS = "auth-gate--closing";
   const AUTH_HIDING_CLASS = "is-hiding";
   const VIEWPORT_MQ = "(max-width: 767.98px)";
@@ -1042,19 +1043,52 @@
     syncPrimaryActionState();
   }
 
+  /**
+   * @returns {{id: string, name: string} | null}
+   */
+  function getSelectedStationFromDom() {
+    const gate = getGate();
+    if (!(gate instanceof HTMLElement)) return null;
+
+    const selected = gate.querySelector(
+      ".auth-station.is-selected, .auth-station[aria-pressed='true']",
+    );
+    if (!(selected instanceof HTMLElement)) return null;
+
+    const stationId = selected.dataset.stationId || selected.getAttribute("data-station-id") || "";
+    return resolveStation(stationId);
+  }
+
+  /**
+   * @returns {{id: string, name: string} | null}
+   */
+  function resolveCurrentStationSelection() {
+    const inMemory = resolveStation(selectedStationId);
+    if (inMemory) return inMemory;
+
+    const fromDom = getSelectedStationFromDom();
+    if (fromDom) {
+      selectedStationId = fromDom.id;
+      return fromDom;
+    }
+
+    return null;
+  }
+
   function syncPrimaryActionState() {
-    const { input, enterBtn } = getAuthControls();
+    const { enterBtn } = getAuthControls();
     if (!enterBtn) return;
 
-    const hasStation = Boolean(selectedStationId);
+    const hasStation = Boolean(resolveCurrentStationSelection());
 
     if (gateMode === "switch") {
       enterBtn.disabled = !hasStation || isAuthenticating;
       return;
     }
 
-    const hasPassword = input ? input.value.trim().length > 0 : false;
-    enterBtn.disabled = !(hasStation && hasPassword) || isAuthenticating;
+    // Mantiene el flujo disponible aunque el navegador/autofill no dispare `input`.
+    // La validación real de clave ocurre en trySubmitGate().
+    enterBtn.disabled = !hasStation || isAuthenticating;
   }
 
   function resetAuthFormState() {
@@ -1201,10 +1235,17 @@
     configureGateMode(mode);
 
     gate.hidden = false;
-    gate.style.display = "grid";
+    gate.style.removeProperty("display");
     gate.classList.remove(AUTH_CLOSE_CLASS, AUTH_HIDING_CLASS);
     gate.setAttribute("aria-hidden", "false");
     lockBody();
+
+    gate.scrollTop = 0;
+    const card = gate.querySelector(".auth-card.pp-modal__card");
+    if (card instanceof HTMLElement) {
+      card.scrollTop = 0;
+    }
+    syncPrimaryActionState();
 
     const selected = gate.querySelector(".auth-station.is-selected");
     const firstStation = gate.querySelector(".auth-station");
@@ -1216,7 +1257,13 @@
           : null;
 
     if (focusTarget) {
-      window.requestAnimationFrame(() => focusTarget.focus());
+      window.requestAnimationFrame(() => {
+        try {
+          focusTarget.focus({ preventScroll: true });
+        } catch {
+          focusTarget.focus();
+        }
+      });
     }
   }
 
@@ -1231,7 +1278,7 @@
     gate.classList.remove(AUTH_CLOSE_CLASS, AUTH_HIDING_CLASS);
     gate.setAttribute("aria-hidden", "true");
     gate.hidden = true;
-    gate.style.display = "none";
+    gate.style.setProperty("display", "none", "important");
     unlockBody();
   }
 
@@ -1251,7 +1298,7 @@
 
     window.setTimeout(() => {
       gate.hidden = true;
-      gate.style.display = "none";
+      gate.style.setProperty("display", "none", "important");
       gate.dataset.mode = "login";
       gate.classList.remove(AUTH_CLOSE_CLASS, AUTH_HIDING_CLASS);
       done();
@@ -1293,7 +1340,7 @@
   function trySubmitGate() {
     if (isAuthenticating) return;
 
-    const station = resolveStation(selectedStationId);
+    const station = resolveCurrentStationSelection();
     if (!station) {
       const { stations, grid } = getAuthControls();
       if (grid) grid.classList.add("is-error");
@@ -1305,14 +1352,30 @@
     }
 
     if (gateMode === "switch") {
-      completeGateFlow(station);
+      try {
+        completeGateFlow(station);
+      } catch (error) {
+        console.error("[auth-gate] Error aplicando cambio de estación", error);
+        isAuthenticating = false;
+        setFieldHelp(`Estación seleccionada: ${station.name}`);
+        syncPrimaryActionState();
+      }
       return;
     }
 
     const { input, enterBtn, toggleBtn } = getAuthControls();
     if (!input || !enterBtn || !toggleBtn) return;
 
-    const passOK = normalizePass(input.value) === AUTH_PASS;
+    const normalizedPass = normalizePass(input.value);
+    if (!normalizedPass) {
+      showAuthError("Ingresá la clave institucional.");
+      setFieldHelp(`Estación seleccionada: ${station.name}`);
+      input.focus();
+      syncPrimaryActionState();
+      return;
+    }
+
+    const passOK = normalizedPass === AUTH_PASS;
 
     if (passOK) {
       isAuthenticating = true;
@@ -1320,7 +1383,18 @@
       enterBtn.disabled = true;
       toggleBtn.disabled = true;
       clearAuthError();
-      completeGateFlow(station);
+      try {
+        completeGateFlow(station);
+      } catch (error) {
+        console.error("[auth-gate] Error completando ingreso", error);
+        isAuthenticating = false;
+        input.disabled = false;
+        toggleBtn.disabled = false;
+        showAuthError("No se pudo completar el ingreso. Reintentá.");
+        setFieldHelp(`Estación seleccionada: ${station.name}`);
+        syncPrimaryActionState();
+        input.focus();
+      }
       return;
     }
 
@@ -1392,6 +1466,12 @@
         if (station) setFieldHelp(`Estación seleccionada: ${station.name}`);
       }
       syncPrimaryActionState();
+    });
+
+    input.addEventListener("change", syncPrimaryActionState);
+    input.addEventListener("keyup", syncPrimaryActionState);
+    input.addEventListener("paste", () => {
+      window.setTimeout(syncPrimaryActionState, 0);
     });
 
     input.addEventListener("keydown", (event) => {
@@ -1525,6 +1605,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     try {
+      console.info("[auth-gate] build:", AUTH_GATE_BUILD);
       authMq = window.matchMedia(VIEWPORT_MQ);
       viewportChangeHandler = () => {
         const station = getStoredStation();
