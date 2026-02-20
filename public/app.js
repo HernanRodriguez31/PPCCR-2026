@@ -266,6 +266,7 @@ let stationBridgeLastSignature = "";
 
 const ALGORITHM_HOME = {
   minAge: 45,
+  maxAge: 75,
   steps: Object.freeze({
     AGE: 1,
     VIGILANCE: 2,
@@ -295,9 +296,10 @@ const HOME_ALGO_OUTCOME = Object.freeze({
 const PROGRAM_CONFIG_DEFAULT = Object.freeze({
   algorithm: Object.freeze({
     minAge: 45,
+    maxAge: 75,
     texts: Object.freeze({
-      ageExcludedOutcome: "No incluye (<{minAge})",
-      ageExcludedReason: "Motivo de cierre: edad {age} (<{minAge}).",
+      ageExcludedOutcome: "No incluye (fuera de {minAge}-{maxAge})",
+      ageExcludedReason: "Motivo de cierre: edad {age} fuera de rango ({minAge}-{maxAge}).",
     }),
   }),
 });
@@ -305,6 +307,7 @@ const PROGRAM_CONFIG_DEFAULT = Object.freeze({
 let programRuntimeConfig = {
   algorithm: {
     minAge: PROGRAM_CONFIG_DEFAULT.algorithm.minAge,
+    maxAge: PROGRAM_CONFIG_DEFAULT.algorithm.maxAge,
     texts: {
       ageExcludedOutcome: PROGRAM_CONFIG_DEFAULT.algorithm.texts.ageExcludedOutcome,
       ageExcludedReason: PROGRAM_CONFIG_DEFAULT.algorithm.texts.ageExcludedReason,
@@ -1445,9 +1448,9 @@ function getHomeAlgoService() {
 function isHomeAlgorithmIncludedByAge(age) {
   const service = getHomeAlgoService();
   if (service?.isIncludedByAge) {
-    return service.isIncludedByAge(age, getAlgorithmMinAge());
+    return service.isIncludedByAge(age, getAlgorithmMinAge(), getAlgorithmMaxAge());
   }
-  return Number.isFinite(age) && age >= getAlgorithmMinAge();
+  return Number.isFinite(age) && age >= getAlgorithmMinAge() && age <= getAlgorithmMaxAge();
 }
 
 function sanitizeHomeAlgorithmCodeList(value) {
@@ -1503,6 +1506,7 @@ function normalizeHomeAlgorithmInterview(rawInterview, stationDetail = {}) {
   if (service?.normalizeStep1Input) {
     normalized.step1 = service.normalizeStep1Input(source?.step1, {
       minAge: getAlgorithmMinAge(),
+      maxAge: getAlgorithmMaxAge(),
       allowedSex: [HOME_ALGO_SEX.MALE, HOME_ALGO_SEX.FEMALE, HOME_ALGO_SEX.OTHER],
       otherSex: HOME_ALGO_SEX.OTHER,
     });
@@ -1806,6 +1810,14 @@ function resolveProgramMinAge(value, fallback = PROGRAM_CONFIG_DEFAULT.algorithm
   return { value: parsed, valid: true };
 }
 
+function resolveProgramMaxAge(value, fallback = PROGRAM_CONFIG_DEFAULT.algorithm.maxAge) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 120) {
+    return { value: fallback, valid: false };
+  }
+  return { value: parsed, valid: true };
+}
+
 function resolveProgramText(value, fallback) {
   const text = String(value ?? "").trim();
   return text || fallback;
@@ -1822,10 +1834,22 @@ function getAlgorithmMinAge() {
   return resolveProgramMinAge(ALGORITHM_HOME.minAge).value;
 }
 
+function getAlgorithmMaxAge() {
+  const minAge = getAlgorithmMinAge();
+  const fallbackMaxAge = Math.max(PROGRAM_CONFIG_DEFAULT.algorithm.maxAge, minAge);
+  const resolvedMax = resolveProgramMaxAge(ALGORITHM_HOME.maxAge, fallbackMaxAge).value;
+  return resolvedMax >= minAge ? resolvedMax : minAge;
+}
+
+function getAlgorithmAgeRangeText() {
+  return `${getAlgorithmMinAge()}-${getAlgorithmMaxAge()}`;
+}
+
 function getAgeExcludedOutcomeText() {
   const template = programRuntimeConfig.algorithm.texts.ageExcludedOutcome;
   return formatProgramConfigText(template, {
     minAge: getAlgorithmMinAge(),
+    maxAge: getAlgorithmMaxAge(),
   });
 }
 
@@ -1834,17 +1858,22 @@ function buildAgeExcludedReason(age) {
   return formatProgramConfigText(template, {
     age: Number.isFinite(age) ? age : "-",
     minAge: getAlgorithmMinAge(),
+    maxAge: getAlgorithmMaxAge(),
   });
 }
 
 function applyProgramRuntimeConfig(rawConfig) {
   const minAge = resolveProgramMinAge(rawConfig?.algorithm?.minAge);
+  const maxAge = resolveProgramMaxAge(rawConfig?.algorithm?.maxAge);
+  const hasValidRange = maxAge.value >= minAge.value;
+  const effectiveMaxAge = hasValidRange ? maxAge.value : minAge.value;
   const rawTexts = rawConfig?.algorithm?.texts;
   const hasTextObject = rawTexts && typeof rawTexts === "object";
 
   programRuntimeConfig = {
     algorithm: {
       minAge: minAge.value,
+      maxAge: effectiveMaxAge,
       texts: {
         ageExcludedOutcome: resolveProgramText(
           hasTextObject ? rawTexts.ageExcludedOutcome : "",
@@ -1859,7 +1888,12 @@ function applyProgramRuntimeConfig(rawConfig) {
   };
 
   ALGORITHM_HOME.minAge = minAge.value;
-  return minAge;
+  ALGORITHM_HOME.maxAge = effectiveMaxAge;
+  return {
+    minAge: { value: minAge.value, valid: minAge.valid },
+    maxAge: { value: effectiveMaxAge, valid: maxAge.valid && hasValidRange },
+    validRange: minAge.valid && maxAge.valid && hasValidRange,
+  };
 }
 
 async function loadProgramConfigOnInit() {
@@ -1872,20 +1906,22 @@ async function loadProgramConfigOnInit() {
     }
 
     const config = await response.json();
-    const minAge = applyProgramRuntimeConfig(config);
+    const configResult = applyProgramRuntimeConfig(config);
 
-    if (!minAge.valid) {
+    if (!configResult.validRange) {
       console.warn(
-        `[app-config] minAge inválido en ${configUrl}. Se usa default ${PROGRAM_CONFIG_DEFAULT.algorithm.minAge}.`,
+        `[app-config] rango de edad inválido en ${configUrl}. Se usan defaults ${PROGRAM_CONFIG_DEFAULT.algorithm.minAge}-${PROGRAM_CONFIG_DEFAULT.algorithm.maxAge}.`,
       );
       return;
     }
 
-    console.info(`[app-config] Config cargada. minAge=${getAlgorithmMinAge()}.`);
+    console.info(
+      `[app-config] Config cargada. rangoEdad=${getAlgorithmMinAge()}-${getAlgorithmMaxAge()}.`,
+    );
   } catch (error) {
     applyProgramRuntimeConfig(null);
     console.warn(
-      `[app-config] No se pudo cargar ${configUrl}. Se usa default ${PROGRAM_CONFIG_DEFAULT.algorithm.minAge}.`,
+      `[app-config] No se pudo cargar ${configUrl}. Se usa default ${PROGRAM_CONFIG_DEFAULT.algorithm.minAge}-${PROGRAM_CONFIG_DEFAULT.algorithm.maxAge}.`,
       error,
     );
   }
@@ -2511,7 +2547,7 @@ function renderHomeAlgorithmStep1State() {
     homeAlgorithmState.step1Continue.hidden = false;
     setHomeAlgorithmFeedback(
       homeAlgorithmState.step1Feedback,
-      "Cumple criterio por edad. Podés continuar al Paso 2.",
+      `Cumple criterio por edad (${getAlgorithmAgeRangeText()}). Podés continuar al Paso 2.`,
       "success",
     );
     return;
@@ -2521,7 +2557,7 @@ function renderHomeAlgorithmStep1State() {
   homeAlgorithmState.step1Finish.hidden = false;
   setHomeAlgorithmFeedback(
     homeAlgorithmState.step1Feedback,
-    "No incluye por edad. Podés editar o finalizar entrevista.",
+    `No incluye por edad (fuera de ${getAlgorithmAgeRangeText()}). Podés editar o finalizar entrevista.`,
     "danger",
   );
 }

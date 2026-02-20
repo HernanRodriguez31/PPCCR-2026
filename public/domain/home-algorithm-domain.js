@@ -14,7 +14,7 @@
   });
 
   const OUTCOME_LABELS = Object.freeze({
-    [OUTCOME.AGE_EXCLUDED]: "No incluye (<{minAge})",
+    [OUTCOME.AGE_EXCLUDED]: "No incluye (fuera de {minAge}-{maxAge})",
     [OUTCOME.ACTIVE_SURVEILLANCE_EXCLUDED]:
       "Seguimiento vigente. No se considera candidato a campaña de screening poblacional. En estos casos la recomendación es que la persona realice una consulta médica. No entregar FIT.",
     [OUTCOME.HIGH_RISK_REFERRAL]:
@@ -52,11 +52,17 @@
     return { valid, value: valid ? normalized : "" };
   }
 
-  function computeAgeInclusion(age, minAge) {
-    return Number.isFinite(age) && Number.isFinite(minAge) && age >= minAge;
+  function computeAgeInclusion(age, minAge, maxAge) {
+    return (
+      Number.isFinite(age) &&
+      Number.isFinite(minAge) &&
+      Number.isFinite(maxAge) &&
+      age >= minAge &&
+      age <= maxAge
+    );
   }
 
-  function normalizeStep1Input(step1, { minAge, allowedSex = [], otherSex = "OTRO" } = {}) {
+  function normalizeStep1Input(step1, { minAge, maxAge, allowedSex = [], otherSex = "OTRO" } = {}) {
     const source = step1 && typeof step1 === "object" ? step1 : {};
     const normalizedAge = normalizeAge(source.age);
     const normalizedSex = normalizeSex(source.sex, { allowed: allowedSex });
@@ -64,7 +70,7 @@
     const includedByAge =
       typeof source.includedByAge === "boolean"
         ? source.includedByAge
-        : computeAgeInclusion(normalizedAge.value, minAge);
+        : computeAgeInclusion(normalizedAge.value, minAge, maxAge);
 
     return {
       age: normalizedAge.value,

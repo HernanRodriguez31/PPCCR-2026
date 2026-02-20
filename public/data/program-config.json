@@ -1,9 +1,10 @@
 {
   "algorithm": {
     "minAge": 45,
+    "maxAge": 75,
     "texts": {
-      "ageExcludedOutcome": "No incluye (<{minAge})",
-      "ageExcludedReason": "Motivo de cierre: edad {age} (<{minAge})."
+      "ageExcludedOutcome": "No incluye (fuera de {minAge}-{maxAge})",
+      "ageExcludedReason": "Motivo de cierre: edad {age} fuera de rango ({minAge}-{maxAge})."
     }
   }
 }

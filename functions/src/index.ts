@@ -13,6 +13,10 @@ const STAGE1_MIN_AGE_DEFAULT = 45;
 const STAGE1_MIN_AGE_PARAM = defineString("PPCCR_STAGE1_MIN_AGE", {
   default: String(STAGE1_MIN_AGE_DEFAULT),
 });
+const STAGE1_MAX_AGE_DEFAULT = 75;
+const STAGE1_MAX_AGE_PARAM = defineString("PPCCR_STAGE1_MAX_AGE", {
+  default: String(STAGE1_MAX_AGE_DEFAULT),
+});
 const PARTICIPANT_SEQUENCE_PADDING = 6;
 const FIRESTORE_COUNTERS_COLLECTION = "ppccr_stage1_counters";
 const FIRESTORE_RECORDS_COLLECTION = "ppccr_stage1_records";
@@ -79,6 +83,8 @@ type Stage1RecordBase = {
   clientParticipantId?: string;
   sex: string;
   age: number;
+  criterionMinAge: number;
+  criterionMaxAge: number;
   criterionAge: number;
   ageMeetsInclusion: boolean;
   outcome: string;
@@ -177,28 +183,45 @@ const STATION_INDEX = (() => {
 })();
 
 const ALLOWED_STATIONS_TEXT = STATIONS.map((station) => station.stationName).join(", ");
-let lastLoggedStage1MinAgeSignature = "";
+let lastLoggedStage1AgeRangeSignature = "";
 
-function getStage1MinAge(): number {
-  const raw = String(STAGE1_MIN_AGE_PARAM.value() || "").trim();
+function parseStage1AgeValue(raw: string, fallback: number): { value: number; valid: boolean } {
   const parsed = Number.parseInt(raw, 10);
-  const valid = Number.isFinite(parsed) && parsed >= 0 && parsed <= 120;
-  const effective = valid ? parsed : STAGE1_MIN_AGE_DEFAULT;
-  const signature = `${raw}|${effective}|${valid ? "ok" : "fallback"}`;
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 120) {
+    return { value: fallback, valid: false };
+  }
+  return { value: parsed, valid: true };
+}
 
-  if (signature !== lastLoggedStage1MinAgeSignature) {
-    if (valid) {
-      logger.info("PPCCR_STAGE1_MIN_AGE efectivo.", { minAge: effective });
+function getStage1AgeRange(): { minAge: number; maxAge: number } {
+  const raw = String(STAGE1_MIN_AGE_PARAM.value() || "").trim();
+  const rawMax = String(STAGE1_MAX_AGE_PARAM.value() || "").trim();
+
+  const minParsed = parseStage1AgeValue(raw, STAGE1_MIN_AGE_DEFAULT);
+  const maxParsed = parseStage1AgeValue(rawMax, STAGE1_MAX_AGE_DEFAULT);
+
+  const minAge = minParsed.value;
+  const maxAge = maxParsed.value >= minAge ? maxParsed.value : minAge;
+  const validRange = minParsed.valid && maxParsed.valid && maxParsed.value >= minAge;
+  const signature = `${raw}|${minAge}|${minParsed.valid ? "ok" : "fallback"}|${rawMax}|${maxAge}|${validRange ? "ok" : "adjusted"}`;
+
+  if (signature !== lastLoggedStage1AgeRangeSignature) {
+    if (validRange) {
+      logger.info("PPCCR_STAGE1_AGE_RANGE efectivo.", { minAge, maxAge });
     } else {
-      logger.warn("PPCCR_STAGE1_MIN_AGE inválido. Se usa default.", {
-        provided: raw || null,
-        fallback: STAGE1_MIN_AGE_DEFAULT,
+      logger.warn("PPCCR_STAGE1_AGE_RANGE inválido. Se usan valores efectivos.", {
+        providedMinAge: raw || null,
+        providedMaxAge: rawMax || null,
+        fallbackMinAge: STAGE1_MIN_AGE_DEFAULT,
+        fallbackMaxAge: STAGE1_MAX_AGE_DEFAULT,
+        effectiveMinAge: minAge,
+        effectiveMaxAge: maxAge,
       });
     }
-    lastLoggedStage1MinAgeSignature = signature;
+    lastLoggedStage1AgeRangeSignature = signature;
   }
 
-  return effective;
+  return { minAge, maxAge };
 }
 
 function normalizeStation(value: unknown): NormalizedStation | null {
@@ -801,9 +824,20 @@ function buildRecordForSheet(
   const ageRaw = Number.parseInt(String(data.age ?? "").trim(), 10);
   const age = Number.isFinite(ageRaw) ? ageRaw : Number.NaN;
 
-  const stage1MinAge = getStage1MinAge();
-  const criterionRaw = Number.parseInt(String(data.criterionAge ?? stage1MinAge).trim(), 10);
-  const criterionAge = Number.isFinite(criterionRaw) ? criterionRaw : stage1MinAge;
+  const stage1AgeRange = getStage1AgeRange();
+  const criterionMinRaw = Number.parseInt(
+    String(data.criterionMinAge ?? data.criterionAge ?? stage1AgeRange.minAge).trim(),
+    10,
+  );
+  const criterionMinAge = Number.isFinite(criterionMinRaw) ? criterionMinRaw : stage1AgeRange.minAge;
+  const criterionMaxRaw = Number.parseInt(
+    String(data.criterionMaxAge ?? stage1AgeRange.maxAge).trim(),
+    10,
+  );
+  const criterionMaxAgeParsed = Number.isFinite(criterionMaxRaw) ? criterionMaxRaw : stage1AgeRange.maxAge;
+  const criterionMaxAge =
+    criterionMaxAgeParsed >= criterionMinAge ? criterionMaxAgeParsed : criterionMinAge;
+  const criterionAge = criterionMinAge;
 
   const sex = normalizeSex(data.sex) || String(data.sex || "").trim().toUpperCase();
   if (!sex) {
@@ -814,7 +848,7 @@ function buildRecordForSheet(
     typeof data.ageMeetsInclusion === "boolean"
       ? data.ageMeetsInclusion
       : Number.isFinite(age)
-        ? age >= criterionAge
+        ? age >= criterionMinAge && age <= criterionMaxAge
         : false;
 
   const outcome =
@@ -851,6 +885,8 @@ function buildRecordForSheet(
     stationCode,
     sex,
     age,
+    criterionMinAge,
+    criterionMaxAge,
     criterionAge,
     ageMeetsInclusion,
     outcome,
@@ -979,11 +1015,18 @@ export const submitAlgorithmStage1 = onRequest(
       minute: "2-digit",
       hour12: false,
     }).replace(",", "");
-    const stage1MinAge = getStage1MinAge();
-    const ageMeetsInclusion = age >= stage1MinAge;
+    const stage1AgeRange = getStage1AgeRange();
+    const stage1MinAge = stage1AgeRange.minAge;
+    const stage1MaxAge = stage1AgeRange.maxAge;
+    const ageMeetsInclusion = age >= stage1MinAge && age <= stage1MaxAge;
     const outcome = finalResult || (ageMeetsInclusion ? "cumple_criterio_edad" : "sin_criterio_inclusion_edad");
+    const ageRangeText = `${stage1MinAge}-${stage1MaxAge}`;
 
-    const step1Result = step1ResultInput || (ageMeetsInclusion ? "Cumple criterio por edad" : "No incluye por edad");
+    const step1Result =
+      step1ResultInput ||
+      (ageMeetsInclusion
+        ? `Cumple criterio por edad (${ageRangeText})`
+        : `No incluye por edad (${ageRangeText})`);
 
     const step2Details = step2Data ? String(step2Data.details || "").trim() : "";
     const step3Details = step3Data ? String(step3Data.details || "").trim() : "";
@@ -1023,6 +1066,8 @@ export const submitAlgorithmStage1 = onRequest(
       clientParticipantId: participantId,
       sex,
       age,
+      criterionMinAge: stage1MinAge,
+      criterionMaxAge: stage1MaxAge,
       criterionAge: stage1MinAge,
       ageMeetsInclusion,
       outcome,
