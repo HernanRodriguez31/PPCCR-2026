@@ -283,8 +283,9 @@ const ALGORITHM_HOME = {
 
 const HOME_ALGO_STORAGE_KEY = "ppccr_home_algorithm_interview_v1";
 const HOME_ALGO_PARTICIPANT_COUNTER_KEY = "ppccr_home_algorithm_counter_v1";
-const HOME_ALGO_STAGE1_SUBMIT_URL =
-  "https://us-central1-ppccr-2026.cloudfunctions.net/submitAlgorithmStage1";
+const HOME_ALGO_STAGE1_LOCAL_EMULATOR_URL =
+  "http://127.0.0.1:5001/ppccr-2026/us-central1/submitAlgorithmStage1";
+const HOME_ALGO_LOCAL_HOSTNAMES = Object.freeze(new Set(["localhost", "127.0.0.1", "[::1]"]));
 
 const HOME_ALGO_OUTCOME = Object.freeze({
   AGE_EXCLUDED: "AGE_EXCLUDED",
@@ -423,6 +424,45 @@ function isInternalPage(url) {
     normalized.startsWith("../") ||
     /^[\w-]+\.html(?:[?#].*)?$/.test(normalized)
   );
+}
+
+function isLocalHostRuntime() {
+  const hostname = String(window.location?.hostname || "").trim().toLowerCase();
+  return HOME_ALGO_LOCAL_HOSTNAMES.has(hostname);
+}
+
+function resolveStage1SubmitEndpoints() {
+  const primary = String(CONFIG?.integrations?.algorithmStage1Endpoint || "").trim();
+  const fallback = String(CONFIG?.integrations?.algorithmStage1FallbackEndpoint || "").trim();
+  const endpoints = [];
+  const isLocalRuntime = isLocalHostRuntime();
+  const isHttpsRuntime = String(window.location?.protocol || "").toLowerCase() === "https:";
+
+  const pushEndpoint = (candidate) => {
+    const endpoint = String(candidate || "").trim();
+    if (!endpoint || endpoints.includes(endpoint)) return;
+    endpoints.push(endpoint);
+  };
+
+  if (isLocalRuntime) {
+    pushEndpoint(primary);
+
+    if (!isHttpsRuntime) {
+      pushEndpoint(HOME_ALGO_STAGE1_LOCAL_EMULATOR_URL);
+    } else {
+      console.info(
+        "ℹ️ Local HTTPS detectado: se omite endpoint HTTP de Functions Emulator para evitar mixed-content.",
+      );
+    }
+
+    pushEndpoint(fallback);
+    return endpoints;
+  }
+
+  pushEndpoint(primary);
+  pushEndpoint(fallback);
+
+  return endpoints;
 }
 
 function safeSetLink(anchorEl, url, { newTab = false } = {}) {
@@ -3131,48 +3171,109 @@ async function saveHomeAlgorithmInterview(finalResult) {
     step4: step4Payload,
   };
 
-  console.log("🟡 Enviando entrevista final:", payload);
-
-  try {
-    const response = await fetch(HOME_ALGO_STAGE1_SUBMIT_URL, {
-      method: "POST",
-      mode: "cors",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const rawBody = await response.text();
-    let parsedBody = rawBody;
-    try {
-      parsedBody = rawBody ? JSON.parse(rawBody) : {};
-    } catch (_error) {
-      parsedBody = rawBody;
-    }
-
-    console.log("🟢 Respuesta guardado final:", {
-      ok: response.ok,
-      status: response.status,
-      body: parsedBody,
-    });
-
-    if (!response.ok) {
-      const message =
-        (parsedBody && typeof parsedBody === "object" && parsedBody.message) ||
-        `HTTP ${response.status}`;
-      interviewState.status = "error";
-      return { ok: false, error: new Error(String(message)) };
-    }
-
-    interviewState.status = "saved";
-    return { ok: true, body: parsedBody };
-  } catch (error) {
+  const endpoints = resolveStage1SubmitEndpoints();
+  if (endpoints.length === 0) {
     interviewState.status = "error";
-    console.error("❌ Error guardando entrevista final:", error);
-    return { ok: false, error };
+    return {
+      ok: false,
+      error: new Error(
+        "No hay endpoint configurado para submitAlgorithmStage1. Revisá CONFIG.integrations.",
+      ),
+    };
   }
+
+  let lastError = null;
+
+  for (let index = 0; index < endpoints.length; index += 1) {
+    const endpoint = endpoints[index];
+    const hasMoreEndpoints = index < endpoints.length - 1;
+
+    console.log("🟡 Enviando entrevista final:", {
+      endpoint,
+      payload,
+    });
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        mode: "cors",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const rawBody = await response.text();
+      let parsedBody = rawBody;
+      try {
+        parsedBody = rawBody ? JSON.parse(rawBody) : {};
+      } catch (_error) {
+        parsedBody = rawBody;
+      }
+
+      console.log("🟢 Respuesta guardado final:", {
+        endpoint,
+        ok: response.ok,
+        status: response.status,
+        body: parsedBody,
+      });
+
+      if (!response.ok) {
+        const message =
+          (parsedBody && typeof parsedBody === "object" && parsedBody.message) ||
+          `HTTP ${response.status}`;
+        lastError = new Error(`${message} (${endpoint})`);
+
+        if (hasMoreEndpoints) {
+          console.warn("⚠️ Endpoint primario falló, intentando fallback...", {
+            endpoint,
+            status: response.status,
+          });
+          continue;
+        }
+
+        interviewState.status = "error";
+        return { ok: false, error: lastError };
+      }
+
+      interviewState.status = "saved";
+      return { ok: true, body: parsedBody, endpoint };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      let detailedMessage = `No se pudo enviar a ${endpoint}: ${errorMessage}`;
+      if (
+        isLocalHostRuntime() &&
+        window.location?.protocol === "https:" &&
+        endpoint.startsWith("http://")
+      ) {
+        detailedMessage +=
+          " En localhost abrí la app por HTTP (ej. http://127.0.0.1:8085) para evitar bloqueo mixed-content hacia Functions Emulator.";
+      }
+      lastError = new Error(detailedMessage);
+
+      if (hasMoreEndpoints) {
+        console.warn("⚠️ Endpoint primario no disponible, intentando fallback...", {
+          endpoint,
+          error: errorMessage,
+        });
+        continue;
+      }
+
+      interviewState.status = "error";
+      console.error("❌ Error guardando entrevista final:", {
+        endpoint,
+        error: errorMessage,
+      });
+      return { ok: false, error: lastError };
+    }
+  }
+
+  interviewState.status = "error";
+  return {
+    ok: false,
+    error: lastError || new Error("No se pudo guardar la entrevista final."),
+  };
 }
 
 async function finalizeAndPersistHomeInterview(

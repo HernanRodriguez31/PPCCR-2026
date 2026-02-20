@@ -99,6 +99,9 @@
     "functions": {
       "port": 5001
     },
+    "hosting": {
+      "port": 8085
+    },
     "firestore": {
       "port": 8080
     },
