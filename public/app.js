@@ -4020,8 +4020,29 @@ function ensureAlgoFlowModalOpenState() {
   const modal = homeAlgorithmFlowModalState.modal;
   if (!modal || modal.hidden) return;
   if (modal.getAttribute("aria-hidden") !== "false") return;
-  if (modal.classList.contains("is-open")) return;
-  modal.classList.add("is-open");
+
+  modal.classList.remove("is-closing");
+  modal.classList.add("is-open", "is-force-open");
+
+  const card = homeAlgorithmFlowModalState.card;
+  if (!(card instanceof HTMLElement)) return;
+
+  const computedStyle = window.getComputedStyle(card);
+  const cardIsHiddenByStyles =
+    computedStyle.display === "none" ||
+    computedStyle.visibility === "hidden" ||
+    Number.parseFloat(computedStyle.opacity || "1") === 0;
+
+  if (cardIsHiddenByStyles) {
+    card.style.opacity = "1";
+    card.style.visibility = "visible";
+    card.style.transform = "translateY(0) scale(1)";
+    return;
+  }
+
+  card.style.removeProperty("opacity");
+  card.style.removeProperty("visibility");
+  card.style.removeProperty("transform");
 }
 
 function openAlgoFlowModal(opener = null) {
@@ -4103,7 +4124,19 @@ function closeAlgoFlowModal({ force = false } = {}) {
   const finishClose = () => {
     if (!homeAlgorithmFlowModalState.modal) return;
     homeAlgorithmFlowModalState.modal.hidden = true;
-    homeAlgorithmFlowModalState.modal.classList.remove("is-closing", "is-open");
+    homeAlgorithmFlowModalState.modal.classList.remove(
+      "is-closing",
+      "is-open",
+      "is-force-open",
+    );
+
+    const card = homeAlgorithmFlowModalState.card;
+    if (card instanceof HTMLElement) {
+      card.style.removeProperty("opacity");
+      card.style.removeProperty("visibility");
+      card.style.removeProperty("transform");
+    }
+
     unlockAlgoFlowBackgroundScroll();
     if (targetToRestore && typeof targetToRestore.focus === "function") {
       targetToRestore.focus();
@@ -4111,7 +4144,7 @@ function closeAlgoFlowModal({ force = false } = {}) {
   };
 
   const closeDelay = getHomeAlgorithmTransitionMs();
-  homeAlgorithmFlowModalState.modal.classList.remove("is-open");
+  homeAlgorithmFlowModalState.modal.classList.remove("is-open", "is-force-open");
   homeAlgorithmFlowModalState.modal.classList.add("is-closing");
   homeAlgorithmFlowModalState.modal.setAttribute("aria-hidden", "true");
 
@@ -4208,7 +4241,17 @@ function setupAlgoFlowModalLifecycle() {
   syncHomeAlgorithmFlowModalElements();
   if (!homeAlgorithmFlowModalState.modal) return;
 
-  homeAlgorithmFlowModalState.modal.classList.remove("is-open", "is-closing");
+  homeAlgorithmFlowModalState.modal.classList.remove(
+    "is-open",
+    "is-closing",
+    "is-force-open",
+  );
+
+  if (homeAlgorithmFlowModalState.card instanceof HTMLElement) {
+    homeAlgorithmFlowModalState.card.style.removeProperty("opacity");
+    homeAlgorithmFlowModalState.card.style.removeProperty("visibility");
+    homeAlgorithmFlowModalState.card.style.removeProperty("transform");
+  }
 
   if (homeAlgorithmFlowModalState.completionDialog) {
     homeAlgorithmFlowModalState.completionDialog.hidden = true;

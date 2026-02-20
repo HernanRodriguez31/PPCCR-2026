@@ -11234,6 +11234,13 @@ html.is-leaving body {
     transform 160ms ease;
 }
 
+/* Overlay safety: evita que body transformado rompa fixed modals */
+body.ppccr-modal-open,
+body.is-auth-locked {
+  animation: none !important;
+  transform: none !important;
+}
+
 @keyframes ppccr-page-enter {
   from {
     opacity: 0.98;
@@ -11263,9 +11270,8 @@ html.is-leaving body {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  display: grid !important;
+  place-items: center !important;
   box-sizing: border-box;
   height: 100vh;
   height: 100dvh;
@@ -11277,8 +11283,9 @@ html.is-leaving body {
     max(12px, env(safe-area-inset-top, 0px))
     12px
     max(12px, env(safe-area-inset-bottom, 0px));
-  overflow-y: auto;
+  overflow: auto;
   overscroll-behavior: contain;
+  margin: 0;
 }
 
 #auth-gate.auth-gate[hidden] {
@@ -11290,8 +11297,9 @@ html.is-leaving body {
 
 #auth-gate.auth-gate .auth-card.pp-modal__card {
   margin: 0;
+  justify-self: center;
   align-self: center;
-  flex: 0 1 auto;
+  transform: none !important;
   width: min(92vw, 560px);
   max-height: calc(100dvh - 24px);
   overflow-y: auto;
@@ -11322,4 +11330,47 @@ html.is-leaving body {
     width: min(100vw - 12px, 520px);
     max-height: calc(100dvh - 20px);
   }
+}
+
+/* Algorithm Modal Hardening: visible + centered + above backdrop */
+#ppccr-algo-modal.ppccr-modal.modal--interview {
+  position: fixed;
+  inset: 0;
+  z-index: 9800;
+  display: grid !important;
+  place-items: center !important;
+  padding: clamp(12px, 2.2vw, 24px);
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: auto;
+}
+
+#ppccr-algo-modal.ppccr-modal.modal--interview.is-open,
+#ppccr-algo-modal.ppccr-modal.modal--interview[aria-hidden="false"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+#ppccr-algo-modal.ppccr-modal.modal--interview .ppccr-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+#ppccr-algo-modal.ppccr-modal.modal--interview .ppccr-modal__card {
+  position: relative;
+  z-index: 1;
+}
+
+#ppccr-algo-modal.ppccr-modal.modal--interview.is-open .ppccr-modal__card,
+#ppccr-algo-modal.ppccr-modal.modal--interview[aria-hidden="false"] .ppccr-modal__card,
+#ppccr-algo-modal.ppccr-modal.modal--interview.is-force-open .ppccr-modal__card {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) scale(1) !important;
 }
