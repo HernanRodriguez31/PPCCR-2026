@@ -94,6 +94,25 @@
   }
 
   /**
+   * Detecta entrada a home solo para "/" o rutas que terminan en "/index.html".
+   * @returns {boolean}
+   */
+  function isHomeEntry() {
+    let pathname = "/";
+    try {
+      pathname = String(window.location?.pathname || "/").trim() || "/";
+    } catch {
+      return false;
+    }
+
+    let normalized = pathname.toLowerCase().replace(/\/{2,}/g, "/");
+    if (!normalized.startsWith("/")) normalized = `/${normalized}`;
+    if (normalized.length > 1) normalized = normalized.replace(/\/+$/, "");
+
+    return normalized === "/" || normalized.endsWith("/index.html");
+  }
+
+  /**
    * @param {string} key
    * @returns {string}
    */
@@ -1518,6 +1537,7 @@
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     if (!station) {
+      if (!isHomeEntry()) return;
       showAuthGate("login");
       return;
     }
@@ -1563,6 +1583,11 @@
     removeIdentityNodes();
     document.body.classList.remove("has-user-banner");
     syncBodyStationDataset(null);
+
+    if (!isHomeEntry()) {
+      hideAuthGateImmediately();
+      return;
+    }
 
     lastFocusedBeforeGate =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
