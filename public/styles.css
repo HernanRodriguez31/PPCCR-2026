@@ -1902,6 +1902,10 @@ body.page-home #guias.section {
   grid-column: 1 / -1;
 }
 
+.home-algo__field--half {
+  grid-column: span 2;
+}
+
 .home-algo__label {
   margin: 0;
   font-weight: 740;
@@ -3567,6 +3571,10 @@ body.page-home #guias.section {
     grid-column: 1 / -1;
   }
 
+  .home-algo__field--half {
+    grid-column: span 1;
+  }
+
   .role-card__header {
     min-height: unset;
     grid-template-rows: auto auto;
@@ -3645,6 +3653,10 @@ body.page-home #guias.section {
 
   .home-algo__grid {
     grid-template-columns: 1fr;
+  }
+
+  .home-algo__field--half {
+    grid-column: 1 / -1;
   }
 
   .home-algo__actions {

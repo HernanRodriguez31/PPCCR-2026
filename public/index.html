@@ -14,17 +14,17 @@
     <link rel="canonical" href="https://programadeprevencion.com/" />
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 
-    <script src="/host-guard.js"></script>
+    <script src="host-guard.js"></script>
     <link rel="icon" href="assets/favicon.png" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="kpis-dashboard.css" />
     <link rel="stylesheet" href="ppccr-sankey-participantes.css" />
-    <script src="/page-transitions.js" defer></script>
-    <script src="/domain/home-algorithm-domain.js" defer></script>
-    <script src="/app/home-algorithm-service.js" defer></script>
-    <script src="/app.js" defer></script>
-    <script src="/kpis-dashboard.js" defer></script>
-    <script src="/auth-gate.js?v=20260219-authfix3" defer></script>
+    <script src="page-transitions.js" defer></script>
+    <script src="domain/home-algorithm-domain.js" defer></script>
+    <script src="app/home-algorithm-service.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="kpis-dashboard.js" defer></script>
+    <script src="auth-gate.js?v=20260219-authfix3" defer></script>
   </head>
 
   <body class="page-home">
@@ -1143,6 +1143,19 @@
                         required
                       />
                     </div>
+                    <div class="home-algo__field home-algo__field--half">
+                      <label class="home-algo__label" for="home-algo-birthdate"
+                        >Fecha de nacimiento</label
+                      >
+                      <input
+                        class="home-algo__input"
+                        id="home-algo-birthdate"
+                        name="home-algo-birthdate"
+                        type="date"
+                        autocomplete="bday"
+                        required
+                      />
+                    </div>
                     <div class="home-algo__field">
                       <label class="home-algo__label" for="home-algo-kit-number"
                         >Número de kit FIT</label
@@ -1678,6 +1691,6 @@
         </div>
       </div>
     </noscript>
-    <script src="/ppccr-sankey-participantes.js" defer></script>
+    <script src="ppccr-sankey-participantes.js" defer></script>
   </body>
 </html>

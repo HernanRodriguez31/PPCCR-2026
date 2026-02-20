@@ -40,7 +40,7 @@ const CONFIG = {
         key: "workflow",
         title: "Workflow operativo",
         meta: "Página interna",
-        url: "/workflow.html",
+        url: "workflow.html",
       },
       {
         key: "algoritmoRiesgo",
@@ -52,19 +52,19 @@ const CONFIG = {
         key: "rolesResponsabilidades",
         title: "Roles y responsabilidades",
         meta: "Página interna",
-        url: "/roles.html",
+        url: "roles.html",
       },
       {
         key: "manejoKitFIT",
         title: "Manejo de kit FIT",
         meta: "Página interna",
-        url: "/kit-fit.html",
+        url: "kit-fit.html",
       },
       {
         key: "entregaMuestras",
         title: "Entrega de muestras",
         meta: "Página interna",
-        url: "/entrega-muestras.html",
+        url: "entrega-muestras.html",
       },
       {
         key: "kpis",
@@ -339,6 +339,7 @@ const HOME_ALGO_SEX = Object.freeze({
 const HOME_ALGO_STEP4_FIELDS = Object.freeze({
   fullName: "fullName",
   documentId: "documentId",
+  birthDate: "birthDate",
   kitNumber: "kitNumber",
   email: "email",
   phone: "phone",
@@ -347,6 +348,7 @@ const HOME_ALGO_STEP4_FIELDS = Object.freeze({
 const HOME_ALGO_REQUIRED_STEP4_FIELDS = Object.freeze([
   HOME_ALGO_STEP4_FIELDS.fullName,
   HOME_ALGO_STEP4_FIELDS.documentId,
+  HOME_ALGO_STEP4_FIELDS.birthDate,
   HOME_ALGO_STEP4_FIELDS.kitNumber,
   HOME_ALGO_STEP4_FIELDS.email,
   HOME_ALGO_STEP4_FIELDS.phone,
@@ -1427,7 +1429,14 @@ function createHomeAlgorithmInterviewSkeleton(stationDetail = {}) {
     step1: { age: null, sex: "", sexOtherDetail: "", includedByAge: false },
     step2: { exclusions: [], hasExclusion: false },
     step3: { riskFlags: [], hasHighRisk: false },
-    step4: { fullName: "", documentId: "", kitNumber: "", email: "", phone: "" },
+    step4: {
+      fullName: "",
+      documentId: "",
+      birthDate: "",
+      kitNumber: "",
+      email: "",
+      phone: "",
+    },
     outcome: "",
   };
 }
@@ -1545,6 +1554,7 @@ function normalizeHomeAlgorithmInterview(rawInterview, stationDetail = {}) {
 
   normalized.step4.fullName = String(source?.step4?.fullName || "").trim();
   normalized.step4.documentId = String(source?.step4?.documentId || "").trim();
+  normalized.step4.birthDate = String(source?.step4?.birthDate || "").trim();
   normalized.step4.kitNumber = String(source?.step4?.kitNumber || "")
     .trim()
     .replace(/\s+/g, "");
@@ -1897,7 +1907,7 @@ function applyProgramRuntimeConfig(rawConfig) {
 }
 
 async function loadProgramConfigOnInit() {
-  const configUrl = "/data/program-config.json";
+  const configUrl = "data/program-config.json";
 
   try {
     const response = await fetch(configUrl, { cache: "no-store" });
@@ -2075,6 +2085,7 @@ function buildHomeAlgorithmSummaryText(interview, labelMaps, { includeJson = fal
     "Paso 4 - Datos de contacto",
     `Apellido y nombre: ${interview?.step4?.fullName || "-"}`,
     `Documento: ${interview?.step4?.documentId || "-"}`,
+    `Fecha de nacimiento: ${interview?.step4?.birthDate || "-"}`,
     `Número de kit FIT: ${interview?.step4?.kitNumber || "-"}`,
     `Email: ${interview?.step4?.email || "-"}`,
     `Celular: ${interview?.step4?.phone || "-"}`,
@@ -2130,6 +2141,12 @@ function clearHomeAlgorithmFieldError(field) {
     return;
   }
 
+  if (field === HOME_ALGO_STEP4_FIELDS.birthDate && homeAlgorithmState.birthDateInput) {
+    homeAlgorithmState.birthDateInput.classList.remove("is-invalid");
+    homeAlgorithmState.birthDateInput.removeAttribute("aria-invalid");
+    return;
+  }
+
   if (field === HOME_ALGO_STEP4_FIELDS.kitNumber && homeAlgorithmState.kitNumberInput) {
     homeAlgorithmState.kitNumberInput.classList.remove("is-invalid");
     homeAlgorithmState.kitNumberInput.removeAttribute("aria-invalid");
@@ -2159,6 +2176,7 @@ function clearHomeAlgorithmAllFieldErrors() {
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP1_FIELDS.sexOther);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.fullName);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.documentId);
+  clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.birthDate);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.kitNumber);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.email);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.phone);
@@ -2205,6 +2223,12 @@ function markHomeAlgorithmFieldError(field) {
   if (field === HOME_ALGO_STEP4_FIELDS.documentId && homeAlgorithmState.documentIdInput) {
     homeAlgorithmState.documentIdInput.classList.add("is-invalid");
     homeAlgorithmState.documentIdInput.setAttribute("aria-invalid", "true");
+    return;
+  }
+
+  if (field === HOME_ALGO_STEP4_FIELDS.birthDate && homeAlgorithmState.birthDateInput) {
+    homeAlgorithmState.birthDateInput.classList.add("is-invalid");
+    homeAlgorithmState.birthDateInput.setAttribute("aria-invalid", "true");
     return;
   }
 
@@ -2265,6 +2289,11 @@ function focusHomeAlgorithmField(field) {
 
   if (field === HOME_ALGO_STEP4_FIELDS.documentId && homeAlgorithmState.documentIdInput) {
     homeAlgorithmState.documentIdInput.focus();
+    return;
+  }
+
+  if (field === HOME_ALGO_STEP4_FIELDS.birthDate && homeAlgorithmState.birthDateInput) {
+    homeAlgorithmState.birthDateInput.focus();
     return;
   }
 
@@ -2430,6 +2459,7 @@ function hydrateHomeAlgorithmFormFromInterview() {
 
   homeAlgorithmState.fullNameInput.value = homeAlgorithmState.interview.step4.fullName || "";
   homeAlgorithmState.documentIdInput.value = homeAlgorithmState.interview.step4.documentId || "";
+  homeAlgorithmState.birthDateInput.value = homeAlgorithmState.interview.step4.birthDate || "";
   homeAlgorithmState.kitNumberInput.value = homeAlgorithmState.interview.step4.kitNumber || "";
   homeAlgorithmState.emailInput.value = homeAlgorithmState.interview.step4.email || "";
   homeAlgorithmState.phoneInput.value = homeAlgorithmState.interview.step4.phone || "";
@@ -2738,6 +2768,7 @@ function renderHomeAlgorithmStepLocks() {
 
   homeAlgorithmState.fullNameInput.disabled = lockStep4;
   homeAlgorithmState.documentIdInput.disabled = lockStep4;
+  homeAlgorithmState.birthDateInput.disabled = lockStep4;
   homeAlgorithmState.kitNumberInput.disabled = lockStep4;
   homeAlgorithmState.emailInput.disabled = lockStep4;
   homeAlgorithmState.phoneInput.disabled = lockStep4;
@@ -2926,6 +2957,7 @@ function syncInterviewStateFromInterview({ status = interviewState.status } = {}
     step4: {
       fullName: homeAlgorithmState.interview.step4.fullName || "",
       documentId: homeAlgorithmState.interview.step4.documentId || "",
+      birthDate: homeAlgorithmState.interview.step4.birthDate || "",
       kitNumber: homeAlgorithmState.interview.step4.kitNumber || "",
       email: homeAlgorithmState.interview.step4.email || "",
       phone: homeAlgorithmState.interview.step4.phone || "",
@@ -2943,6 +2975,7 @@ function clearInterviewAfterStep1() {
   homeAlgorithmState.interview.step4 = {
     fullName: "",
     documentId: "",
+    birthDate: "",
     kitNumber: "",
     email: "",
     phone: "",
@@ -2955,6 +2988,7 @@ function clearInterviewAfterStep1() {
   });
   homeAlgorithmState.fullNameInput.value = "";
   homeAlgorithmState.documentIdInput.value = "";
+  homeAlgorithmState.birthDateInput.value = "";
   homeAlgorithmState.kitNumberInput.value = "";
   homeAlgorithmState.emailInput.value = "";
   homeAlgorithmState.phoneInput.value = "";
@@ -2968,6 +3002,7 @@ function clearInterviewAfterStep2() {
   homeAlgorithmState.interview.step4 = {
     fullName: "",
     documentId: "",
+    birthDate: "",
     kitNumber: "",
     email: "",
     phone: "",
@@ -2977,6 +3012,7 @@ function clearInterviewAfterStep2() {
   });
   homeAlgorithmState.fullNameInput.value = "";
   homeAlgorithmState.documentIdInput.value = "";
+  homeAlgorithmState.birthDateInput.value = "";
   homeAlgorithmState.kitNumberInput.value = "";
   homeAlgorithmState.emailInput.value = "";
   homeAlgorithmState.phoneInput.value = "";
@@ -2988,12 +3024,14 @@ function clearInterviewAfterStep3() {
   homeAlgorithmState.interview.step4 = {
     fullName: "",
     documentId: "",
+    birthDate: "",
     kitNumber: "",
     email: "",
     phone: "",
   };
   homeAlgorithmState.fullNameInput.value = "";
   homeAlgorithmState.documentIdInput.value = "";
+  homeAlgorithmState.birthDateInput.value = "";
   homeAlgorithmState.kitNumberInput.value = "";
   homeAlgorithmState.emailInput.value = "";
   homeAlgorithmState.phoneInput.value = "";
@@ -3051,6 +3089,7 @@ async function saveHomeAlgorithmInterview(finalResult) {
     ? {
         fullName: interviewState.step4.fullName,
         documentId: interviewState.step4.documentId,
+        birthDate: interviewState.step4.birthDate,
         kitNumber: interviewState.step4.kitNumber,
         email: interviewState.step4.email,
         phone: interviewState.step4.phone,
@@ -3083,6 +3122,7 @@ async function saveHomeAlgorithmInterview(finalResult) {
       ? {
           name: step4Payload.fullName,
           dni: step4Payload.documentId,
+          birthDate: step4Payload.birthDate,
           kitNumber: step4Payload.kitNumber,
           email: step4Payload.email,
           phone: step4Payload.phone,
@@ -3449,6 +3489,18 @@ function onHomeAlgorithmBackToStep2() {
   goToHomeAlgorithmStep(ALGORITHM_HOME.steps.VIGILANCE);
 }
 
+function normalizeHomeAlgorithmBirthDate(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return { value: "", valid: false };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { value: raw, valid: false };
+
+  const date = new Date(`${raw}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return { value: raw, valid: false };
+  if (date.toISOString().slice(0, 10) !== raw) return { value: raw, valid: false };
+
+  return { value: raw, valid: true };
+}
+
 function getHomeAlgorithmStep4Values() {
   if (!homeAlgorithmState) {
     return { ok: false, message: "No se pudo iniciar Paso 4." };
@@ -3456,6 +3508,7 @@ function getHomeAlgorithmStep4Values() {
 
   const fullName = String(homeAlgorithmState.fullNameInput.value || "").trim();
   const documentId = String(homeAlgorithmState.documentIdInput.value || "").trim();
+  const birthDate = normalizeHomeAlgorithmBirthDate(homeAlgorithmState.birthDateInput.value || "");
   const kitNumber = String(homeAlgorithmState.kitNumberInput.value || "")
     .trim()
     .replace(/\s+/g, "");
@@ -3469,6 +3522,9 @@ function getHomeAlgorithmStep4Values() {
   }
   if (!documentId) {
     errors[HOME_ALGO_STEP4_FIELDS.documentId] = "Ingresá el documento.";
+  }
+  if (!birthDate.value || !birthDate.valid) {
+    errors[HOME_ALGO_STEP4_FIELDS.birthDate] = "Ingresá una fecha de nacimiento válida.";
   }
   if (!kitNumber) {
     errors[HOME_ALGO_STEP4_FIELDS.kitNumber] = "Ingresá el número de kit FIT.";
@@ -3498,6 +3554,7 @@ function getHomeAlgorithmStep4Values() {
     values: {
       fullName,
       documentId,
+      birthDate: birthDate.value,
       kitNumber,
       email,
       phone,
@@ -3513,6 +3570,9 @@ function isHomeAlgorithmStep4Complete(step4Values = {}) {
     if (field === HOME_ALGO_STEP4_FIELDS.email) {
       return emailRegex.test(value);
     }
+    if (field === HOME_ALGO_STEP4_FIELDS.birthDate) {
+      return normalizeHomeAlgorithmBirthDate(value).valid;
+    }
     return true;
   });
 }
@@ -3525,6 +3585,9 @@ function onHomeAlgorithmStep4InputChanged() {
   ).trim();
   homeAlgorithmState.interview.step4.documentId = String(
     homeAlgorithmState.documentIdInput.value || "",
+  ).trim();
+  homeAlgorithmState.interview.step4.birthDate = String(
+    homeAlgorithmState.birthDateInput.value || "",
   ).trim();
   homeAlgorithmState.interview.step4.kitNumber = String(
     homeAlgorithmState.kitNumberInput.value || "",
@@ -3540,6 +3603,7 @@ function onHomeAlgorithmStep4InputChanged() {
 
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.fullName);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.documentId);
+  clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.birthDate);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.kitNumber);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.email);
   clearHomeAlgorithmFieldError(HOME_ALGO_STEP4_FIELDS.phone);
@@ -3573,6 +3637,7 @@ async function onHomeAlgorithmFinishStep4() {
   homeAlgorithmState.interview.step4 = {
     fullName: result.values.fullName,
     documentId: result.values.documentId,
+    birthDate: result.values.birthDate,
     kitNumber: result.values.kitNumber,
     email: result.values.email,
     phone: result.values.phone,
@@ -4266,6 +4331,7 @@ function homeAlgorithmHasMeaningfulData() {
       i.step3.riskFlags.length > 0 ||
       i.step4.fullName ||
       i.step4.documentId ||
+      i.step4.birthDate ||
       i.step4.kitNumber ||
       i.step4.email ||
       i.step4.phone,
@@ -4369,6 +4435,7 @@ function initHomeAlgorithm() {
 
   const fullNameInput = $("#home-algo-full-name");
   const documentIdInput = $("#home-algo-document-id");
+  const birthDateInput = $("#home-algo-birthdate");
   const kitNumberInput = getRequiredElement("home-algo-kit-number", root);
   const kitNumberError = getRequiredElement("home-algo-kit-number-error", root);
   const emailInput = $("#home-algo-email");
@@ -4428,6 +4495,7 @@ function initHomeAlgorithm() {
     !step3Back ||
     !fullNameInput ||
     !documentIdInput ||
+    !birthDateInput ||
     !kitNumberInput ||
     !kitNumberError ||
     !emailInput ||
@@ -4513,6 +4581,7 @@ function initHomeAlgorithm() {
 
     fullNameInput,
     documentIdInput,
+    birthDateInput,
     kitNumberInput,
     kitNumberError,
     emailInput,
@@ -4699,6 +4768,7 @@ function initHomeAlgorithm() {
   [
     homeAlgorithmState.fullNameInput,
     homeAlgorithmState.documentIdInput,
+    homeAlgorithmState.birthDateInput,
     homeAlgorithmState.kitNumberInput,
     homeAlgorithmState.emailInput,
     homeAlgorithmState.phoneInput,

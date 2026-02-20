@@ -50,7 +50,7 @@ const SHEET_HEADERS_A_TO_G = Object.freeze([
   "Exclusion Paso 2",
 ]);
 
-const SHEET_HEADERS_A_TO_N = Object.freeze([
+const SHEET_HEADERS_A_TO_O = Object.freeze([
   "ID Participante",
   "Fecha/Hora",
   "Station ID",
@@ -65,6 +65,7 @@ const SHEET_HEADERS_A_TO_N = Object.freeze([
   "Email",
   "Celular",
   "Nro Kit FIT",
+  "Fecha de Nacimiento",
 ]);
 
 type StationDefinition = {
@@ -276,6 +277,18 @@ function formatDateForSheet(date: Date): string {
   });
 
   return formatter.format(date).replace(",", "");
+}
+
+function normalizeBirthDateForSheet(value: unknown): { value: string; valid: boolean } {
+  const raw = String(value || "").trim();
+  if (!raw) return { value: "", valid: false };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { value: raw, valid: false };
+
+  const parsed = new Date(`${raw}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return { value: raw, valid: false };
+  if (parsed.toISOString().slice(0, 10) !== raw) return { value: raw, valid: false };
+
+  return { value: raw, valid: true };
 }
 
 function setCorsHeaders(res: { set: (key: string, value: string) => void }): void {
@@ -562,7 +575,7 @@ async function ensureSheetHeadersAtoN(
   sheetTab: string,
   accessToken: string,
 ): Promise<void> {
-  const headerRange = `${sheetTab}!A1:N1`;
+  const headerRange = `${sheetTab}!A1:O1`;
   const getUrl = `${GOOGLE_SHEETS_API_BASE}/${sheetId}/values/${encodeURIComponent(headerRange)}`;
 
   const getResponse = await googleSheetsRequest<{ values?: string[][] }>({
@@ -572,7 +585,7 @@ async function ensureSheetHeadersAtoN(
   });
 
   const current = Array.isArray(getResponse?.values?.[0]) ? getResponse?.values?.[0] || [] : [];
-  const hasHeaders = SHEET_HEADERS_A_TO_N.every((header, index) => current[index] === header);
+  const hasHeaders = SHEET_HEADERS_A_TO_O.every((header, index) => current[index] === header);
   if (hasHeaders) return;
 
   const putUrl = `${GOOGLE_SHEETS_API_BASE}/${sheetId}/values/${encodeURIComponent(headerRange)}?valueInputOption=RAW`;
@@ -584,7 +597,7 @@ async function ensureSheetHeadersAtoN(
     body: {
       range: headerRange,
       majorDimension: "ROWS",
-      values: [SHEET_HEADERS_A_TO_N],
+      values: [SHEET_HEADERS_A_TO_O],
     },
   });
 }
@@ -632,11 +645,11 @@ async function appendSheetRowAtoN({
   accessToken: string;
   row: Array<string | number>;
 }): Promise<number> {
-  if (row.length !== 14) {
-    throw new Error(`appendSheetRowAtoN requiere 14 columnas. Recibidas: ${row.length}.`);
+  if (row.length !== 15) {
+    throw new Error(`appendSheetRowAtoN requiere 15 columnas. Recibidas: ${row.length}.`);
   }
 
-  const appendRange = `${sheetTab}!A:N`;
+  const appendRange = `${sheetTab}!A:O`;
   const appendUrl = `${GOOGLE_SHEETS_API_BASE}/${sheetId}/values/${encodeURIComponent(appendRange)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
 
   const appendResponse = await googleSheetsRequest<{ updates?: { updatedRange?: string } }>({
@@ -1030,11 +1043,27 @@ export const submitAlgorithmStage1 = onRequest(
 
     const step2Details = step2Data ? String(step2Data.details || "").trim() : "";
     const step3Details = step3Data ? String(step3Data.details || "").trim() : "";
-    const step4Name = step4Data ? String(step4Data.name || "").trim() : "";
-    const step4Dni = step4Data ? String(step4Data.dni || "").trim() : "";
-    const step4Email = step4Data ? String(step4Data.email || "").trim() : "";
-    const step4Phone = step4Data ? String(step4Data.phone || "").trim() : "";
-    const stage4KitNumber = String(step4Data?.kitNumber || "").trim();
+    const hasStep4Payload = Boolean(step4Data);
+    const step4Name = hasStep4Payload
+      ? String(step4Data?.name || step4Data?.fullName || "").trim()
+      : "";
+    const step4Dni = hasStep4Payload
+      ? String(step4Data?.dni || step4Data?.documentId || "").trim()
+      : "";
+    const step4Email = hasStep4Payload ? String(step4Data?.email || "").trim() : "";
+    const step4Phone = hasStep4Payload ? String(step4Data?.phone || "").trim() : "";
+    const stage4KitNumber = hasStep4Payload ? String(step4Data?.kitNumber || "").trim() : "";
+    const birthDate = hasStep4Payload
+      ? normalizeBirthDateForSheet(step4Data?.birthDate || step4Data?.fechaNacimiento || "")
+      : { value: "", valid: false };
+
+    if (hasStep4Payload && !birthDate.valid) {
+      res.status(400).json({
+        ok: false,
+        message: "step4Data.birthDate invalido. Debe tener formato YYYY-MM-DD.",
+      });
+      return;
+    }
 
     const rowValues: Array<string | number> = [
       participantId,
@@ -1051,10 +1080,11 @@ export const submitAlgorithmStage1 = onRequest(
       step4Email,
       step4Phone,
       stage4KitNumber,
+      birthDate.value,
     ];
 
     const stageReached =
-      step4Data ? 4 :
+      hasStep4Payload ? 4 :
         step3Data ? 3 :
           step2Data ? 2 :
             ageMeetsInclusion ? 2 : 1;
@@ -1338,17 +1368,26 @@ export const updateParticipantStage = onRequest(
       }
 
       const finalResult = String(data.finalResult || data.result || "Candidato FIT").trim() || "Candidato FIT";
-      const fullName = String(data.fullName || "").trim();
-      const documentId = String(data.documentId || "").trim();
+      const fullName = String(data.fullName || data.name || "").trim();
+      const documentId = String(data.documentId || data.dni || "").trim();
       const email = String(data.email || "").trim();
       const phone = String(data.phone || "").trim();
       const kitNumber = String(data.kitNumber || "").trim();
+      const birthDate = normalizeBirthDateForSheet(data.birthDate || data.fechaNacimiento || "");
+
+      if (!birthDate.valid) {
+        res.status(400).json({
+          ok: false,
+          message: "data.birthDate invalido. Debe tener formato YYYY-MM-DD.",
+        });
+        return;
+      }
 
       await updateSheetRange({
         sheetId,
-        range: `${sheetTab}!I${row}:N${row}`,
+        range: `${sheetTab}!I${row}:O${row}`,
         accessToken,
-        values: [[finalResult, fullName, documentId, email, phone, kitNumber]],
+        values: [[finalResult, fullName, documentId, email, phone, kitNumber, birthDate.value]],
       });
 
       res.status(200).json({
@@ -1356,7 +1395,7 @@ export const updateParticipantStage = onRequest(
         participantId,
         stage,
         row,
-        updated: ["I", "J", "K", "L", "M", "N"],
+        updated: ["I", "J", "K", "L", "M", "N", "O"],
       });
     } catch (error) {
       logger.error("No se pudo actualizar etapa del participante en Google Sheets.", {
