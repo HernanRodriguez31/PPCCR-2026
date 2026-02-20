@@ -3914,6 +3914,15 @@ function shouldConfirmCloseAlgoFlowModal() {
   return hasAlgoFlowModalMeaningfulDataFallback();
 }
 
+function ensureAlgoFlowModalOpenState() {
+  syncHomeAlgorithmFlowModalElements();
+  const modal = homeAlgorithmFlowModalState.modal;
+  if (!modal || modal.hidden) return;
+  if (modal.getAttribute("aria-hidden") !== "false") return;
+  if (modal.classList.contains("is-open")) return;
+  modal.classList.add("is-open");
+}
+
 function openAlgoFlowModal(opener = null) {
   mountHomeAlgorithmInFlowModal();
   syncHomeAlgorithmFlowModalElements();
@@ -3942,11 +3951,15 @@ function openAlgoFlowModal(opener = null) {
   homeAlgorithmFlowModalState.modal.classList.remove("is-closing");
   homeAlgorithmFlowModalState.modal.hidden = false;
   homeAlgorithmFlowModalState.modal.setAttribute("aria-hidden", "false");
+  ensureAlgoFlowModalOpenState();
   window.requestAnimationFrame(() => {
     if (!homeAlgorithmFlowModalState.modal || homeAlgorithmFlowModalState.modal.hidden) return;
     if (homeAlgorithmFlowModalState.modal.classList.contains("is-closing")) return;
-    homeAlgorithmFlowModalState.modal.classList.add("is-open");
+    ensureAlgoFlowModalOpenState();
   });
+  window.setTimeout(() => {
+    ensureAlgoFlowModalOpenState();
+  }, 90);
   lockAlgoFlowBackgroundScroll();
 
   startAlgoFlowDeviceClockPreview();

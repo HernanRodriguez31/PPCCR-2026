@@ -9194,6 +9194,38 @@ body.page-home .ppccr-modal.modal--interview.is-open .ppccr-modal__card {
   transform: translateY(0) scale(1);
 }
 
+#ppccr-algo-modal.ppccr-modal.modal--interview[hidden] {
+  display: none !important;
+}
+
+#ppccr-algo-modal.ppccr-modal.modal--interview {
+  position: fixed;
+  inset: 0;
+  z-index: 9800;
+  display: grid;
+  place-items: center;
+}
+
+#ppccr-algo-modal.ppccr-modal.modal--interview.is-open,
+#ppccr-algo-modal.ppccr-modal.modal--interview[aria-hidden="false"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+#ppccr-algo-modal.ppccr-modal.modal--interview .ppccr-modal__backdrop {
+  z-index: 0;
+}
+
+#ppccr-algo-modal.ppccr-modal.modal--interview .ppccr-modal__card {
+  z-index: 2;
+}
+
+#ppccr-algo-modal.ppccr-modal.modal--interview[aria-hidden="false"] .ppccr-modal__card {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
 body.page-home .ppccr-modal.modal--interview .ppccr-modal__header {
   flex: 0 0 auto;
   display: flex;
