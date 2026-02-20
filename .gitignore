@@ -76,3 +76,10 @@ secrets-jaas/
 .dataconnect
 .DS_Store
 **/.DS_Store
+
+# Security hardening (recursive patterns)
+secrets-jaas/**
+**/*.pem
+**/*.key
+**/*.p12
+**/*.log
