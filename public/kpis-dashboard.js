@@ -23,7 +23,7 @@
     resultadosFitPorEstacion: {
       label: "Recepción de Resultados de FIT",
       sheet: "Recepción de Resultados de FIT",
-      tq: "select C, count(A) where C is not null and F is not null group by C pivot F",
+      tq: "select K, count(A) where K is not null and F is not null group by K pivot F",
     },
   };
 
@@ -275,7 +275,7 @@
       status.resultadosFitPorEstacion,
     );
 
-    const stations = Array.from(stationsMap.values())
+    const stationsRaw = Array.from(stationsMap.values())
       .map((station) => {
         const entregados = isFiniteMetric(station.criterioFitKits)
           ? Number(station.criterioFitKits)
@@ -321,6 +321,24 @@
         }
         return a.station.localeCompare(b.station, "es");
       });
+
+    const outOfCatalogStations = stationsRaw.filter(
+      (station) => !STATION_LABELS[station.key],
+    );
+    if (outOfCatalogStations.length > 0) {
+      console.warn(
+        "[KPI Dashboard] Se detectaron estaciones fuera de catálogo. Se omiten del dashboard.",
+        outOfCatalogStations.map((station) => ({
+          key: station.key,
+          station: station.station,
+        })),
+      );
+    }
+
+    // Mantener solamente las 4 estaciones saludables base del dashboard.
+    const stations = stationsRaw.filter((station) =>
+      Boolean(STATION_LABELS[station.key]),
+    );
 
     const effectiveStatus = Object.assign({}, status);
     if (
@@ -759,7 +777,7 @@
       "</article>",
       '<article class="kpiDash__panel kpiDash__panel--aux">',
       '<header class="kpiDash__panelHeader">',
-      "<h4>Sankey de participantes</h4>",
+      "<h4>Flujo de participantes</h4>",
       "<p>Participantes y segmentación de screening</p>",
       "</header>",
       '<div id="ppccrSankeyParticipantes" class="ppccr-sankey"></div>',
