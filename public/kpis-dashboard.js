@@ -52,17 +52,6 @@
     posneg: "[data-kpi-chart-posneg]",
   };
 
-  const SANKEY_PARTICIPANTES_DATA = {
-    total: 35,
-    fit: 20,
-    fuera: 15,
-    motivos: [
-      { key: "riesgo", label: "Mayor riesgo (orientación)", n: 7 },
-      { key: "seguimiento", label: "Seguimiento vigente", n: 4 },
-      { key: "edad", label: "Edad < 45", n: 4 },
-    ],
-  };
-
   function initKpiDashboard() {
     const root = document.querySelector(SELECTORS.root);
     if (!root) {
@@ -777,7 +766,7 @@
       "</article>",
       '<article class="kpiDash__panel kpiDash__panel--aux">',
       '<header class="kpiDash__panelHeader">',
-      "<h4>Flujo de participantes</h4>",
+      "<h4>Distribución de Participantes</h4>",
       "<p>Participantes y segmentación de screening</p>",
       "</header>",
       '<div id="ppccrSankeyParticipantes" class="ppccr-sankey"></div>',
@@ -813,10 +802,36 @@
     ].join("");
     bindReportHeaderActions(root);
     bindTrkGaugeTooltips(root);
-    renderParticipantSankey();
+    renderParticipantSankey(model);
   }
 
-  function renderParticipantSankey(attempt = 0) {
+  function buildParticipantSankeyData(model) {
+    const totals = model && model.totals ? model.totals : {};
+    return {
+      total: toInt(totals.participantesTotal),
+      fit: toInt(totals.criterioFitKits),
+      fuera: toInt(totals.fueraDeScreening),
+      motivos: [
+        {
+          key: "riesgo",
+          label: "Mayor riesgo (orientación)",
+          n: toInt(totals.mayorRiesgo),
+        },
+        {
+          key: "seguimiento",
+          label: "Seguimiento vigente",
+          n: toInt(totals.seguimientoVigente),
+        },
+        {
+          key: "edad",
+          label: "Edad < 45",
+          n: toInt(totals.edadLt45),
+        },
+      ],
+    };
+  }
+
+  function renderParticipantSankey(model, attempt = 0) {
     const host = document.getElementById("ppccrSankeyParticipantes");
     if (!host) {
       return;
@@ -825,7 +840,7 @@
     const api = window.PPCCR_SANK;
     if (!api || typeof api.render !== "function") {
       if (attempt < 10) {
-        window.setTimeout(() => renderParticipantSankey(attempt + 1), 120);
+        window.setTimeout(() => renderParticipantSankey(model, attempt + 1), 120);
       } else {
         console.warn(
           "[KPI Dashboard] Componente Sankey de participantes no disponible.",
@@ -834,7 +849,7 @@
       return;
     }
 
-    api.render(host, SANKEY_PARTICIPANTES_DATA);
+    api.render(host, buildParticipantSankeyData(model), { showHeader: false });
   }
 
   function buildSummaryCard(totals) {
@@ -1211,9 +1226,9 @@
       "</header>",
       summaryCard,
       "</section>",
-      '<section class="kpiDash__fitFlow kpiDash__flowTop kpiDash__execPanel" aria-label="Flujo FIT">',
+      '<section class="kpiDash__fitFlow kpiDash__flowTop kpiDash__execPanel" aria-label="Trazabilidad del Test">',
       '<header class="kpiDash__panelHeader kpiDash__execHeader">',
-      "<h4>Flujo FIT</h4>",
+      "<h4>Trazabilidad del Test</h4>",
       "<p>Seguimiento integral del circuito FIT</p>",
       "</header>",
       '<div class="kpiDash__fitFlowBody">',

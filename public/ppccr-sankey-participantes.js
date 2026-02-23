@@ -125,13 +125,60 @@
     ].join(" ");
   }
 
-  function logScaledDistribution(values, targetTotal) {
-    const weights = values.map((value) => Math.log1p(Math.max(0, Number(value) || 0)));
-    const weightSum = weights.reduce((acc, value) => acc + value, 0);
-    if (!weightSum || !targetTotal) {
-      return values.map(() => 0);
+  function toSafeInt(value) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return 0;
     }
-    return weights.map((weight) => (targetTotal * weight) / weightSum);
+    return Math.max(0, Math.round(parsed));
+  }
+
+  function normalizeInputData(inputData) {
+    const source =
+      inputData && typeof inputData === "object" ? inputData : DATA;
+    const motivosSource = Array.isArray(source.motivos)
+      ? source.motivos
+      : DATA.motivos;
+    const motivosByKey = new Map();
+
+    motivosSource.forEach((motivo, index) => {
+      const safeKey = String((motivo && motivo.key) || "").trim() || `motivo_${index + 1}`;
+      const safeLabel = String((motivo && motivo.label) || safeKey).trim();
+      const safeN = toSafeInt(motivo && motivo.n);
+
+      if (!motivosByKey.has(safeKey)) {
+        motivosByKey.set(safeKey, {
+          key: safeKey,
+          label: safeLabel,
+          n: safeN,
+        });
+        return;
+      }
+
+      // Merge de claves repetidas para no perder volumen por categoría.
+      const current = motivosByKey.get(safeKey);
+      current.n += safeN;
+      if (!current.label && safeLabel) {
+        current.label = safeLabel;
+      }
+    });
+
+    const orderedMotivos = [];
+    MOTIVO_LAYOUT_ORDER.forEach((preferredKey) => {
+      if (!motivosByKey.has(preferredKey)) {
+        return;
+      }
+      orderedMotivos.push(motivosByKey.get(preferredKey));
+      motivosByKey.delete(preferredKey);
+    });
+    orderedMotivos.push(...Array.from(motivosByKey.values()));
+
+    return {
+      total: toSafeInt(source.total ?? DATA.total),
+      fit: toSafeInt(source.fit ?? DATA.fit),
+      fuera: toSafeInt(source.fuera ?? DATA.fuera),
+      motivos: orderedMotivos
+    };
   }
 
   function wrapLabel(label, maxChars) {
@@ -160,8 +207,9 @@
     return lines.length ? lines : [label];
   }
 
-  function render(container, inputData) {
-    const data = inputData || DATA;
+  function render(container, inputData, options = {}) {
+    const data = normalizeInputData(inputData);
+    const showHeader = options.showHeader !== false;
     const calcFuera = data.total - data.fit;
     const sumMotivos = data.motivos.reduce((acc, motivo) => acc + motivo.n, 0);
     const hasMismatch = calcFuera !== data.fuera || sumMotivos !== data.fuera;
@@ -211,22 +259,11 @@
       }
     };
 
-    const motivosByKey = {};
-    data.motivos.forEach((motivo) => {
-      motivosByKey[motivo.key] = motivo;
-    });
-    const orderedMotivos = MOTIVO_LAYOUT_ORDER.map((key) => motivosByKey[key]).filter(
-      Boolean,
-    );
-
-    const motivoDisplayValues = logScaledDistribution(
-      orderedMotivos.map((motivo) => motivo.n),
-      data.fuera,
-    );
+    const orderedMotivos = data.motivos;
 
     let yMotivo = nodes.fuera.y + 2;
-    const motivoNodes = orderedMotivos.map((motivo, index) => {
-      const displayValue = motivoDisplayValues[index];
+    const motivoNodes = orderedMotivos.map((motivo) => {
+      const displayValue = motivo.n;
       const h = displayValue * k;
       const node = {
         key: motivo.key,
@@ -511,11 +548,11 @@
     const leftFlowLabelX =
       leftFlowStartX + (leftFlowEndX - leftFlowStartX) * 0.54;
 
-    addNodeCenterLabel(nodes.fit, "N 20", "Criterio FIT", {
+    addNodeCenterLabel(nodes.fit, "N " + data.fit, "Criterio FIT", {
       x: leftFlowLabelX,
       y: nodes.fit.y + nodes.fit.h * 0.5,
     });
-    addNodeCenterLabel(nodes.fuera, "N 15", "Fuera de screening", {
+    addNodeCenterLabel(nodes.fuera, "N " + data.fuera, "Fuera de screening", {
       x: leftFlowLabelX,
       y: nodes.fuera.y + nodes.fuera.h * 0.5,
     });
@@ -539,39 +576,43 @@
       svg.appendChild(inlineText);
     });
 
-    const motivoRows = [
-      nodes.fuera.y + 4,
-      nodes.fuera.y + 36,
-      nodes.fuera.y + 70,
-    ];
+    let minCalloutY = nodes.fuera.y + 6;
+    motivoNodes.forEach((motivo) => {
+      // Evita solapado cuando los nodos son pequeños o hay más de 3 motivos.
+      const centeredY = Math.round(motivo.y + Math.max(9, motivo.h * 0.52));
+      const calloutY = Math.max(minCalloutY, centeredY);
+      minCalloutY = calloutY + 18;
 
-    motivoNodes.forEach((motivo, index) => {
       addCallout({
         node: motivo,
         side: "right",
         textX: x2 + nodeW + 20,
-        y: motivoRows[index],
+        y: calloutY,
         label: "",
         maxChars: 17,
         meta: "",
         fromX: motivo.x + nodeW,
         fromY: motivo.y + motivo.h * 0.52,
         toX: x2 + nodeW + 16,
-        toY: motivoRows[index] - 2,
+        toY: calloutY - 2,
       });
     });
 
     container.innerHTML = "";
-    container.appendChild(
-      el("div", { class: "head" }, [
-        el("div", {}, [
-          el("h3", { html: "Flujo de participantes" }),
-          el("p", { class: "sub", html: "Participantes y segmentación de screening" })
-        ])
-      ]),
-    );
+    if (showHeader) {
+      container.appendChild(
+        el("div", { class: "head" }, [
+          el("div", {}, [
+            el("h3", { html: "Flujo de participantes" }),
+            el("p", { class: "sub", html: "Participantes y segmentación de screening" })
+          ])
+        ]),
+      );
+    }
 
-    container.appendChild(el("div", { class: "viz" }, [svg]));
+    container.appendChild(
+      el("div", { class: showHeader ? "viz" : "viz viz--solo" }, [svg]),
+    );
 
     if (hasMismatch) {
       container.appendChild(
