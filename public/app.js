@@ -952,6 +952,8 @@ function renderRoles() {
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 9h11.5v7.8H3.5z"></path><path d="M15 11h3.3l2.2 2.2v3.6H15z"></path><path d="M6.8 18.2h.1"></path><path d="M17.8 18.2h.1"></path><path d="M6.8 18.2a1.7 1.7 0 1 0 0 .01"></path><path d="M17.8 18.2a1.7 1.7 0 1 0 0 .01"></path><path d="M6 6.3h5.6"></path></svg>',
     recepcionResultadosFIT:
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="4.5" width="12" height="15" rx="2"></rect><path d="M9 9h6"></path><path d="M9 12h6"></path><path d="m9.2 15.2 1.6 1.6 3.2-3.2"></path></svg>',
+    informeFITEntregadosLab:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4.5h8l4 4v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"></path><path d="M14 4.5V9h4"></path><path d="M9 12h6"></path><path d="M9 15h6"></path><path d="M9 18h4"></path></svg>',
     entrevistaMedica:
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 4.2v4.2a3.1 3.1 0 0 0 3.1 3.1h1.8A3.1 3.1 0 0 0 16 8.4V4.2"></path><path d="M12 11.5v2.4a4.2 4.2 0 1 0 8.4 0v-2.5"></path><circle cx="16.2" cy="17.9" r="2.1"></circle></svg>',
     informePacienteResultadoFIT:
@@ -965,6 +967,7 @@ function renderRoles() {
     recepcionMuestraFIT: "Recepción de muestra de FIT",
     envioMuestrasLaboratorio: "Entrega de FIT al laboratorio",
     recepcionResultadosFIT: "Recepción de resultado de FIT",
+    informeFITEntregadosLab: "Informe de FIT entregados a lab",
     entrevistaMedica: "Entrevista médica",
     informePacienteResultadoFIT: "Informe de resultado FIT",
     evaluacionInicialSalud: "Evaluación inicial",
@@ -973,20 +976,35 @@ function renderRoles() {
   const enfermeriaItems = Array.isArray(CONFIG.links.formularios?.enfermeria?.items)
     ? [...CONFIG.links.formularios.enfermeria.items]
     : [];
-  const registroOrden = [
-    "recepcionMuestraFIT",
-    "envioMuestrasLaboratorio",
-    "recepcionResultadosFIT",
-  ];
-  const consolidatedItems = registroOrden
-    .map((key) => enfermeriaItems.find((item) => item?.key === key))
-    .filter(Boolean);
+  const byKey = (key) => enfermeriaItems.find((item) => item?.key === key) || null;
+  const recepcionMuestraFIT = byKey("recepcionMuestraFIT");
+  const envioMuestrasLaboratorio = byKey("envioMuestrasLaboratorio");
+  const recepcionResultadosFIT = byKey("recepcionResultadosFIT");
 
-  const roles = consolidatedItems.length
-    ? [{ key: "registroOperativo", title: "", desc: "", items: consolidatedItems }]
-    : [];
+  const roles = [
+    {
+      key: "navigators",
+      title: "Navigators",
+      desc: "",
+      items: [recepcionMuestraFIT, envioMuestrasLaboratorio].filter(Boolean),
+    },
+    {
+      key: "administrador",
+      title: "Administrador",
+      desc: "",
+      items: [
+        recepcionResultadosFIT,
+        {
+          key: "informeFITEntregadosLab",
+          label: "Informe de FIT entregados a lab",
+          url: "PEGAR_AQUI_INFORME_FIT_ENTREGADOS_LAB",
+        },
+      ].filter(Boolean),
+    },
+  ].filter((roleCfg) => Array.isArray(roleCfg.items) && roleCfg.items.length > 0);
 
-  grid.classList.toggle("role-grid--single", roles.length === 1);
+  grid.classList.toggle("role-grid--single", false);
+  grid.classList.toggle("role-grid--registro-split", true);
 
   roles.forEach((roleCfg, roleIndex) => {
     if (!roleCfg || !Array.isArray(roleCfg.items) || roleCfg.items.length === 0) return;
