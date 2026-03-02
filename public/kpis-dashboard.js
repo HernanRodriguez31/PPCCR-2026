@@ -23,7 +23,7 @@
     resultadosFitPorEstacion: {
       label: "Recepción de Resultados de FIT",
       sheet: "Recepción de Resultados de FIT",
-      tq: "select K, count(A) where K is not null and F is not null group by K pivot F",
+      tq: "select K, count(A) where K is not null and K <> 'No encontrado' and F is not null group by K pivot F",
     },
   };
 
@@ -635,7 +635,7 @@
     const negativosIndex = findHeaderIndex(headers, ["negativo"]);
     const positivosIndex = findHeaderIndex(headers, ["positivo"]);
 
-    if (negativosIndex < 0 || positivosIndex < 0) {
+    if (negativosIndex < 0 && positivosIndex < 0) {
       stationsMap.forEach((station) => {
         station.resultadosFitRecibidos = null;
         station.fitInformados = null;
@@ -655,8 +655,8 @@
         return;
       }
 
-      const negativos = toInt(getCell(row, negativosIndex));
-      const positivos = toInt(getCell(row, positivosIndex));
+      const negativos = negativosIndex >= 0 ? toInt(getCell(row, negativosIndex)) : 0;
+      const positivos = positivosIndex >= 0 ? toInt(getCell(row, positivosIndex)) : 0;
       const totalResultados = negativos + positivos;
 
       station.resultadosFitNegativos += negativos;
