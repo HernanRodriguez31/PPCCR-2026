@@ -13,7 +13,7 @@
     muestrasRecibidasPorEstacion: {
       label: "Recepción de Muestra de Test FIT",
       sheet: "Recepción de Muestra de Test FIT",
-      tq: "select G, count(E) where E is not null group by G",
+      tq: "select C, count(G) where C is not null and G is not null group by C",
     },
     muestrasALabPorEstacion: {
       label: "Entrega de Muestras de FIT a Lab",
