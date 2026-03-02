@@ -50,8 +50,8 @@ const WORKFLOW_PHASES = [
     iconKey: "station",
     title: "Etapa 2 — Operativo en estación",
     timelineTitle: "Operativo en estación",
-    range: "del 23 de marzo al 1 de abril",
-    rangeShort: "23 mar – 1 abr",
+    range: "del 23 al 24 de marzo",
+    rangeShort: "23–24 mar",
     objective:
       "Evaluación de criterios de tamizaje y definición de la ruta operativa para cada participante.",
     steps: [
@@ -106,8 +106,8 @@ const WORKFLOW_PHASES = [
     iconKey: "fit",
     title: "Etapa 3 — Test FIT (Ruta A)",
     timelineTitle: "Test FIT + resultados",
-    range: "del 23 de marzo al 1 de abril",
-    rangeShort: "23 mar – 1 abr",
+    range: "del 25 de marzo al 1 de abril",
+    rangeShort: "25 mar – 1 abr",
     objective:
       "Ejecución del circuito FIT: entrega, recepción, traslado de muestras e información del resultado.",
     steps: [

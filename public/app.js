@@ -202,9 +202,9 @@ const CONFIG = {
       {
         id: "etapa-2",
         stageLabel: "Etapa 2",
-        periodLabel: "09–22 Mar",
+        periodLabel: "09–24 Mar",
         startDate: "2026-03-09",
-        endDate: "2026-03-22",
+        endDate: "2026-03-24",
         title: "Difusión y educación",
         objective:
           "Impulsar la participación y asegurar comprensión del proceso.",
@@ -215,16 +215,15 @@ const CONFIG = {
         ],
         details: [
           "9 al 15 de marzo: campaña digital coordinada con aliados institucionales.",
-          "16 al 22 de marzo: acciones presenciales en estaciones con material impreso y digital.",
+          "16 al 24 de marzo: acciones presenciales en estaciones con material impreso y digital.",
           "Webinars de 35 minutos con Q&A para equipos y población objetivo.",
-          "31 de marzo: activación territorial por Día Mundial del Cáncer de Colon.",
         ],
       },
       {
         id: "etapa-3",
         stageLabel: "Etapa 3",
-        periodLabel: "23 Mar–01 Abr",
-        startDate: "2026-03-23",
+        periodLabel: "25 Mar–01 Abr",
+        startDate: "2026-03-25",
         endDate: "2026-04-01",
         title: "Operativo de testeo qFIT",
         objective:
@@ -237,8 +236,9 @@ const CONFIG = {
         details: [
           "Stock operativo: 300 qFIT para estaciones priorizadas.",
           "Estaciones priorizadas: Parque Saavedra, Aristóbulo del Valle, Parque Rivadavia y Parque Chacabuco.",
-          "Entrega de kits: 23 al 28 de marzo.",
+          "Entrega de kits: 25 al 28 de marzo.",
           "Recepción y devolución de muestras: 29 de marzo al 1 de abril.",
+          "31 de marzo: activación territorial por Día Mundial del Cáncer de Colon.",
           "Dotación: 1 Navegador por estación para entrega, recepción y seguimiento.",
         ],
       },
