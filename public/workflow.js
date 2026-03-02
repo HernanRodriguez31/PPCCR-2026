@@ -10,20 +10,20 @@ const WORKFLOW_PHASES = [
   {
     id: "etapa-1",
     iconKey: "megaphone",
-    title: "Etapa 1 — Difusión e información + preparación",
-    timelineTitle: "Difusión e información",
-    range: "del 9 al 22 de marzo",
-    rangeShort: "9–22 mar",
+    title: "Etapa 1 — Capacitación y alistamiento operativo",
+    timelineTitle: "Capacitación y alistamiento",
+    range: "del 1 al 7 de marzo",
+    rangeShort: "1–7 mar",
     objective:
-      "Difusión, organización del equipo y alistamiento para iniciar el operativo en estación.",
+      "Asegurar capacidades del equipo, materiales y circuito operativo validados.",
     steps: [
       {
         id: "paso-1",
         number: 1,
-        title: "Difusión y concientización",
-        desc: "Campaña en redes + comunicación institucional.",
+        title: "Capacitación técnica del equipo",
+        desc: "Capacitación técnica para personal y referentes del operativo.",
         details: [
-          "Objetivo: informar a participantes y promover el acceso al tamizaje.",
+          "Cobertura del circuito preventivo y criterios de elegibilidad.",
         ],
         roles: ["CO", "EN"],
       },
@@ -48,16 +48,40 @@ const WORKFLOW_PHASES = [
   {
     id: "etapa-2",
     iconKey: "station",
-    title: "Etapa 2 — Operativo en estación",
-    timelineTitle: "Operativo en estación",
-    range: "del 23 al 24 de marzo",
-    rangeShort: "23–24 mar",
+    title: "Etapa 2 — Difusión y educación",
+    timelineTitle: "Difusión y educación",
+    range: "del 9 al 24 de marzo",
+    rangeShort: "9–24 mar",
     objective:
-      "Evaluación de criterios de tamizaje y definición de la ruta operativa para cada participante.",
+      "Impulsar la participación y asegurar comprensión del proceso.",
     steps: [
       {
         id: "paso-4",
         number: 4,
+        title: "Difusión y educación comunitaria",
+        desc: "Campaña multicanal coordinada con aliados institucionales y acciones en territorio.",
+        details: [
+          "9 al 15 de marzo: campaña digital coordinada con aliados institucionales.",
+          "16 al 24 de marzo: acciones presenciales con material impreso y digital.",
+          "Webinars breves con Q&A para equipos y población objetivo.",
+        ],
+        roles: ["CO", "EN"],
+      },
+    ],
+  },
+  {
+    id: "etapa-3",
+    iconKey: "fit",
+    title: "Etapa 3 — Operativo de testeo qFIT",
+    timelineTitle: "Operativo de testeo qFIT",
+    range: "del 25 de marzo al 3 de abril",
+    rangeShort: "25 mar – 3 abr",
+    objective:
+      "Ejecución del tamizaje, circuito FIT, resultados y cierre operativo.",
+    steps: [
+      {
+        id: "paso-5",
+        number: 5,
         title: "Entrevista de tamizaje (Algoritmo)",
         desc: "Evaluar criterios de tamizaje y clasificar riesgo.",
         details: [
@@ -99,21 +123,9 @@ const WORKFLOW_PHASES = [
           },
         ],
       },
-    ],
-  },
-  {
-    id: "etapa-3",
-    iconKey: "fit",
-    title: "Etapa 3 — Test FIT (Ruta A)",
-    timelineTitle: "Test FIT + resultados",
-    range: "del 25 de marzo al 1 de abril",
-    rangeShort: "25 mar – 1 abr",
-    objective:
-      "Ejecución del circuito FIT: entrega, recepción, traslado de muestras e información del resultado.",
-    steps: [
       {
-        id: "paso-5",
-        number: 5,
+        id: "paso-6",
+        number: 6,
         title: "Información sobre uso y entrega del test FIT",
         desc: "Información sobre el uso y entrega del test FIT.",
         details: [
@@ -124,15 +136,19 @@ const WORKFLOW_PHASES = [
         roles: ["EN"],
       },
       {
-        id: "paso-6",
-        number: 6,
+        id: "paso-7",
+        number: 7,
         title: "Recepción de muestra en estación",
-        desc: "Verificación del rotulado, indemnidad del producto y se registra la recepción.",
+        desc: "Verificación del rotulado, indemnidad del producto y registro de recepción en estación.",
+        details: [
+          "Recepción y devolución de muestras: 29 de marzo al 3 de abril.",
+          "02 y 03 de abril: recepción de muestras FIT en las estaciones.",
+        ],
         roles: ["EN"],
       },
       {
-        id: "paso-7",
-        number: 7,
+        id: "paso-8",
+        number: 8,
         title: "Traslado a laboratorio",
         desc: "Se retiran las muestras de la estación saludable y se trasladan al laboratorio.",
         details: [
@@ -141,15 +157,15 @@ const WORKFLOW_PHASES = [
         roles: ["LO", "CO"],
       },
       {
-        id: "paso-8",
-        number: 8,
+        id: "paso-9",
+        number: 9,
         title: "Recepción de resultado FIT",
         desc: "Los resultados del test FIT llegan a la coordinación operativa del programa y directamente al participante por correo.",
         roles: ["CO"],
       },
       {
-        id: "paso-9",
-        number: 9,
+        id: "paso-10",
+        number: 10,
         title: "Información al participante sobre el resultado FIT",
         desc: "Cierre operativo para cada participante.",
         roles: ["EN"],
@@ -179,20 +195,9 @@ const WORKFLOW_PHASES = [
           },
         ],
       },
-    ],
-  },
-  {
-    id: "etapa-4",
-    iconKey: "check",
-    title: "Etapa 4 — Cierre operativo",
-    timelineTitle: "Cierre operativo",
-    range: "1 de abril",
-    rangeShort: "1 abr",
-    objective: "Consolidación final de registros, parámetros y métricas del operativo.",
-    steps: [
       {
-        id: "paso-10",
-        number: 10,
+        id: "paso-11",
+        number: 11,
         title: "Cierre y consolidación de parámetros y métricas",
         desc: "Consolidación de registros y reporte operativo.",
         roles: ["CO"],

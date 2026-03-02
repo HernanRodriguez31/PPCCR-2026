@@ -222,9 +222,9 @@ const CONFIG = {
       {
         id: "etapa-3",
         stageLabel: "Etapa 3",
-        periodLabel: "25 Mar–01 Abr",
+        periodLabel: "25 Mar–03 Abr",
         startDate: "2026-03-25",
-        endDate: "2026-04-01",
+        endDate: "2026-04-03",
         title: "Operativo de testeo qFIT",
         objective:
           "Ejecutar entrega, recepción y gestión de muestras con trazabilidad.",
@@ -237,7 +237,8 @@ const CONFIG = {
           "Stock operativo: 300 qFIT para estaciones priorizadas.",
           "Estaciones priorizadas: Parque Saavedra, Aristóbulo del Valle, Parque Rivadavia y Parque Chacabuco.",
           "Entrega de kits: 25 al 28 de marzo.",
-          "Recepción y devolución de muestras: 29 de marzo al 1 de abril.",
+          "Recepción y devolución de muestras: 29 de marzo al 3 de abril.",
+          "02 y 03 de abril: recepción de muestras FIT en las estaciones.",
           "31 de marzo: activación territorial por Día Mundial del Cáncer de Colon.",
           "Dotación: 1 Navegador por estación para entrega, recepción y seguimiento.",
         ],
