@@ -1,5 +1,8 @@
 # PP CCR 2026 Interinstitucional
 
+## Deploy
+Ver [DEPLOY.md](DEPLOY.md) para el flujo hibrido recomendado (hosting automatico + functions manual).
+
 ## Seguridad de llaves
 Nunca commitear llaves privadas, certificados ni secretos al repositorio.
 
