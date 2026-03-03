@@ -40,7 +40,6 @@ const SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY_SECRET = defineSecret(
 );
 const SHEETS_STAGE1_SHEET_ID_SECRET = defineSecret("PPCCR_STAGE1_SHEET_ID");
 const SHEETS_STAGE1_SHEET_TAB_SECRET = defineSecret("PPCCR_STAGE1_SHEET_TAB");
-const EXPORT_SERVICE_ACCOUNT_JSON_SECRET = defineSecret("GOOGLE_SA_JSON");
 
 const SHEETS_SECRETS = [
   SHEETS_SERVICE_ACCOUNT_EMAIL_SECRET,
@@ -50,7 +49,6 @@ const SHEETS_SECRETS = [
 ] as const;
 
 const EXPORT_SECRETS = [
-  EXPORT_SERVICE_ACCOUNT_JSON_SECRET,
   SHEETS_SERVICE_ACCOUNT_EMAIL_SECRET,
   SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY_SECRET,
 ] as const;
@@ -348,7 +346,7 @@ function parseServiceAccountFromJsonOrFallback(): {
   serviceAccountEmail: string;
   serviceAccountKey: string;
 } {
-  const jsonRaw = getSecretOrEnv(EXPORT_SERVICE_ACCOUNT_JSON_SECRET, "GOOGLE_SA_JSON");
+  const jsonRaw = String(process.env.GOOGLE_SA_JSON || "").trim();
   if (jsonRaw) {
     try {
       const parsed = JSON.parse(jsonRaw) as Record<string, unknown>;
@@ -377,7 +375,7 @@ function parseServiceAccountFromJsonOrFallback(): {
   const serviceAccountKey = serviceAccountKeyRaw.replace(/\\n/g, "\n");
   if (!serviceAccountEmail || !serviceAccountKey) {
     throw new Error(
-      "Credenciales de Google no configuradas para exportación. Definir GOOGLE_SA_JSON o secrets legacy.",
+      "Credenciales de Google no configuradas para exportación. Definir PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL/PPCCR_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY (o GOOGLE_SA_JSON opcional).",
     );
   }
   return { serviceAccountEmail, serviceAccountKey };

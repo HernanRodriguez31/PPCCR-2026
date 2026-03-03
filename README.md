@@ -12,12 +12,14 @@ Si una llave privada fue expuesta (por ejemplo `secrets-jaas/jaas_private.pem`),
 - Endpoint: `/exports/informe-fit-entregados-lab.xlsx`
 - Fuente: Google Sheets `Informe de FIT entregados a Lab` (`A1:G`)
 - Seguridad: endpoint público (sin auth).
+- Nota local: si abrís con Live Server (`127.0.0.1:5500`), el frontend usa fallback a `https://ppccr-2026.web.app/...` para la descarga.
 
 ### Secrets requeridos (Functions Gen2)
 ```bash
-firebase functions:secrets:set GOOGLE_SA_JSON
+firebase functions:secrets:get PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL
+firebase functions:secrets:get PPCCR_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
 ```
 
 Notas:
-- `GOOGLE_SA_JSON` debe contener el JSON completo del Service Account.
-- Compartir el spreadsheet con el email `client_email` del Service Account.
+- `GOOGLE_SA_JSON` es opcional (solo si querés usar JSON completo por env).
+- Compartir el spreadsheet con el service account usado por esos secrets.

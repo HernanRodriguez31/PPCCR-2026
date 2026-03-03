@@ -256,6 +256,8 @@ const STATION_BRIDGE_KEYS = Object.freeze({
 
 const PPCCR_EXPORT_ENDPOINTS = Object.freeze({
   informeFitEntregadosLab: "/exports/informe-fit-entregados-lab.xlsx",
+  informeFitEntregadosLabProd:
+    "https://ppccr-2026.web.app/exports/informe-fit-entregados-lab.xlsx",
 });
 
 const STATION_NAME_BY_ID = Object.freeze({
@@ -436,6 +438,23 @@ function isLocalHostRuntime() {
   return HOME_ALGO_LOCAL_HOSTNAMES.has(hostname);
 }
 
+function isFirebaseHostingEmulatorRuntime() {
+  const host = String(window.location?.host || "").trim().toLowerCase();
+  return host === "127.0.0.1:8085" || host === "localhost:8085";
+}
+
+function resolveInformeFitEntregadosLabUrl(url) {
+  const raw = String(url || PPCCR_EXPORT_ENDPOINTS.informeFitEntregadosLab).trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  if (isLocalHostRuntime() && !isFirebaseHostingEmulatorRuntime()) {
+    return PPCCR_EXPORT_ENDPOINTS.informeFitEntregadosLabProd;
+  }
+
+  return raw;
+}
+
 function resolveStage1SubmitEndpoints() {
   const primary = String(CONFIG?.integrations?.algorithmStage1Endpoint || "").trim();
   const fallback = String(CONFIG?.integrations?.algorithmStage1FallbackEndpoint || "").trim();
@@ -532,7 +551,7 @@ function triggerBlobDownload(blob, fileName) {
 }
 
 async function downloadInformeFitEntregadosLab(url) {
-  const exportUrl = String(url || PPCCR_EXPORT_ENDPOINTS.informeFitEntregadosLab).trim();
+  const exportUrl = resolveInformeFitEntregadosLabUrl(url);
   if (!exportUrl) return;
 
   let response;

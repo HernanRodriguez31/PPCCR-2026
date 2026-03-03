@@ -2,6 +2,7 @@
   "scripts": {
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:functions": "firebase deploy --only functions",
+    "deploy:export": "firebase deploy --only functions:exportInformeFitEntregadosLab,hosting",
     "deploy:full": "firebase deploy --only hosting,functions",
     "deploy:firestore": "firebase deploy --only firestore:rules,firestore:indexes",
     "deploy:secrets:check": "firebase functions:secrets:get PPCCR_STAGE1_SHEET_ID && firebase functions:secrets:get PPCCR_STAGE1_SHEET_TAB && firebase functions:secrets:get PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL && firebase functions:secrets:get PPCCR_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY"
