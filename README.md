@@ -11,12 +11,11 @@ Si una llave privada fue expuesta (por ejemplo `secrets-jaas/jaas_private.pem`),
 ## Exporte Excel Informe FIT
 - Endpoint: `/exports/informe-fit-entregados-lab.xlsx`
 - Fuente: Google Sheets `Informe de FIT entregados a Lab` (`A1:G`)
-- Seguridad: `Authorization: Bearer <idToken>` o fallback `X-PPCCR-EXPORT-KEY`.
+- Seguridad: endpoint público (sin auth).
 
 ### Secrets requeridos (Functions Gen2)
 ```bash
 firebase functions:secrets:set GOOGLE_SA_JSON
-firebase functions:secrets:set PPCCR_EXPORT_KEY
 ```
 
 Notas:

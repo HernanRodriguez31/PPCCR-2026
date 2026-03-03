@@ -41,7 +41,6 @@ const SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY_SECRET = defineSecret(
 const SHEETS_STAGE1_SHEET_ID_SECRET = defineSecret("PPCCR_STAGE1_SHEET_ID");
 const SHEETS_STAGE1_SHEET_TAB_SECRET = defineSecret("PPCCR_STAGE1_SHEET_TAB");
 const EXPORT_SERVICE_ACCOUNT_JSON_SECRET = defineSecret("GOOGLE_SA_JSON");
-const EXPORT_AUTH_KEY_SECRET = defineSecret("PPCCR_EXPORT_KEY");
 
 const SHEETS_SECRETS = [
   SHEETS_SERVICE_ACCOUNT_EMAIL_SECRET,
@@ -52,7 +51,6 @@ const SHEETS_SECRETS = [
 
 const EXPORT_SECRETS = [
   EXPORT_SERVICE_ACCOUNT_JSON_SECRET,
-  EXPORT_AUTH_KEY_SECRET,
   SHEETS_SERVICE_ACCOUNT_EMAIL_SECRET,
   SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY_SECRET,
 ] as const;
@@ -343,54 +341,7 @@ function getSecretOrEnv(secretParam: { value?: () => string } | null, fallbackEn
 function setExportCorsHeaders(res: { set: (key: string, value: string) => void }): void {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET,OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Authorization,Content-Type,X-PPCCR-EXPORT-KEY");
-}
-
-function getExportAuthKey(): string {
-  return getSecretOrEnv(EXPORT_AUTH_KEY_SECRET, "PPCCR_EXPORT_KEY");
-}
-
-function getBearerToken(req: {
-  get?: (name: string) => string | undefined;
-  headers?: Record<string, unknown>;
-}): string {
-  const fromGetter = typeof req.get === "function" ? req.get("authorization") : "";
-  const fromHeaders = String(req.headers?.authorization || "");
-  const raw = String(fromGetter || fromHeaders || "").trim();
-  const match = raw.match(/^Bearer\s+(.+)$/i);
-  return match ? String(match[1] || "").trim() : "";
-}
-
-async function verifyExportAuthorization(req: {
-  get?: (name: string) => string | undefined;
-  headers?: Record<string, unknown>;
-}): Promise<{ ok: true; method: "bearer" | "header" } | { ok: false; reason: "unauthorized" | "missing_key" }> {
-  const bearerToken = getBearerToken(req);
-  if (bearerToken) {
-    try {
-      await admin.auth().verifyIdToken(bearerToken);
-      return { ok: true, method: "bearer" };
-    } catch (error) {
-      logger.warn("Export XLSX: bearer token inválido. Se intentará fallback por header.", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  const expectedKey = getExportAuthKey();
-  if (!expectedKey) {
-    logger.error("Export XLSX: PPCCR_EXPORT_KEY no configurado.");
-    return { ok: false, reason: "missing_key" };
-  }
-
-  const headerFromGet = typeof req.get === "function" ? req.get("X-PPCCR-EXPORT-KEY") : "";
-  const headerFromRaw = String(req.headers?.["x-ppccr-export-key"] || "");
-  const providedKey = String(headerFromGet || headerFromRaw || "").trim();
-  if (providedKey && providedKey === expectedKey) {
-    return { ok: true, method: "header" };
-  }
-
-  return { ok: false, reason: "unauthorized" };
+  res.set("Access-Control-Allow-Headers", "Authorization,Content-Type");
 }
 
 function parseServiceAccountFromJsonOrFallback(): {
@@ -1705,23 +1656,6 @@ export const exportInformeFitEntregadosLab = onRequest(
       res.status(405).json({
         ok: false,
         message: "Metodo no permitido. Usar GET.",
-      });
-      return;
-    }
-
-    const auth = await verifyExportAuthorization(req);
-    if ("reason" in auth && auth.reason === "missing_key") {
-      res.status(500).json({
-        ok: false,
-        message: "Exportación no configurada en servidor.",
-      });
-      return;
-    }
-
-    if (!auth.ok) {
-      res.status(401).json({
-        ok: false,
-        message: "No autorizado para exportar.",
       });
       return;
     }

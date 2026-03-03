@@ -258,8 +258,6 @@ const PPCCR_EXPORT_ENDPOINTS = Object.freeze({
   informeFitEntregadosLab: "/exports/informe-fit-entregados-lab.xlsx",
 });
 
-const PPCCR_EXPORT_KEY_SESSION = "ppccr_export_key";
-
 const STATION_NAME_BY_ID = Object.freeze({
   saavedra: "Parque Saavedra",
   aristobulo: "Aristóbulo del Valle",
@@ -490,30 +488,6 @@ function safeSetLink(anchorEl, url, { newTab = false } = {}) {
   }
 }
 
-function getExportKeyFromSession() {
-  try {
-    return String(window.sessionStorage.getItem(PPCCR_EXPORT_KEY_SESSION) || "").trim();
-  } catch (_error) {
-    return "";
-  }
-}
-
-function setExportKeyInSession(value) {
-  try {
-    window.sessionStorage.setItem(PPCCR_EXPORT_KEY_SESSION, String(value || "").trim());
-  } catch (_error) {
-    // noop
-  }
-}
-
-function clearExportKeyFromSession() {
-  try {
-    window.sessionStorage.removeItem(PPCCR_EXPORT_KEY_SESSION);
-  } catch (_error) {
-    // noop
-  }
-}
-
 function parseFilenameFromContentDisposition(contentDisposition) {
   const raw = String(contentDisposition || "").trim();
   if (!raw) return "";
@@ -561,40 +535,16 @@ async function downloadInformeFitEntregadosLab(url) {
   const exportUrl = String(url || PPCCR_EXPORT_ENDPOINTS.informeFitEntregadosLab).trim();
   if (!exportUrl) return;
 
-  let exportKey = getExportKeyFromSession();
-  if (!exportKey) {
-    const typed = window.prompt(
-      "Ingresá la clave de exportación para descargar el informe Excel:",
-      "",
-    );
-    if (typed === null) return;
-    exportKey = String(typed || "").trim();
-    if (!exportKey) {
-      window.alert("La clave de exportación es obligatoria.");
-      return;
-    }
-    setExportKeyInSession(exportKey);
-  }
-
   let response;
   try {
     response = await fetch(exportUrl, {
       method: "GET",
-      headers: {
-        "X-PPCCR-EXPORT-KEY": exportKey,
-      },
       credentials: "same-origin",
       cache: "no-store",
     });
   } catch (error) {
     console.error("No se pudo iniciar la descarga del informe Excel.", error);
     window.alert("No se pudo conectar con el servidor de exportación.");
-    return;
-  }
-
-  if (response.status === 401) {
-    clearExportKeyFromSession();
-    window.alert("No autorizado. Verificá la clave de exportación e intentá nuevamente.");
     return;
   }
 
