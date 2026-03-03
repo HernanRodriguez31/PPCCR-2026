@@ -254,6 +254,12 @@ const STATION_BRIDGE_KEYS = Object.freeze({
   stationLegacy: "ppccr_auth_user",
 });
 
+const PPCCR_EXPORT_ENDPOINTS = Object.freeze({
+  informeFitEntregadosLab: "/exports/informe-fit-entregados-lab.xlsx",
+});
+
+const PPCCR_EXPORT_KEY_SESSION = "ppccr_export_key";
+
 const STATION_NAME_BY_ID = Object.freeze({
   saavedra: "Parque Saavedra",
   aristobulo: "Aristóbulo del Valle",
@@ -482,6 +488,133 @@ function safeSetLink(anchorEl, url, { newTab = false } = {}) {
     anchorEl.setAttribute("target", "_blank");
     anchorEl.setAttribute("rel", "noopener noreferrer");
   }
+}
+
+function getExportKeyFromSession() {
+  try {
+    return String(window.sessionStorage.getItem(PPCCR_EXPORT_KEY_SESSION) || "").trim();
+  } catch (_error) {
+    return "";
+  }
+}
+
+function setExportKeyInSession(value) {
+  try {
+    window.sessionStorage.setItem(PPCCR_EXPORT_KEY_SESSION, String(value || "").trim());
+  } catch (_error) {
+    // noop
+  }
+}
+
+function clearExportKeyFromSession() {
+  try {
+    window.sessionStorage.removeItem(PPCCR_EXPORT_KEY_SESSION);
+  } catch (_error) {
+    // noop
+  }
+}
+
+function parseFilenameFromContentDisposition(contentDisposition) {
+  const raw = String(contentDisposition || "").trim();
+  if (!raw) return "";
+
+  const utf8Match = raw.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]).replace(/[\\/:*?"<>|]/g, "_");
+    } catch (_error) {
+      return String(utf8Match[1]).replace(/[\\/:*?"<>|]/g, "_");
+    }
+  }
+
+  const simpleMatch = raw.match(/filename="?([^\";]+)"?/i);
+  if (!simpleMatch?.[1]) return "";
+  return String(simpleMatch[1]).replace(/[\\/:*?"<>|]/g, "_");
+}
+
+function buildFallbackExportFilename() {
+  const now = new Date();
+  const pad = (value) => String(value).padStart(2, "0");
+  const year = now.getFullYear();
+  const month = pad(now.getMonth() + 1);
+  const day = pad(now.getDate());
+  const hour = pad(now.getHours());
+  const minute = pad(now.getMinutes());
+  return `Informe_FIT_entregados_a_lab_${year}-${month}-${day}_${hour}-${minute}.xlsx`;
+}
+
+function triggerBlobDownload(blob, fileName) {
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => {
+    window.URL.revokeObjectURL(url);
+  }, 0);
+}
+
+async function downloadInformeFitEntregadosLab(url) {
+  const exportUrl = String(url || PPCCR_EXPORT_ENDPOINTS.informeFitEntregadosLab).trim();
+  if (!exportUrl) return;
+
+  let exportKey = getExportKeyFromSession();
+  if (!exportKey) {
+    const typed = window.prompt(
+      "Ingresá la clave de exportación para descargar el informe Excel:",
+      "",
+    );
+    if (typed === null) return;
+    exportKey = String(typed || "").trim();
+    if (!exportKey) {
+      window.alert("La clave de exportación es obligatoria.");
+      return;
+    }
+    setExportKeyInSession(exportKey);
+  }
+
+  let response;
+  try {
+    response = await fetch(exportUrl, {
+      method: "GET",
+      headers: {
+        "X-PPCCR-EXPORT-KEY": exportKey,
+      },
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+  } catch (error) {
+    console.error("No se pudo iniciar la descarga del informe Excel.", error);
+    window.alert("No se pudo conectar con el servidor de exportación.");
+    return;
+  }
+
+  if (response.status === 401) {
+    clearExportKeyFromSession();
+    window.alert("No autorizado. Verificá la clave de exportación e intentá nuevamente.");
+    return;
+  }
+
+  if (!response.ok) {
+    const reason = `${response.status} ${response.statusText || ""}`.trim();
+    window.alert(`No se pudo descargar el informe (${reason}).`);
+    return;
+  }
+
+  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+  if (!contentType.includes("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+    console.warn("Respuesta de exportación con Content-Type no esperado:", contentType);
+  }
+
+  const blob = await response.blob();
+  const contentDisposition = response.headers.get("content-disposition") || "";
+  const fileName =
+    parseFilenameFromContentDisposition(contentDisposition) || buildFallbackExportFilename();
+
+  triggerBlobDownload(blob, fileName);
 }
 
 function deriveLookerEmbedUrl(openUrl) {
@@ -997,7 +1130,7 @@ function renderRoles() {
         {
           key: "informeFITEntregadosLab",
           label: "Informe de FIT entregados a lab",
-          url: "PEGAR_AQUI_INFORME_FIT_ENTREGADOS_LAB",
+          url: PPCCR_EXPORT_ENDPOINTS.informeFitEntregadosLab,
         },
       ].filter(Boolean),
     },
@@ -1069,11 +1202,37 @@ function renderRoles() {
       a.appendChild(label);
       a.appendChild(chev);
 
-      // Formularios SIEMPRE nueva pestaña
-      safeSetLink(a, item.url, { newTab: true });
+      const isExportInformeFit = item.key === "informeFITEntregadosLab";
+
+      // Formularios abren en nueva pestaña, excepto export Excel protegido.
+      safeSetLink(a, item.url, { newTab: !isExportInformeFit });
+
+      if (
+        isExportInformeFit &&
+        item.url &&
+        !isPlaceholderUrl(item.url)
+      ) {
+        a.addEventListener("click", async (event) => {
+          event.preventDefault();
+          if (a.dataset.loading === "1") return;
+          a.dataset.loading = "1";
+          a.setAttribute("aria-busy", "true");
+          try {
+            await downloadInformeFitEntregadosLab(item.url);
+          } finally {
+            a.dataset.loading = "0";
+            a.removeAttribute("aria-busy");
+          }
+        });
+      }
 
       if (!item.url || isPlaceholderUrl(item.url)) {
         a.setAttribute("aria-label", `${item.label} (URL pendiente)`);
+      } else if (isExportInformeFit) {
+        a.setAttribute(
+          "aria-label",
+          `${label.textContent} (descargar Excel protegido)`,
+        );
       } else {
         a.setAttribute(
           "aria-label",

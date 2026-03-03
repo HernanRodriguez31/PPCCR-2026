@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { defineSecret, defineString } from "firebase-functions/params";
 import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
+import ExcelJS from "exceljs";
 import jwt from "jsonwebtoken";
 
 if (!admin.apps.length) {
@@ -22,7 +23,14 @@ const FIRESTORE_COUNTERS_COLLECTION = "ppccr_stage1_counters";
 const FIRESTORE_RECORDS_COLLECTION = "ppccr_stage1_records";
 const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
+const GOOGLE_SHEETS_SCOPE_RW = "https://www.googleapis.com/auth/spreadsheets";
+const GOOGLE_SHEETS_SCOPE_RO = "https://www.googleapis.com/auth/spreadsheets.readonly";
 const SHEET_ROW_RANGE_REGEX = /![A-Z]+(\d+):[A-Z]+(\d+)$/;
+const EXPORT_SPREADSHEET_ID = "1le0b37MzYrWxfWt3r__QdiWDasLC1u_e6v9Exluttrc";
+const EXPORT_SHEET_NAME = "Informe de FIT entregados a Lab";
+const EXPORT_RANGE = `'${EXPORT_SHEET_NAME}'!A1:G`;
+const EXPORT_TIMEZONE = "America/Argentina/Buenos_Aires";
+const EXPORT_FILENAME_PREFIX = "Informe_FIT_entregados_a_lab";
 
 const SHEETS_SERVICE_ACCOUNT_EMAIL_SECRET = defineSecret(
   "PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL",
@@ -32,12 +40,21 @@ const SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY_SECRET = defineSecret(
 );
 const SHEETS_STAGE1_SHEET_ID_SECRET = defineSecret("PPCCR_STAGE1_SHEET_ID");
 const SHEETS_STAGE1_SHEET_TAB_SECRET = defineSecret("PPCCR_STAGE1_SHEET_TAB");
+const EXPORT_SERVICE_ACCOUNT_JSON_SECRET = defineSecret("GOOGLE_SA_JSON");
+const EXPORT_AUTH_KEY_SECRET = defineSecret("PPCCR_EXPORT_KEY");
 
 const SHEETS_SECRETS = [
   SHEETS_SERVICE_ACCOUNT_EMAIL_SECRET,
   SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY_SECRET,
   SHEETS_STAGE1_SHEET_ID_SECRET,
   SHEETS_STAGE1_SHEET_TAB_SECRET,
+] as const;
+
+const EXPORT_SECRETS = [
+  EXPORT_SERVICE_ACCOUNT_JSON_SECRET,
+  EXPORT_AUTH_KEY_SECRET,
+  SHEETS_SERVICE_ACCOUNT_EMAIL_SECRET,
+  SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY_SECRET,
 ] as const;
 
 const SHEET_HEADERS_A_TO_G = Object.freeze([
@@ -323,6 +340,146 @@ function getSecretOrEnv(secretParam: { value?: () => string } | null, fallbackEn
   return String(process.env[fallbackEnvKey] || "").trim();
 }
 
+function setExportCorsHeaders(res: { set: (key: string, value: string) => void }): void {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET,OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Authorization,Content-Type,X-PPCCR-EXPORT-KEY");
+}
+
+function getExportAuthKey(): string {
+  return getSecretOrEnv(EXPORT_AUTH_KEY_SECRET, "PPCCR_EXPORT_KEY");
+}
+
+function getBearerToken(req: {
+  get?: (name: string) => string | undefined;
+  headers?: Record<string, unknown>;
+}): string {
+  const fromGetter = typeof req.get === "function" ? req.get("authorization") : "";
+  const fromHeaders = String(req.headers?.authorization || "");
+  const raw = String(fromGetter || fromHeaders || "").trim();
+  const match = raw.match(/^Bearer\s+(.+)$/i);
+  return match ? String(match[1] || "").trim() : "";
+}
+
+async function verifyExportAuthorization(req: {
+  get?: (name: string) => string | undefined;
+  headers?: Record<string, unknown>;
+}): Promise<{ ok: true; method: "bearer" | "header" } | { ok: false; reason: "unauthorized" | "missing_key" }> {
+  const bearerToken = getBearerToken(req);
+  if (bearerToken) {
+    try {
+      await admin.auth().verifyIdToken(bearerToken);
+      return { ok: true, method: "bearer" };
+    } catch (error) {
+      logger.warn("Export XLSX: bearer token inválido. Se intentará fallback por header.", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  const expectedKey = getExportAuthKey();
+  if (!expectedKey) {
+    logger.error("Export XLSX: PPCCR_EXPORT_KEY no configurado.");
+    return { ok: false, reason: "missing_key" };
+  }
+
+  const headerFromGet = typeof req.get === "function" ? req.get("X-PPCCR-EXPORT-KEY") : "";
+  const headerFromRaw = String(req.headers?.["x-ppccr-export-key"] || "");
+  const providedKey = String(headerFromGet || headerFromRaw || "").trim();
+  if (providedKey && providedKey === expectedKey) {
+    return { ok: true, method: "header" };
+  }
+
+  return { ok: false, reason: "unauthorized" };
+}
+
+function parseServiceAccountFromJsonOrFallback(): {
+  serviceAccountEmail: string;
+  serviceAccountKey: string;
+} {
+  const jsonRaw = getSecretOrEnv(EXPORT_SERVICE_ACCOUNT_JSON_SECRET, "GOOGLE_SA_JSON");
+  if (jsonRaw) {
+    try {
+      const parsed = JSON.parse(jsonRaw) as Record<string, unknown>;
+      const serviceAccountEmail = String(parsed.client_email || "").trim();
+      const serviceAccountKeyRaw = String(parsed.private_key || "").trim();
+      const serviceAccountKey = serviceAccountKeyRaw.replace(/\\n/g, "\n");
+      if (!serviceAccountEmail || !serviceAccountKey) {
+        throw new Error("client_email/private_key faltantes.");
+      }
+      return { serviceAccountEmail, serviceAccountKey };
+    } catch (error) {
+      throw new Error(
+        `GOOGLE_SA_JSON inválido para exportación: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  const serviceAccountEmail = getSecretOrEnv(
+    SHEETS_SERVICE_ACCOUNT_EMAIL_SECRET,
+    "PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL",
+  );
+  const serviceAccountKeyRaw = getSecretOrEnv(
+    SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY_SECRET,
+    "PPCCR_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY",
+  );
+  const serviceAccountKey = serviceAccountKeyRaw.replace(/\\n/g, "\n");
+  if (!serviceAccountEmail || !serviceAccountKey) {
+    throw new Error(
+      "Credenciales de Google no configuradas para exportación. Definir GOOGLE_SA_JSON o secrets legacy.",
+    );
+  }
+  return { serviceAccountEmail, serviceAccountKey };
+}
+
+function getZonedDateParts(date: Date, timeZone: string): {
+  year: string;
+  month: string;
+  day: string;
+  hour: string;
+  minute: string;
+} {
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const byType = (type: Intl.DateTimeFormatPartTypes) =>
+    String(parts.find((part) => part.type === type)?.value || "").trim();
+
+  return {
+    year: byType("year"),
+    month: byType("month"),
+    day: byType("day"),
+    hour: byType("hour"),
+    minute: byType("minute"),
+  };
+}
+
+function formatExportTimestampAR(date: Date): string {
+  const parts = getZonedDateParts(date, EXPORT_TIMEZONE);
+  return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}`;
+}
+
+function formatFilenameTimestampAR(date: Date): string {
+  const parts = getZonedDateParts(date, EXPORT_TIMEZONE);
+  return `${parts.year}-${parts.month}-${parts.day}_${parts.hour}-${parts.minute}`;
+}
+
+function normalizeExportRow(row: unknown): string[] {
+  const source = Array.isArray(row) ? row : [];
+  const normalized = new Array(7).fill("");
+  for (let idx = 0; idx < 7; idx += 1) {
+    normalized[idx] = String(source[idx] ?? "");
+  }
+  return normalized;
+}
+
 function getSheetsConfig(): SheetsConfig {
   const sheetId = getSecretOrEnv(SHEETS_STAGE1_SHEET_ID_SECRET, "PPCCR_STAGE1_SHEET_ID");
   const sheetTab =
@@ -471,12 +628,16 @@ function buildSheetRowAtoG(record: Partial<Stage1Record>): Array<string | number
   ];
 }
 
-async function getGoogleAccessToken(serviceAccountEmail: string, privateKey: string): Promise<string> {
+async function getGoogleAccessToken(
+  serviceAccountEmail: string,
+  privateKey: string,
+  scope = GOOGLE_SHEETS_SCOPE_RW,
+): Promise<string> {
   const issuedAt = Math.floor(Date.now() / 1000);
   const assertion = jwt.sign(
     {
       iss: serviceAccountEmail,
-      scope: "https://www.googleapis.com/auth/spreadsheets",
+      scope,
       aud: GOOGLE_OAUTH_TOKEN_URL,
       iat: issuedAt,
       exp: issuedAt + 3600,
@@ -1523,6 +1684,122 @@ export const syncStage1ToSheet = onCall(
       });
 
       throw new HttpsError("internal", "No se pudo sincronizar Etapa 1 a Google Sheets.");
+    }
+  },
+);
+
+export const exportInformeFitEntregadosLab = onRequest(
+  {
+    region: "us-central1",
+    secrets: [...EXPORT_SECRETS],
+  },
+  async (req, res) => {
+    setExportCorsHeaders(res);
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+
+    if (req.method !== "GET") {
+      res.status(405).json({
+        ok: false,
+        message: "Metodo no permitido. Usar GET.",
+      });
+      return;
+    }
+
+    const auth = await verifyExportAuthorization(req);
+    if ("reason" in auth && auth.reason === "missing_key") {
+      res.status(500).json({
+        ok: false,
+        message: "Exportación no configurada en servidor.",
+      });
+      return;
+    }
+
+    if (!auth.ok) {
+      res.status(401).json({
+        ok: false,
+        message: "No autorizado para exportar.",
+      });
+      return;
+    }
+
+    try {
+      const { serviceAccountEmail, serviceAccountKey } = parseServiceAccountFromJsonOrFallback();
+      const accessToken = await getGoogleAccessToken(
+        serviceAccountEmail,
+        serviceAccountKey,
+        GOOGLE_SHEETS_SCOPE_RO,
+      );
+
+      const valuesUrl =
+        `${GOOGLE_SHEETS_API_BASE}/${EXPORT_SPREADSHEET_ID}/values/${encodeURIComponent(EXPORT_RANGE)}`;
+      const sheetData = await googleSheetsRequest<{ values?: string[][] }>({
+        method: "GET",
+        url: valuesUrl,
+        accessToken,
+      });
+      const values = Array.isArray(sheetData?.values) ? sheetData.values : [];
+
+      const now = new Date();
+      const exportedAt = formatExportTimestampAR(now);
+      const filename = `${EXPORT_FILENAME_PREFIX}_${formatFilenameTimestampAR(now)}.xlsx`;
+
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "PPCCR";
+      workbook.created = now;
+
+      const worksheet = workbook.addWorksheet("Informe");
+      worksheet.views = [{ state: "frozen", ySplit: 3 }];
+      worksheet.columns = [
+        { width: 18 },
+        { width: 34 },
+        { width: 28 },
+        { width: 22 },
+        { width: 16 },
+        { width: 16 },
+        { width: 40 },
+      ];
+
+      worksheet.addRow([`Exportado: ${exportedAt} (AR)`]);
+      worksheet.mergeCells("A1:G1");
+      worksheet.getCell("A1").font = { bold: true };
+      worksheet.getCell("A1").alignment = { vertical: "middle", horizontal: "left" };
+
+      worksheet.addRow(["", "", "", "", "", "", ""]);
+
+      if (values.length > 0) {
+        values.forEach((row) => {
+          worksheet.addRow(normalizeExportRow(row));
+        });
+
+        const headerRow = worksheet.getRow(3);
+        headerRow.font = { bold: true };
+      } else {
+        worksheet.addRow(["Sin datos para exportar", "", "", "", "", "", ""]);
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`,
+      );
+      res.status(200).send(Buffer.from(buffer as ArrayBuffer));
+    } catch (error) {
+      logger.error("No se pudo exportar Informe de FIT entregados a lab.", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        ok: false,
+        message: "No se pudo generar el Excel.",
+      });
     }
   },
 );

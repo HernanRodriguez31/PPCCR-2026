@@ -31,6 +31,10 @@
       {
         "source": "/api/algorithm/stage1",
         "function": "submitAlgorithmStage1"
+      },
+      {
+        "source": "/exports/informe-fit-entregados-lab.xlsx",
+        "function": "exportInformeFitEntregadosLab"
       }
     ],
     "headers": [
