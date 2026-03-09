@@ -2764,7 +2764,7 @@ function renderHomeAlgorithmStep1State() {
     homeAlgorithmState.step1Continue.hidden = false;
     setHomeAlgorithmFeedback(
       homeAlgorithmState.step1Feedback,
-      `Cumple criterio por edad (${getAlgorithmAgeRangeText()}). Podés continuar al Paso 2.`,
+      `Cumple criterio por edad (entre ${getAlgorithmMinAge()} y ${getAlgorithmMaxAge()} años). Podés continuar al Paso 2.`,
       "success",
     );
     return;
@@ -2774,7 +2774,7 @@ function renderHomeAlgorithmStep1State() {
   homeAlgorithmState.step1Finish.hidden = false;
   setHomeAlgorithmFeedback(
     homeAlgorithmState.step1Feedback,
-    `No incluye por edad (fuera de ${getAlgorithmAgeRangeText()}). Podés editar o finalizar entrevista.`,
+    `No incluye por edad (menor a ${getAlgorithmMinAge()} o mayor a ${getAlgorithmMaxAge()} años). Podés editar o finalizar entrevista.`,
     "danger",
   );
 }

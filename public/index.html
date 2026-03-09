@@ -467,8 +467,8 @@
                     Paso 1: Criterio por edad
                   </h3>
                   <p class="home-algo__panel-copy">
-                    Confirmá los datos obligatorios. Si edad es menor a 45, la
-                    entrevista finaliza en este paso.
+                    Confirmá los datos obligatorios. Si edad es menor a 45 o
+                    mayor a 75 años, la entrevista finaliza en este paso.
                   </p>
 
                   <div class="home-algo__grid">
@@ -542,7 +542,7 @@
                         max="120"
                         inputmode="numeric"
                         autocomplete="off"
-                        placeholder="45"
+                        placeholder="Entre 45 y 75 años"
                         aria-describedby="home-algo-step1-required"
                         required
                       />
@@ -649,8 +649,8 @@
                       Resultado: No incluye por edad
                     </h4>
                     <p class="home-algo__alert-text">
-                      Edad menor a 45 años. Se cierra la entrevista en este
-                      punto.
+                      Edad menor a 45 o mayor a 75 años. Se cierra la
+                      entrevista en este punto.
                     </p>
                   </article>
 
@@ -662,7 +662,7 @@
                   >
                     <h4 class="home-algo__alert-title">Criterio cumplido</h4>
                     <p class="home-algo__alert-text">
-                      Edad igual o mayor a 45 años. Se habilita el Paso 2.
+                      Edad entre 45 y 75 años. Se habilita el Paso 2.
                     </p>
                   </article>
 
