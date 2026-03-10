@@ -7,7 +7,8 @@
 (() => {
   const AUTH_MODAL_ID = "auth-gate";
   const AUTH_PASS = "marzo31";
-  const AUTH_GATE_BUILD = "2026-02-19-authfix2";
+  const AUTH_ADMIN_EXTRA_PASS = "FEP2026!";
+  const AUTH_GATE_BUILD = "2026-03-10-admin-dual-pass1";
   const AUTH_CLOSE_CLASS = "auth-gate--closing";
   const AUTH_HIDING_CLASS = "is-hiding";
   const VIEWPORT_MQ = "(max-width: 767.98px)";
@@ -79,6 +80,18 @@
    */
   function normalizePass(value) {
     return String(value ?? "").trim().toLowerCase();
+  }
+
+  /**
+   * @param {string} stationId
+   * @param {string} rawPassword
+   * @returns {boolean}
+   */
+  function isAcceptedPasswordForStation(stationId, rawPassword) {
+    const trimmedPass = String(rawPassword ?? "").trim();
+    if (!trimmedPass) return false;
+    if (normalizePass(trimmedPass) === AUTH_PASS) return true;
+    return stationId === "admin" && trimmedPass === AUTH_ADMIN_EXTRA_PASS;
   }
 
   /**
@@ -1385,8 +1398,8 @@
     const { input, enterBtn, toggleBtn } = getAuthControls();
     if (!input || !enterBtn || !toggleBtn) return;
 
-    const normalizedPass = normalizePass(input.value);
-    if (!normalizedPass) {
+    const trimmedPass = String(input.value ?? "").trim();
+    if (!trimmedPass) {
       showAuthError("Ingresá la clave institucional.");
       setFieldHelp(`Estación seleccionada: ${station.name}`);
       input.focus();
@@ -1394,7 +1407,7 @@
       return;
     }
 
-    const passOK = normalizedPass === AUTH_PASS;
+    const passOK = isAcceptedPasswordForStation(station.id, input.value);
 
     if (passOK) {
       isAuthenticating = true;
