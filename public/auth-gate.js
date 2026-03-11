@@ -8,7 +8,21 @@
   const AUTH_MODAL_ID = "auth-gate";
   const AUTH_PASS = "marzo31";
   const AUTH_ADMIN_EXTRA_PASS = "FEP2026!";
-  const AUTH_GATE_BUILD = "2026-03-10-admin-dual-pass1";
+  const AUTH_SHARED_CREDENTIALS = Object.freeze([
+    Object.freeze({ value: AUTH_PASS, exact: false }),
+  ]);
+  const AUTH_PROGRAM_TITLE = "Programa de Prevención de Cáncer Colorrectal";
+  const AUTH_CREDENTIALS_BY_STATION = Object.freeze({
+    saavedra: AUTH_SHARED_CREDENTIALS,
+    aristobulo: AUTH_SHARED_CREDENTIALS,
+    rivadavia: AUTH_SHARED_CREDENTIALS,
+    chacabuco: AUTH_SHARED_CREDENTIALS,
+    admin: Object.freeze([
+      ...AUTH_SHARED_CREDENTIALS,
+      Object.freeze({ value: AUTH_ADMIN_EXTRA_PASS, exact: true }),
+    ]),
+  });
+  const AUTH_GATE_BUILD = "2026-03-10-auth-modal-polish3";
   const AUTH_CLOSE_CLASS = "auth-gate--closing";
   const AUTH_HIDING_CLASS = "is-hiding";
   const VIEWPORT_MQ = "(max-width: 767.98px)";
@@ -84,14 +98,33 @@
 
   /**
    * @param {string} stationId
+   * @returns {{ value: string, exact: boolean }[]}
+   */
+  function getCredentialsForStation(stationId) {
+    return AUTH_CREDENTIALS_BY_STATION[stationId] || AUTH_SHARED_CREDENTIALS;
+  }
+
+  /**
+   * @param {{ value: string, exact: boolean }} credential
+   * @param {string} rawPassword
+   * @returns {boolean}
+   */
+  function credentialMatches(credential, rawPassword) {
+    const trimmedPass = String(rawPassword ?? "").trim();
+    if (!trimmedPass) return false;
+    if (credential.exact) return trimmedPass === credential.value;
+    return normalizePass(trimmedPass) === normalizePass(credential.value);
+  }
+
+  /**
+   * @param {string} stationId
    * @param {string} rawPassword
    * @returns {boolean}
    */
   function isAcceptedPasswordForStation(stationId, rawPassword) {
-    const trimmedPass = String(rawPassword ?? "").trim();
-    if (!trimmedPass) return false;
-    if (normalizePass(trimmedPass) === AUTH_PASS) return true;
-    return stationId === "admin" && trimmedPass === AUTH_ADMIN_EXTRA_PASS;
+    return getCredentialsForStation(stationId).some((credential) =>
+      credentialMatches(credential, rawPassword),
+    );
   }
 
   /**
@@ -409,6 +442,7 @@
           <path d="m7.2 12.4 3.2 3.3 6.4-6.6" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
         </svg>
       </span>
+      <span class="station-card__currentTag" aria-hidden="true" hidden>Sesión actual</span>
       <span class="station-card__content">
         <span class="station-card__avatarWrap" aria-hidden="true">
           <img
@@ -476,6 +510,17 @@
         </header>
 
         <section class="auth-section pp-modal__body">
+          <div id="authSessionSummary" class="auth-sessionSummary" hidden>
+            <div class="auth-sessionSummary__item">
+              <span class="auth-sessionSummary__label">Sesión actual</span>
+              <strong id="authCurrentStation" class="auth-sessionSummary__value">Sin sesión activa</strong>
+            </div>
+            <div class="auth-sessionSummary__item">
+              <span class="auth-sessionSummary__label">Nuevo acceso</span>
+              <strong id="authTargetStation" class="auth-sessionSummary__value is-placeholder">Elegí una estación</strong>
+            </div>
+          </div>
+
           <div
             class="auth-grid pp-modal__station-grid station-grid"
             id="authStationGrid"
@@ -486,7 +531,7 @@
           </div>
 
           <div class="auth-field" id="authPasswordField">
-            <label class="auth-label" for="authPass">Clave</label>
+            <label id="authPassLabel" class="auth-label" for="authPass">Clave</label>
             <div class="auth-inputWrap">
               <input
                 id="authPass"
@@ -697,7 +742,7 @@
     banner.type = "button";
     banner.id = "user-banner";
     banner.className = "user-banner user-banner--sticky";
-    banner.setAttribute("aria-label", "Cambiar estación saludable");
+    banner.setAttribute("aria-label", `Cambiar usuario. Sesión activa: ${station.name}`);
     banner.dataset.stationId = station.id;
     banner.innerHTML = `
       <span class="user-banner__icon" aria-hidden="true">
@@ -706,7 +751,10 @@
           <circle cx="12" cy="10.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.9"></circle>
         </svg>
       </span>
-      <span class="user-banner__text">${station.name}</span>
+      <span class="user-banner__copy">
+        <span class="user-banner__eyebrow">Sesión activa</span>
+        <span class="user-banner__text">${station.name}</span>
+      </span>
       <span class="user-banner__chevron" aria-hidden="true">
         <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
           <path d="m6.5 7.5 3.5 3.7 3.5-3.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -727,15 +775,13 @@
     const labelClass = `station-chip__label user-dock-tile__label${
       tightLabel ? " station-chip__label--tight" : ""
     }${isAdmin ? " station-chip__label--admin" : ""}`;
-    const kickerMarkup = isAdmin
-      ? ""
-      : '<span class="station-chip__kicker">Estación</span>';
+    const kickerMarkup = '<span class="station-chip__kicker">Sesión activa</span>';
 
     const button = document.createElement("button");
     button.type = "button";
     button.id = "station-switch-trigger";
     button.className = `station-chip user-dock-tile${isAdmin ? " station-chip--admin" : ""}`;
-    button.setAttribute("aria-label", `Cambiar estación saludable. Activa: ${station.name}`);
+    button.setAttribute("aria-label", `Cambiar usuario. Sesión activa: ${station.name}`);
     button.dataset.stationId = station.id;
     button.innerHTML = `
       <span class="station-chip__icon user-dock-tile__icon" aria-hidden="true">
@@ -955,6 +1001,10 @@
     const sectionTitleWrap = document.getElementById("authSectionTitleWrap");
     const sectionKicker = document.getElementById("authSectionKicker");
     const sectionHeading = document.getElementById("stationSectionTitle");
+    const summaryWrap = document.getElementById("authSessionSummary");
+    const currentStationValue = document.getElementById("authCurrentStation");
+    const targetStationValue = document.getElementById("authTargetStation");
+    const inputLabel = document.getElementById("authPassLabel");
 
     return {
       gate: gate instanceof HTMLElement ? gate : null,
@@ -974,7 +1024,101 @@
       sectionTitleWrap: sectionTitleWrap instanceof HTMLElement ? sectionTitleWrap : null,
       sectionKicker: sectionKicker instanceof HTMLElement ? sectionKicker : null,
       sectionHeading: sectionHeading instanceof HTMLElement ? sectionHeading : null,
+      summaryWrap: summaryWrap instanceof HTMLElement ? summaryWrap : null,
+      currentStationValue:
+        currentStationValue instanceof HTMLElement ? currentStationValue : null,
+      targetStationValue: targetStationValue instanceof HTMLElement ? targetStationValue : null,
+      inputLabel: inputLabel instanceof HTMLElement ? inputLabel : null,
     };
+  }
+
+  /**
+   * @returns {{id: string, name: string} | null}
+   */
+  function getSwitchSourceStation() {
+    return getStoredStation();
+  }
+
+  function syncStationSelectionUi() {
+    const { stations } = getAuthControls();
+    const selectedStation = resolveStation(selectedStationId);
+    const currentStation = gateMode === "switch" ? getSwitchSourceStation() : null;
+
+    stations.forEach((stationBtn) => {
+      const stationId = stationBtn.dataset.stationId || "";
+      const isSelected = Boolean(selectedStation && selectedStation.id === stationId);
+      const isCurrent = Boolean(currentStation && currentStation.id === stationId);
+      const currentTag = stationBtn.querySelector(".station-card__currentTag");
+
+      stationBtn.classList.toggle("is-selected", isSelected);
+      stationBtn.classList.toggle("is-current", isCurrent);
+      stationBtn.setAttribute("aria-pressed", String(isSelected));
+      stationBtn.dataset.currentStation = isCurrent ? "true" : "false";
+
+      if (currentTag instanceof HTMLElement) currentTag.hidden = !isCurrent;
+    });
+  }
+
+  /**
+   * @param {{id: string, name: string} | null} targetStation
+   */
+  function updateSwitchSummary(targetStation = null) {
+    const { summaryWrap, currentStationValue, targetStationValue } = getAuthControls();
+    if (!summaryWrap || !currentStationValue || !targetStationValue) return;
+
+    const currentStation = getSwitchSourceStation();
+    summaryWrap.hidden = gateMode !== "switch";
+
+    currentStationValue.textContent = currentStation ? currentStation.name : "Sin sesión activa";
+    currentStationValue.classList.toggle("is-placeholder", !currentStation);
+
+    targetStationValue.textContent = targetStation ? targetStation.name : "Elegí una estación";
+    targetStationValue.classList.toggle("is-placeholder", !targetStation);
+  }
+
+  function setNeutralSwitchHelp() {
+    setFieldHelp("Seleccioná una estación para continuar.");
+  }
+
+  /**
+   * @param {HTMLElement | null} title
+   * @param {"login" | "switch"} mode
+   */
+  function renderAuthTitle(title, mode) {
+    if (!title) return;
+
+    if (mode === "login" || mode === "switch") {
+      title.setAttribute("aria-label", AUTH_PROGRAM_TITLE);
+      title.innerHTML = `
+        <span class="pp-modal__titleLine pp-modal__titleLine--intro">Programa de Prevención de</span>
+        <span class="pp-modal__titleLine pp-modal__titleLine--focus">Cáncer Colorrectal</span>
+      `;
+      return;
+    }
+
+    title.removeAttribute("aria-label");
+    title.textContent = AUTH_PROGRAM_TITLE;
+  }
+
+  /**
+   * @param {{id: string, name: string}} station
+   */
+  function setSelectedStationHelp(station) {
+    const currentStation = getSwitchSourceStation();
+
+    if (gateMode === "switch") {
+      if (currentStation && currentStation.id === station.id) {
+        setFieldHelp(
+          "La sesión actual ya corresponde a esta estación. Elegí otra para cambiar el usuario activo.",
+        );
+        return;
+      }
+
+      setFieldHelp(`Ingresá la clave vigente de ${station.name}.`);
+      return;
+    }
+
+    setFieldHelp(`Estación seleccionada: ${station.name}`);
   }
 
   /**
@@ -1010,15 +1154,16 @@
    * @param {string} message
    */
   function showAuthError(message) {
-    const { field, error, inputWrap } = getAuthControls();
+    const { field, error, inputWrap, input } = getAuthControls();
+    const canMarkField = Boolean(field && !field.hidden && input && !input.disabled);
 
-    if (field && gateMode === "login") field.classList.add("is-error");
+    if (field && canMarkField) field.classList.add("is-error");
     if (error) {
       error.textContent = message;
       error.hidden = false;
     }
 
-    if (inputWrap && gateMode === "login") {
+    if (inputWrap && canMarkField) {
       inputWrap.classList.remove("is-shaking");
       void inputWrap.offsetWidth;
       inputWrap.classList.add("is-shaking");
@@ -1051,26 +1196,60 @@
     const station = resolveStation(stationId);
     if (!station) return;
 
-    selectedStationId = station.id;
-
-    const { stations, input, grid } = getAuthControls();
-
-    stations.forEach((stationBtn) => {
-      const isActive = stationBtn.dataset.stationId === station.id;
-      stationBtn.classList.toggle("is-selected", isActive);
-      stationBtn.setAttribute("aria-pressed", String(isActive));
-    });
+    const { input, grid, toggleBtn } = getAuthControls();
 
     if (grid) grid.classList.remove("is-error");
     clearAuthError();
 
-    if (gateMode === "login") {
-      if (input) input.disabled = false;
-      setFieldHelp(`Estación seleccionada: ${station.name}`);
+    if (gateMode === "switch") {
+      const currentStation = getSwitchSourceStation();
+      const isCurrentStation = Boolean(currentStation && currentStation.id === station.id);
+
+      if (isCurrentStation) {
+        selectedStationId = "";
+        syncStationSelectionUi();
+        updateSwitchSummary(null);
+
+        if (input) {
+          input.value = "";
+          input.disabled = true;
+          input.type = "password";
+        }
+        if (toggleBtn) toggleBtn.disabled = true;
+
+        isPassVisible = false;
+        setPasswordVisibility(false);
+        setSelectedStationHelp(station);
+        syncPrimaryActionState();
+        return;
+      }
+
+      selectedStationId = station.id;
+      syncStationSelectionUi();
+      updateSwitchSummary(station);
+
+      if (input) {
+        input.disabled = false;
+        input.value = "";
+        input.type = "password";
+      }
+      if (toggleBtn) toggleBtn.disabled = false;
+
+      isPassVisible = false;
+      setPasswordVisibility(false);
+      setSelectedStationHelp(station);
       if (options.focusInput !== false && input) input.focus();
-    } else {
-      setFieldHelp(`Estación seleccionada: ${station.name}`);
+      syncPrimaryActionState();
+      return;
     }
+
+    selectedStationId = station.id;
+    syncStationSelectionUi();
+
+    if (input) input.disabled = false;
+    if (toggleBtn) toggleBtn.disabled = false;
+    setSelectedStationHelp(station);
+    if (options.focusInput !== false && input) input.focus();
 
     syncPrimaryActionState();
   }
@@ -1108,13 +1287,14 @@
   }
 
   function syncPrimaryActionState() {
-    const { enterBtn } = getAuthControls();
+    const { enterBtn, input } = getAuthControls();
     if (!enterBtn) return;
 
     const hasStation = Boolean(resolveCurrentStationSelection());
 
     if (gateMode === "switch") {
-      enterBtn.disabled = !hasStation || isAuthenticating;
+      const hasPassword = Boolean(String(input?.value ?? "").trim());
+      enterBtn.disabled = !hasStation || !hasPassword || isAuthenticating;
       return;
     }
 
@@ -1124,25 +1304,22 @@
   }
 
   function resetAuthFormState() {
-    const { stations, input, enterBtn, toggleBtn, field, cancelBtn } = getAuthControls();
+    const { input, enterBtn, toggleBtn, field, cancelBtn, summaryWrap, inputLabel } =
+      getAuthControls();
 
     selectedStationId = "";
     isAuthenticating = false;
     isPassVisible = false;
 
-    stations.forEach((stationBtn) => {
-      stationBtn.classList.remove("is-selected");
-      stationBtn.setAttribute("aria-pressed", "false");
-    });
-
     if (input) {
       input.value = "";
       input.disabled = true;
       input.type = "password";
+      input.placeholder = "Ingresá la clave institucional";
     }
 
     if (toggleBtn) {
-      toggleBtn.disabled = false;
+      toggleBtn.disabled = true;
       toggleBtn.setAttribute("aria-pressed", "false");
       toggleBtn.setAttribute("aria-label", "Mostrar clave");
     }
@@ -1153,7 +1330,11 @@
       field.removeAttribute("aria-hidden");
     }
     if (cancelBtn) cancelBtn.hidden = true;
+    if (summaryWrap) summaryWrap.hidden = true;
+    if (inputLabel) inputLabel.textContent = "Clave";
 
+    syncStationSelectionUi();
+    updateSwitchSummary(null);
     setPasswordVisibility(false);
     clearAuthError();
     setFieldHelp("Seleccioná una estación antes de ingresar la clave.");
@@ -1179,6 +1360,8 @@
       cancelBtn,
       toggleBtn,
       stations,
+      summaryWrap,
+      inputLabel,
     } = getAuthControls();
 
     if (!enterBtn || !toggleBtn || !stations.length) return;
@@ -1190,31 +1373,37 @@
         kicker.textContent = "";
         kicker.hidden = true;
       }
-      if (title) title.textContent = "Programa de Prevención de Cáncer Colorrectal";
-      if (hint) hint.textContent = "Actualizá la estación activa para esta sesión";
-      if (sectionTitleWrap) sectionTitleWrap.hidden = false;
-      if (sectionKicker) sectionKicker.textContent = "Estación activa";
-      if (sectionHeading) sectionHeading.textContent = "Cambiar estación saludable";
+      renderAuthTitle(title, "switch");
+      if (hint) {
+        hint.textContent = "Seleccioná una estación para continuar.";
+        hint.hidden = true;
+      }
+      if (sectionTitleWrap) sectionTitleWrap.hidden = true;
+      if (sectionKicker) sectionKicker.textContent = "";
+      if (sectionHeading) sectionHeading.textContent = "";
+      if (summaryWrap) summaryWrap.hidden = true;
 
       if (field) {
-        field.hidden = true;
-        field.setAttribute("aria-hidden", "true");
+        field.hidden = false;
+        field.removeAttribute("aria-hidden");
       }
 
       if (input) {
         input.value = "";
         input.disabled = true;
+        input.type = "password";
+        input.placeholder = "Ingresá la clave de la estación seleccionada";
       }
 
+      if (inputLabel) inputLabel.textContent = "Clave de la estación seleccionada";
       toggleBtn.disabled = true;
-      enterBtn.textContent = "Aplicar";
+      enterBtn.textContent = "Cambiar usuario";
       if (cancelBtn) cancelBtn.hidden = false;
 
-      const stationToSelect = currentStation ? currentStation.id : STATIONS[0].id;
-      selectStation(stationToSelect, { focusInput: false });
-      setFieldHelp(
-        "Seleccioná una estación y aplicá los cambios. Este modo no requiere clave.",
-      );
+      selectedStationId = "";
+      syncStationSelectionUi();
+      updateSwitchSummary(null);
+      setNeutralSwitchHelp();
       syncPrimaryActionState();
       return;
     }
@@ -1223,24 +1412,27 @@
       kicker.hidden = false;
       kicker.textContent = "Inicio de sesión";
     }
-    if (title) title.textContent = "Programa de Prevención de Cáncer Colorrectal";
-    if (hint) hint.textContent = "Seleccioná estación e ingresá la clave institucional";
+    renderAuthTitle(title, "login");
+    if (hint) {
+      hint.textContent = "Seleccioná estación e ingresá la clave institucional";
+      hint.hidden = false;
+    }
     if (sectionTitleWrap) sectionTitleWrap.hidden = true;
+    if (summaryWrap) summaryWrap.hidden = true;
 
     if (field) {
       field.hidden = false;
       field.removeAttribute("aria-hidden");
     }
 
+    if (inputLabel) inputLabel.textContent = "Clave";
     if (cancelBtn) cancelBtn.hidden = true;
-    toggleBtn.disabled = false;
+    toggleBtn.disabled = true;
     enterBtn.textContent = "Ingresar";
+    if (input) input.placeholder = "Ingresá la clave institucional";
 
     selectedStationId = "";
-    stations.forEach((stationBtn) => {
-      stationBtn.classList.remove("is-selected");
-      stationBtn.setAttribute("aria-pressed", "false");
-    });
+    syncStationSelectionUi();
 
     if (currentStation) {
       selectStation(currentStation.id, { focusInput: false });
@@ -1280,10 +1472,13 @@
     syncPrimaryActionState();
 
     const selected = gate.querySelector(".auth-station.is-selected");
+    const current = gate.querySelector(".auth-station.is-current");
     const firstStation = gate.querySelector(".auth-station");
     const focusTarget =
       selected instanceof HTMLElement
         ? selected
+        : current instanceof HTMLElement
+          ? current
         : firstStation instanceof HTMLElement
           ? firstStation
           : null;
@@ -1376,22 +1571,20 @@
     if (!station) {
       const { stations, grid } = getAuthControls();
       if (grid) grid.classList.add("is-error");
-      showAuthError("Seleccioná una estación saludable.");
-      setFieldHelp("Seleccioná una estación antes de continuar.", true);
-      const firstStation = stations[0];
+      showAuthError(
+        gateMode === "switch"
+          ? "Elegí una estación distinta para cambiar el usuario activo."
+          : "Seleccioná una estación saludable.",
+      );
+      setFieldHelp(
+        gateMode === "switch"
+          ? "Elegí una estación distinta de la sesión actual para continuar."
+          : "Seleccioná una estación antes de continuar.",
+        true,
+      );
+      const currentStationBtn = stations.find((stationBtn) => stationBtn.classList.contains("is-current"));
+      const firstStation = currentStationBtn || stations[0];
       if (firstStation) firstStation.focus();
-      return;
-    }
-
-    if (gateMode === "switch") {
-      try {
-        completeGateFlow(station);
-      } catch (error) {
-        console.error("[auth-gate] Error aplicando cambio de estación", error);
-        isAuthenticating = false;
-        setFieldHelp(`Estación seleccionada: ${station.name}`);
-        syncPrimaryActionState();
-      }
       return;
     }
 
@@ -1400,8 +1593,12 @@
 
     const trimmedPass = String(input.value ?? "").trim();
     if (!trimmedPass) {
-      showAuthError("Ingresá la clave institucional.");
-      setFieldHelp(`Estación seleccionada: ${station.name}`);
+      showAuthError(
+        gateMode === "switch"
+          ? "Ingresá la clave de la estación seleccionada."
+          : "Ingresá la clave institucional.",
+      );
+      setSelectedStationHelp(station);
       input.focus();
       syncPrimaryActionState();
       return;
@@ -1423,7 +1620,7 @@
         input.disabled = false;
         toggleBtn.disabled = false;
         showAuthError("No se pudo completar el ingreso. Reintentá.");
-        setFieldHelp(`Estación seleccionada: ${station.name}`);
+        setSelectedStationHelp(station);
         syncPrimaryActionState();
         input.focus();
       }
@@ -1431,7 +1628,7 @@
     }
 
     showAuthError("Clave incorrecta.");
-    setFieldHelp(`Estación seleccionada: ${station.name}`);
+    setSelectedStationHelp(station);
     input.focus();
     input.select();
     syncPrimaryActionState();
@@ -1495,7 +1692,9 @@
       clearAuthError();
       if (selectedStationId) {
         const station = resolveStation(selectedStationId);
-        if (station) setFieldHelp(`Estación seleccionada: ${station.name}`);
+        if (station) setSelectedStationHelp(station);
+      } else if (gateMode === "switch") {
+        setNeutralSwitchHelp();
       }
       syncPrimaryActionState();
     });
@@ -1513,7 +1712,7 @@
     });
 
     toggleBtn.addEventListener("click", () => {
-      if (input.disabled || gateMode !== "login") return;
+      if (input.disabled) return;
       isPassVisible = !isPassVisible;
       setPasswordVisibility(isPassVisible);
       input.focus();
