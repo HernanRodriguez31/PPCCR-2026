@@ -12072,3 +12072,295 @@ body.is-auth-locked {
     font-size: 0.96rem;
   }
 }
+
+/* Home hero sponsors: institutional band refinement */
+body.page-home header.site-header.site-topbar .logo-strip.partners-bar,
+body.page-home header.site-header.site-topbar .partners-bar {
+  background: linear-gradient(
+    180deg,
+    rgba(247, 250, 254, 0.92) 0%,
+    rgba(241, 246, 252, 0.97) 55%,
+    rgba(247, 250, 254, 0.88) 100%
+  );
+  border-top-color: rgba(124, 166, 208, 0.18);
+  box-shadow: inset 0 -1px 0 rgba(174, 201, 227, 0.32);
+}
+
+body.page-home header.site-header.site-topbar .logo-strip.partners-bar::before,
+body.page-home header.site-header.site-topbar .partners-bar::before {
+  background: linear-gradient(
+    90deg,
+    rgba(116, 162, 206, 0.04),
+    rgba(58, 132, 204, 0.24),
+    rgba(116, 162, 206, 0.04)
+  );
+}
+
+body.page-home header.site-header.site-topbar .partners-bar .container,
+body.page-home header.site-header.site-topbar .logo-strip.partners-bar .container {
+  width: min(100% - 34px, 850px);
+}
+
+body.page-home #siteTopbar .brand {
+  gap: 16px;
+}
+
+body.page-home #siteTopbar .brand-mark {
+  width: clamp(72px, 5.8vw, 78px);
+  height: clamp(72px, 5.8vw, 78px);
+  display: grid;
+  place-items: center;
+}
+
+body.page-home #siteTopbar .brand-ribbon {
+  width: clamp(58px, 4.8vw, 64px);
+  height: clamp(58px, 4.8vw, 64px) !important;
+  max-width: none;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  transform: translateY(-1px);
+}
+
+@media (min-width: 769px) {
+  body.page-home #partner-logos.partners-strip {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 25px;
+    max-width: 846px;
+    padding: 7px 0 10px;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo,
+  body.page-home #partner-logos.partners-strip > .partner-pill,
+  body.page-home #partner-logos.partners-strip > * {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    overflow: visible;
+    transform: none;
+    transition: none;
+    scroll-snap-align: none;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo:hover,
+  body.page-home #partner-logos.partners-strip > .partner-logo:focus-within,
+  body.page-home #partner-logos.partners-strip > .partner-pill:hover,
+  body.page-home #partner-logos.partners-strip > .partner-pill:focus-within {
+    border-color: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo img,
+  body.page-home #partner-logos.partners-strip > .partner-pill img,
+  body.page-home #partner-logos.partners-strip img {
+    width: auto;
+    height: 40px;
+    max-width: none;
+    max-height: none;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+    transform: none;
+    transition: none;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo:hover img,
+  body.page-home #partner-logos.partners-strip > .partner-logo:focus-within img,
+  body.page-home #partner-logos.partners-strip > .partner-pill:hover img,
+  body.page-home #partner-logos.partners-strip > .partner-pill:focus-within img {
+    transform: none;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="fep"] img {
+    height: 44px;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="gedyt"] img {
+    height: 40px;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="merck"] img {
+    height: 42px;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="gcba"] img {
+    height: 41px;
+  }
+}
+
+@media (min-width: 521px) and (max-width: 768px) {
+  body.page-home header.site-header.site-topbar .partners-bar .container,
+  body.page-home header.site-header.site-topbar .logo-strip.partners-bar .container {
+    width: min(100% - 28px, 720px);
+  }
+
+  body.page-home #partner-logos.partners-strip {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 16px;
+    max-width: 100%;
+    padding: 7px 0 10px;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo,
+  body.page-home #partner-logos.partners-strip > .partner-pill,
+  body.page-home #partner-logos.partners-strip > * {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    overflow: visible;
+    transform: none;
+    transition: none;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo:hover,
+  body.page-home #partner-logos.partners-strip > .partner-logo:focus-within,
+  body.page-home #partner-logos.partners-strip > .partner-pill:hover,
+  body.page-home #partner-logos.partners-strip > .partner-pill:focus-within {
+    border-color: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo img,
+  body.page-home #partner-logos.partners-strip > .partner-pill img,
+  body.page-home #partner-logos.partners-strip img {
+    width: auto;
+    height: 35px !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+    transform: none;
+    transition: none;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo:hover img,
+  body.page-home #partner-logos.partners-strip > .partner-logo:focus-within img,
+  body.page-home #partner-logos.partners-strip > .partner-pill:hover img,
+  body.page-home #partner-logos.partners-strip > .partner-pill:focus-within img {
+    transform: none;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="fep"] img {
+    height: 38px !important;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="gedyt"] img {
+    height: 35px !important;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="merck"] img {
+    height: 37px !important;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="gcba"] img {
+    height: 36px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  body.page-home header.site-header.site-topbar .partners-bar .container,
+  body.page-home header.site-header.site-topbar .logo-strip.partners-bar .container {
+    width: min(100% - 22px, 520px);
+  }
+
+  body.page-home #partner-logos.partners-strip {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    justify-items: center;
+    align-items: center;
+    gap: 8px;
+    padding: 6px var(--shell-gutter) 9px;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo,
+  body.page-home #partner-logos.partners-strip > .partner-pill,
+  body.page-home #partner-logos.partners-strip > a,
+  body.page-home #partner-logos.partners-strip > * {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    transform: none;
+    transition: none;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo:hover,
+  body.page-home #partner-logos.partners-strip > .partner-logo:focus-within,
+  body.page-home #partner-logos.partners-strip > .partner-pill:hover,
+  body.page-home #partner-logos.partners-strip > .partner-pill:focus-within {
+    border-color: transparent !important;
+    box-shadow: none !important;
+    transform: none;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo img,
+  body.page-home #partner-logos.partners-strip > .partner-pill img,
+  body.page-home #partner-logos.partners-strip img {
+    width: auto !important;
+    height: auto !important;
+    max-width: 100% !important;
+    max-height: 22px !important;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+    transform: none !important;
+    transition: none;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="fep"] img {
+    max-height: 24px !important;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="gedyt"] img {
+    max-height: 22px !important;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="merck"] img {
+    max-height: 23px !important;
+  }
+
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="gcba"] img {
+    max-height: 22px !important;
+  }
+}
