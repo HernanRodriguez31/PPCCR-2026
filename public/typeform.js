@@ -84,7 +84,7 @@ function showFallback(url, customMessage) {
     directLinkEl.textContent = "Typeform";
     directLinkEl.hidden = false;
   } else {
-    directLinkEl.href = "https://programadeprevencion.com/";
+    directLinkEl.href = "https://www.programadeprevencion.com/";
     directLinkEl.textContent = "portal principal";
     directLinkEl.hidden = false;
   }
