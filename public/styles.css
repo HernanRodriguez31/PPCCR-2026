@@ -12098,7 +12098,7 @@ body.page-home header.site-header.site-topbar .partners-bar::before {
 
 body.page-home header.site-header.site-topbar .partners-bar .container,
 body.page-home header.site-header.site-topbar .logo-strip.partners-bar .container {
-  width: min(100% - 34px, 850px);
+  width: min(100% - 34px, 780px);
 }
 
 body.page-home #siteTopbar .brand {
@@ -12125,11 +12125,13 @@ body.page-home #siteTopbar .brand-ribbon {
 @media (min-width: 769px) {
   body.page-home #partner-logos.partners-strip {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
     flex-wrap: nowrap;
-    gap: 25px;
-    max-width: 846px;
+    gap: 0;
+    width: min(100%, 740px);
+    max-width: 740px;
+    margin-inline: auto;
     padding: 7px 0 10px;
   }
 
@@ -12187,35 +12189,37 @@ body.page-home #siteTopbar .brand-ribbon {
   }
 
   body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="fep"] img {
-    height: 44px;
+    height: 46px;
   }
 
   body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="gedyt"] img {
-    height: 40px;
-  }
-
-  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="merck"] img {
     height: 42px;
   }
 
+  body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="merck"] img {
+    height: 44px;
+  }
+
   body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="gcba"] img {
-    height: 41px;
+    height: 43px;
   }
 }
 
 @media (min-width: 521px) and (max-width: 768px) {
   body.page-home header.site-header.site-topbar .partners-bar .container,
   body.page-home header.site-header.site-topbar .logo-strip.partners-bar .container {
-    width: min(100% - 28px, 720px);
+    width: min(100% - 28px, 700px);
   }
 
   body.page-home #partner-logos.partners-strip {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
     flex-wrap: nowrap;
-    gap: 16px;
-    max-width: 100%;
+    gap: 0;
+    width: min(100%, 620px);
+    max-width: 620px;
+    margin-inline: auto;
     padding: 7px 0 10px;
   }
 
@@ -12272,19 +12276,19 @@ body.page-home #siteTopbar .brand-ribbon {
   }
 
   body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="fep"] img {
-    height: 38px !important;
+    height: 40px !important;
   }
 
   body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="gedyt"] img {
-    height: 35px !important;
+    height: 36px !important;
   }
 
   body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="merck"] img {
-    height: 37px !important;
+    height: 38px !important;
   }
 
   body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="gcba"] img {
-    height: 36px !important;
+    height: 37px !important;
   }
 }
 
@@ -12299,7 +12303,7 @@ body.page-home #siteTopbar .brand-ribbon {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     justify-items: center;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     padding: 6px var(--shell-gutter) 9px;
   }
 
