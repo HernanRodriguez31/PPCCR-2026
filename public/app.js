@@ -236,9 +236,9 @@ const CONFIG = {
         details: [
           "Stock operativo: 300 qFIT para estaciones priorizadas.",
           "Estaciones priorizadas: Parque Saavedra, Aristóbulo del Valle, Parque Rivadavia y Parque Chacabuco.",
-          "Entrega de kits: 25 al 28 de marzo.",
-          "Recepción y devolución de muestras: 29 de marzo al 3 de abril.",
-          "02 y 03 de abril: recepción de muestras FIT en las estaciones.",
+          "Entrega de kits: 26 al 28 de marzo.",
+          "Recepción y devolución de muestras: 26 de marzo al 3 de abril.",
+          "Desde el 26 de marzo: recepción de muestras FIT en las estaciones.",
           "31 de marzo: activación territorial por Día Mundial del Cáncer de Colon.",
           "Dotación: 1 Navegador por estación para entrega, recepción y seguimiento.",
         ],

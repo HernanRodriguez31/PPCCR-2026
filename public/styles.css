@@ -12368,3 +12368,366 @@ body.page-home #siteTopbar .brand-ribbon {
     max-height: 22px !important;
   }
 }
+
+@media (min-width: 769px) {
+  body.workflow-page header.site-header.site-topbar .partners-bar .container,
+  body.page-roles header.site-header.site-topbar .partners-bar .container,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .container {
+    width: min(100% - 34px, 780px);
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0;
+    width: min(100%, 740px);
+    max-width: 740px;
+    margin-inline: auto;
+    padding: 7px 0 10px;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > *,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > *,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > * {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    overflow: visible;
+    transform: none;
+    transition: none;
+    scroll-snap-align: none;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within {
+    border-color: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip img {
+    width: auto;
+    height: 40px;
+    max-width: none;
+    max-height: none;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+    transform: none;
+    transition: none;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within img {
+    transform: none;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="fep"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="fep"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="fep"] img {
+    height: 46px;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gedyt"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gedyt"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gedyt"] img {
+    height: 42px;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img {
+    height: 44px;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gcba"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gcba"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gcba"] img {
+    height: 43px;
+  }
+}
+
+@media (min-width: 521px) and (max-width: 768px) {
+  body.workflow-page header.site-header.site-topbar .partners-bar .container,
+  body.page-roles header.site-header.site-topbar .partners-bar .container,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .container {
+    width: min(100% - 28px, 700px);
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0;
+    width: min(100%, 620px);
+    max-width: 620px;
+    margin-inline: auto;
+    padding: 7px 0 10px;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > *,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > *,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > * {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    overflow: visible;
+    transform: none;
+    transition: none;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within {
+    border-color: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip img {
+    width: auto;
+    height: 35px !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+    transform: none;
+    transition: none;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within img {
+    transform: none;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="fep"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="fep"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="fep"] img {
+    height: 40px !important;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gedyt"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gedyt"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gedyt"] img {
+    height: 36px !important;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img {
+    height: 38px !important;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gcba"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gcba"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gcba"] img {
+    height: 37px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  body.workflow-page header.site-header.site-topbar .partners-bar .container,
+  body.page-roles header.site-header.site-topbar .partners-bar .container,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .container {
+    width: min(100% - 22px, 520px);
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    justify-items: center;
+    align-items: center;
+    gap: 10px;
+    padding: 6px var(--shell-gutter) 9px;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > a,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > *,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > a,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > *,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > a,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > * {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    transform: none;
+    transition: none;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:hover,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo:focus-within,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:hover,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill:focus-within {
+    border-color: transparent !important;
+    box-shadow: none !important;
+    transform: none;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip img {
+    width: auto !important;
+    height: auto !important;
+    max-width: 100% !important;
+    max-height: 22px !important;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+    transform: none !important;
+    transition: none;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="fep"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="fep"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="fep"] img {
+    max-height: 24px !important;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gedyt"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gedyt"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gedyt"] img {
+    max-height: 22px !important;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img {
+    max-height: 23px !important;
+  }
+
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gcba"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gcba"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="gcba"] img {
+    max-height: 22px !important;
+  }
+}

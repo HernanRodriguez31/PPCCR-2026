@@ -141,8 +141,8 @@ const WORKFLOW_PHASES = [
         title: "Recepción de muestra en estación",
         desc: "Verificación del rotulado, indemnidad del producto y registro de recepción en estación.",
         details: [
-          "Recepción y devolución de muestras: 29 de marzo al 3 de abril.",
-          "02 y 03 de abril: recepción de muestras FIT en las estaciones.",
+          "Recepción y devolución de muestras: 26 de marzo al 3 de abril.",
+          "Desde el 26 de marzo: recepción de muestras FIT en las estaciones.",
         ],
         roles: ["EN"],
       },
