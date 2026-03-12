@@ -260,6 +260,20 @@ const PPCCR_EXPORT_ENDPOINTS = Object.freeze({
     "https://ppccr-2026.web.app/exports/informe-fit-entregados-lab.xlsx",
 });
 
+const HOME_SHELL_MEDIA_QUERY = "(max-width: 1024px)";
+const deferredEmbedObservers = new WeakMap();
+
+function isHomeShellViewport() {
+  return (
+    document.body?.classList.contains("page-home") &&
+    window.matchMedia(HOME_SHELL_MEDIA_QUERY).matches
+  );
+}
+
+function isHomeAuthLocked() {
+  return !!document.body?.classList.contains("is-auth-locked");
+}
+
 const STATION_NAME_BY_ID = Object.freeze({
   saavedra: "Parque Saavedra",
   aristobulo: "Aristóbulo del Valle",
@@ -790,7 +804,7 @@ function setHeaderOffset() {
   }
 
   if (document.body.classList.contains("page-home")) {
-    const mobileQuery = window.matchMedia("(max-width: 520px)");
+    const mobileQuery = window.matchMedia(HOME_SHELL_MEDIA_QUERY);
     const mobileTopbar = $("#siteTopbar") || $(".topbar");
     const topbarHeight = mobileTopbar
       ? Math.max(48, Math.round(mobileTopbar.getBoundingClientRect().height))
@@ -805,6 +819,11 @@ function setHeaderOffset() {
         `${mobileHeaderHeight + 8}px`,
       );
       root.style.setProperty("--h-offset", `${topbarHeight + 12}px`);
+    } else {
+      root.style.removeProperty("--topbar-h");
+      root.style.removeProperty("--mobile-header-h");
+      root.style.removeProperty("--home-mobile-header-offset");
+      root.style.removeProperty("--h-offset");
     }
   }
 
@@ -824,7 +843,7 @@ function updateMobileBars() {
   if (!document.body.classList.contains("page-home")) return;
 
   const root = document.documentElement;
-  const isMobile = window.matchMedia("(max-width: 520px)").matches;
+  const isMobile = window.matchMedia(HOME_SHELL_MEDIA_QUERY).matches;
   const header = $(".site-header");
   const topbar = $("#siteTopbar") || $(".topbar");
   const headerHeight = header
@@ -923,6 +942,113 @@ function loadEmbedWithSkeleton(iframeEl, wrapperEl, src) {
   }
 
   iframeEl.src = src;
+}
+
+function clearDeferredEmbedObserver(wrapperEl) {
+  if (!wrapperEl) return;
+
+  const observer = deferredEmbedObservers.get(wrapperEl);
+  if (observer) {
+    observer.disconnect();
+    deferredEmbedObservers.delete(wrapperEl);
+  }
+
+  delete wrapperEl.dataset.embedPending;
+}
+
+function loadEmbedResponsively(iframeEl, wrapperEl, src, options = {}) {
+  if (!iframeEl || !wrapperEl || !src) return;
+
+  const {
+    hintEl = null,
+    deferredHintText = "",
+    readyHintText = "",
+    rootMargin = "240px 0px",
+  } = options;
+
+  const applyHint = (text) => {
+    if (!hintEl || !text) return;
+    hintEl.hidden = false;
+    hintEl.textContent = text;
+  };
+
+  wrapperEl.dataset.embedSrc = src;
+  const hiddenAncestor = wrapperEl.closest("[hidden]");
+  const shouldDefer =
+    isHomeShellViewport() &&
+    !hiddenAncestor &&
+    "IntersectionObserver" in window;
+
+  if (!shouldDefer) {
+    clearDeferredEmbedObserver(wrapperEl);
+    if (iframeEl.getAttribute("src") !== src) {
+      loadEmbedWithSkeleton(iframeEl, wrapperEl, src);
+    }
+    wrapperEl.dataset.embedLoaded = "true";
+    applyHint(readyHintText);
+    return;
+  }
+
+  if (
+    iframeEl.getAttribute("src") === src ||
+    wrapperEl.classList.contains("is-loaded")
+  ) {
+    clearDeferredEmbedObserver(wrapperEl);
+    wrapperEl.dataset.embedLoaded = "true";
+    applyHint(readyHintText);
+    return;
+  }
+
+  if (deferredEmbedObservers.has(wrapperEl)) {
+    applyHint(deferredHintText || readyHintText);
+    return;
+  }
+
+  clearEmbedTimeout(wrapperEl);
+  wrapperEl.classList.remove("is-loaded", "is-timeout");
+  updateEmbedLoadState(wrapperEl, "idle");
+  wrapperEl.dataset.embedPending = "true";
+  delete wrapperEl.dataset.embedLoaded;
+  applyHint(deferredHintText || readyHintText);
+
+  const observer = new IntersectionObserver(
+    (entries, currentObserver) => {
+      const visible = entries.some(
+        (entry) => entry.isIntersecting || entry.intersectionRatio > 0,
+      );
+      if (!visible) return;
+
+      currentObserver.disconnect();
+      deferredEmbedObservers.delete(wrapperEl);
+      delete wrapperEl.dataset.embedPending;
+      loadEmbedWithSkeleton(iframeEl, wrapperEl, src);
+      wrapperEl.dataset.embedLoaded = "true";
+      applyHint(readyHintText);
+    },
+    {
+      root: null,
+      rootMargin,
+      threshold: 0.01,
+    },
+  );
+
+  deferredEmbedObservers.set(wrapperEl, observer);
+  observer.observe(wrapperEl);
+}
+
+function flushDeferredHomeEmbeds() {
+  if (!document.body.classList.contains("page-home")) return;
+  if (isHomeShellViewport()) return;
+
+  document.querySelectorAll("[data-embed-pending='true']").forEach((wrapperEl) => {
+    const iframeEl = wrapperEl.querySelector("iframe");
+    const src = wrapperEl.dataset.embedSrc;
+    if (!iframeEl || !src) return;
+
+    clearDeferredEmbedObserver(wrapperEl);
+    loadEmbedWithSkeleton(iframeEl, wrapperEl, src);
+    wrapperEl.dataset.embedLoaded = "true";
+  });
 }
 
 /* ----------------------------- Renderers ----------------------------- */
@@ -1392,11 +1518,14 @@ function renderEmbeds() {
 
   const lookerOk = !!lookerEmbedUrl && !isPlaceholderUrl(lookerEmbedUrl);
   if (lookerOk) {
-    loadEmbedWithSkeleton(lookerIframe, lookerWrap, lookerEmbedUrl);
+    loadEmbedResponsively(lookerIframe, lookerWrap, lookerEmbedUrl, {
+      hintEl: lookerHint,
+      deferredHintText: "El reporte se cargará al acercarte a esta sección.",
+      readyHintText: "",
+    });
     lookerFallback.hidden = true;
     if (lookerHint) {
-      lookerHint.textContent = "";
-      lookerHint.hidden = true;
+      lookerHint.hidden = !lookerHint.textContent;
     }
     if (lookerFullscreenBtn) {
       lookerFullscreenBtn.removeAttribute("aria-disabled");
@@ -1405,6 +1534,7 @@ function renderEmbeds() {
   } else {
     lookerIframe.removeAttribute("src");
     clearEmbedTimeout(lookerWrap);
+    clearDeferredEmbedObserver(lookerWrap);
     lookerWrap.classList.remove("is-loaded", "is-timeout");
     updateEmbedLoadState(lookerWrap, "idle");
     lookerFallback.hidden = false;
@@ -1432,13 +1562,19 @@ function renderEmbeds() {
     !isPlaceholderUrl(CONFIG.embeds.calendar.embedUrl);
   if (calOk) {
     calWrap.hidden = false;
-    loadEmbedWithSkeleton(calIframe, calWrap, CONFIG.embeds.calendar.embedUrl);
+    loadEmbedResponsively(calIframe, calWrap, CONFIG.embeds.calendar.embedUrl, {
+      hintEl: calHint,
+      deferredHintText:
+        "Vista mensual disponible. El calendario se cargará al acercarte a esta sección.",
+      readyHintText: "Vista mensual disponible en el calendario embebido.",
+      rootMargin: "260px 0px",
+    });
     calFallback.hidden = true;
-    calHint.textContent = "Vista mensual disponible en el calendario embebido.";
   } else {
     calIframe.removeAttribute("src");
     calWrap.hidden = true;
     clearEmbedTimeout(calWrap);
+    clearDeferredEmbedObserver(calWrap);
     calWrap.classList.remove("is-loaded", "is-timeout");
     updateEmbedLoadState(calWrap, "idle");
     calFallback.hidden = false;
@@ -5129,12 +5265,10 @@ function setupHomeMobileBottomNavDock() {
   const fixedDock = $("#mobile-fixed-dock");
   if (!sourceNav || !sourceList || !fixedDock) return;
 
-  const isMobile = window.matchMedia("(max-width: 520px)").matches;
+  const isMobile = isHomeShellViewport();
+  const authLocked = isHomeAuthLocked();
 
   if (isMobile) {
-    sourceNav.classList.add("is-mobile-source-hidden");
-    sourceNav.setAttribute("aria-hidden", "true");
-
     if (!fixedDock.querySelector(".mobile-dock-list")) {
       const list = document.createElement("ul");
       list.className = "mobile-dock-list";
@@ -5153,7 +5287,11 @@ function setupHomeMobileBottomNavDock() {
       fixedDock.innerHTML = "";
       fixedDock.appendChild(list);
     }
+  }
 
+  if (isMobile && !authLocked) {
+    sourceNav.classList.add("is-mobile-source-hidden");
+    sourceNav.setAttribute("aria-hidden", "true");
     fixedDock.hidden = false;
     fixedDock.classList.add("is-visible");
   } else {
@@ -5180,7 +5318,7 @@ function initMobilePremiumHeader() {
     header?.querySelector(".site-topbar__inner");
   if (!header) return;
 
-  const mq = window.matchMedia("(max-width: 520px)");
+  const mq = window.matchMedia(HOME_SHELL_MEDIA_QUERY);
   const COMPACT_Y = 24;
   let lastCompact = null;
 
@@ -5323,11 +5461,12 @@ function setupActiveNavObserver() {
       a.removeAttribute("aria-current");
       a.classList.remove("is-active");
     });
-    const active = navLinks.find((a) => a.getAttribute("href") === `#${sectionId}`);
-    if (active) {
-      active.setAttribute("aria-current", "true");
-      active.classList.add("is-active");
-    }
+    navLinks
+      .filter((a) => a.getAttribute("href") === `#${sectionId}`)
+      .forEach((active) => {
+        active.setAttribute("aria-current", "true");
+        active.classList.add("is-active");
+      });
   };
 
   const getSectionByScroll = () => {
@@ -5417,7 +5556,7 @@ function setupSmoothAnchorScroll() {
       rootStyles.getPropertyValue("--h-offset").trim(),
     );
     const desktopOffset = getHeaderOffset();
-    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    const isMobile = window.matchMedia(HOME_SHELL_MEDIA_QUERY).matches;
 
     if (isMobile && Number.isFinite(mobileOffset) && mobileOffset > 0) {
       return mobileOffset;
@@ -5474,7 +5613,7 @@ function setupHeaderScrollState() {
   const scrolledClass = CONFIG.ui.headerScrolledClass;
   const enterThreshold = 72;
   const exitThreshold = 28;
-  const mobileSolidQuery = window.matchMedia("(max-width: 520px)");
+  const mobileSolidQuery = window.matchMedia(HOME_SHELL_MEDIA_QUERY);
   let ticking = false;
   let isScrolled = header.classList.contains(scrolledClass);
 
@@ -5793,6 +5932,7 @@ async function init() {
         setupHomeMobileBottomNavDock();
         setHeaderOffset();
         updateMobileBars();
+        flushDeferredHomeEmbeds();
       }, 120);
     },
     { passive: true },
@@ -5802,6 +5942,7 @@ async function init() {
     setupHomeMobileBottomNavDock();
     setHeaderOffset();
     updateMobileBars();
+    flushDeferredHomeEmbeds();
   });
 
   if ("ResizeObserver" in window && !mobileBarsObserver) {
