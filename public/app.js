@@ -274,12 +274,42 @@ function isHomeAuthLocked() {
   return !!document.body?.classList.contains("is-auth-locked");
 }
 
+function stabilizeHomeShellBody() {
+  if (!document.body?.classList.contains("page-home")) return;
+  document.body.style.setProperty("animation", "none", "important");
+  document.body.style.setProperty("transform", "none", "important");
+}
+
 function syncHomeShellLayout() {
   if (!document.body?.classList.contains("page-home")) return;
+  stabilizeHomeShellBody();
   setupHomeMobileBottomNavDock();
   setHeaderOffset();
   updateMobileBars();
+  syncNavStateFromHashOrScroll({ restoreHash: true });
   flushDeferredHomeEmbeds();
+}
+
+function syncHomeShellHashTargetIfPresent() {
+  const hashSectionId = getHomeNavSectionIdFromHash();
+  if (!hashSectionId || hashSectionId === "inicio") return false;
+
+  restoreHomeHashTarget(hashSectionId, { behavior: "auto" });
+  setActiveHomeNavLink(hashSectionId);
+  return true;
+}
+
+function syncHomeShellAfterAuthChange() {
+  if (!document.body?.classList.contains("page-home")) return;
+
+  syncHomeShellLayout();
+  syncHomeShellHashTargetIfPresent();
+  window.requestAnimationFrame(() => {
+    syncHomeShellLayout();
+    if (!syncHomeShellHashTargetIfPresent()) {
+      syncNavStateFromHashOrScroll({ preferHash: true, restoreHash: true });
+    }
+  });
 }
 
 const STATION_NAME_BY_ID = Object.freeze({
@@ -1115,6 +1145,7 @@ function renderPartnerLogos() {
 function renderGuides() {
   const grid = $("#guides-grid");
   if (!grid) return;
+  grid.innerHTML = "";
 
   const iconMap = {
     estructuraPrograma:
@@ -5263,6 +5294,140 @@ function setupMobileNav() {
   });
 }
 
+function getHomeNavLinks() {
+  return Array.from(document.querySelectorAll(".nav-link[data-nav]"));
+}
+
+function getHomeNavSections() {
+  const sections = [];
+  const seen = new Set();
+
+  getHomeNavLinks().forEach((link) => {
+    const href = String(link.getAttribute("href") || "").trim();
+    if (!isAnchor(href)) return;
+
+    let section = null;
+    try {
+      section = document.querySelector(href);
+    } catch (error) {
+      console.warn("[nav] enlace no válido para sección:", href, error);
+      return;
+    }
+
+    if (!(section instanceof HTMLElement) || !section.id || seen.has(section.id)) return;
+    seen.add(section.id);
+    sections.push(section);
+  });
+
+  return sections;
+}
+
+function getHomeNavSectionIdFromHash() {
+  const rawHash = decodeURIComponent(window.location.hash || "").trim();
+  if (!rawHash.startsWith("#") || rawHash === "#") return "";
+
+  const hashId = rawHash.slice(1);
+  if (!hashId) return "";
+
+  const target = document.getElementById(hashId);
+  return target instanceof HTMLElement ? target.id : "";
+}
+
+function clearActiveHomeNavLinks() {
+  getHomeNavLinks().forEach((link) => {
+    link.removeAttribute("aria-current");
+    link.classList.remove("is-active");
+  });
+}
+
+function setActiveHomeNavLink(sectionId) {
+  clearActiveHomeNavLinks();
+  if (!sectionId) return;
+
+  getHomeNavLinks()
+    .filter((link) => link.getAttribute("href") === `#${sectionId}`)
+    .forEach((link) => {
+      link.setAttribute("aria-current", "true");
+      link.classList.add("is-active");
+    });
+}
+
+function getHomeNavScrollOffset() {
+  setHeaderOffset();
+  const rootStyles = getComputedStyle(document.documentElement);
+  const mobileOffset = Number.parseFloat(rootStyles.getPropertyValue("--h-offset").trim());
+  const desktopOffset = getHeaderOffset();
+  const isMobile = window.matchMedia(HOME_SHELL_MEDIA_QUERY).matches;
+
+  if (isMobile && Number.isFinite(mobileOffset) && mobileOffset > 0) {
+    return mobileOffset;
+  }
+
+  return desktopOffset;
+}
+
+function getHomeSectionScrollTop(target) {
+  if (!(target instanceof HTMLElement)) return 0;
+  return Math.max(
+    0,
+    Math.round(window.scrollY + target.getBoundingClientRect().top - getHomeNavScrollOffset() - 8),
+  );
+}
+
+function getHomeSectionIdByScroll() {
+  const sections = getHomeNavSections();
+  if (sections.length === 0) return "";
+
+  const line = window.scrollY + getHeaderOffset() + 24;
+  let current = sections[0];
+  sections.forEach((section) => {
+    if (section.offsetTop <= line) current = section;
+  });
+  return current?.id || "";
+}
+
+function shouldRestoreHomeHashTarget(sectionId) {
+  if (!sectionId || sectionId === "inicio" || isHomeAuthLocked()) return false;
+  const target = document.getElementById(sectionId);
+  if (!(target instanceof HTMLElement)) return false;
+
+  const currentY = Math.round(window.scrollY);
+  const restoreThreshold = Math.max(4, Math.round(getHomeNavScrollOffset() / 2));
+  return currentY <= restoreThreshold;
+}
+
+function restoreHomeHashTarget(sectionId, { behavior = "auto" } = {}) {
+  const target = document.getElementById(sectionId);
+  if (!(target instanceof HTMLElement)) return false;
+
+  const targetTop = getHomeSectionScrollTop(target);
+  const currentY = Math.round(window.scrollY);
+  if (Math.abs(currentY - targetTop) <= 2) return false;
+
+  window.scrollTo({
+    top: targetTop,
+    left: 0,
+    behavior,
+  });
+  return true;
+}
+
+function syncNavStateFromHashOrScroll({ preferHash = false, restoreHash = false } = {}) {
+  if (!document.body?.classList.contains("page-home")) return "";
+
+  const hashSectionId = getHomeNavSectionIdFromHash();
+  if (restoreHash && shouldRestoreHomeHashTarget(hashSectionId)) {
+    restoreHomeHashTarget(hashSectionId, { behavior: "auto" });
+    setActiveHomeNavLink(hashSectionId);
+    return hashSectionId;
+  }
+
+  const scrollSectionId = getHomeSectionIdByScroll();
+  const nextSectionId = preferHash && hashSectionId ? hashSectionId : scrollSectionId || hashSectionId;
+  setActiveHomeNavLink(nextSectionId);
+  return nextSectionId;
+}
+
 function setupHomeMobileBottomNavDock() {
   if (!document.body.classList.contains("page-home")) return;
 
@@ -5310,6 +5475,7 @@ function setupHomeMobileBottomNavDock() {
   }
 
   updateMobileBars();
+  syncNavStateFromHashOrScroll();
 }
 
 function initMobilePremiumHeader() {
@@ -5445,47 +5611,12 @@ function initMobilePremiumHeader() {
 }
 
 function setupActiveNavObserver() {
-  const navLinks = Array.from(document.querySelectorAll(".nav-link[data-nav]"));
-  const sections = navLinks
-    .map((a) => {
-      const href = a.getAttribute("href");
-      if (!href || !isAnchor(href)) return null;
-      try {
-        return document.querySelector(href);
-      } catch (error) {
-        console.warn("[nav] enlace no válido para observer:", href, error);
-        return null;
-      }
-    })
-    .filter(Boolean);
+  const sections = getHomeNavSections();
 
   if (sections.length === 0) return;
 
-  const setActiveLink = (sectionId) => {
-    navLinks.forEach((a) => {
-      a.removeAttribute("aria-current");
-      a.classList.remove("is-active");
-    });
-    navLinks
-      .filter((a) => a.getAttribute("href") === `#${sectionId}`)
-      .forEach((active) => {
-        active.setAttribute("aria-current", "true");
-        active.classList.add("is-active");
-      });
-  };
-
-  const getSectionByScroll = () => {
-    const line = window.scrollY + getHeaderOffset() + 24;
-    let current = sections[0];
-    sections.forEach((section) => {
-      if (section.offsetTop <= line) current = section;
-    });
-    return current?.id ?? null;
-  };
-
   const syncFromScroll = () => {
-    const currentSectionId = getSectionByScroll();
-    if (currentSectionId) setActiveLink(currentSectionId);
+    syncNavStateFromHashOrScroll();
   };
 
   syncFromScroll();
@@ -5513,7 +5644,7 @@ function setupActiveNavObserver() {
           })[0];
 
         if (visible?.target?.id) {
-          setActiveLink(visible.target.id);
+          setActiveHomeNavLink(visible.target.id);
           return;
         }
 
@@ -5526,7 +5657,7 @@ function setupActiveNavObserver() {
       },
     );
 
-    sections.forEach((section) => observer.observe(section));
+    getHomeNavSections().forEach((section) => observer.observe(section));
   };
 
   buildObserver();
@@ -5553,23 +5684,6 @@ function setupActiveNavObserver() {
 }
 
 function setupSmoothAnchorScroll() {
-  const navLinks = Array.from(document.querySelectorAll(".nav-link[data-nav]"));
-  const getScrollOffset = () => {
-    setHeaderOffset();
-    const rootStyles = getComputedStyle(document.documentElement);
-    const mobileOffset = Number.parseFloat(
-      rootStyles.getPropertyValue("--h-offset").trim(),
-    );
-    const desktopOffset = getHeaderOffset();
-    const isMobile = window.matchMedia(HOME_SHELL_MEDIA_QUERY).matches;
-
-    if (isMobile && Number.isFinite(mobileOffset) && mobileOffset > 0) {
-      return mobileOffset;
-    }
-
-    return desktopOffset;
-  };
-
   document.addEventListener("click", (e) => {
     if (e.defaultPrevented) return;
 
@@ -5577,7 +5691,7 @@ function setupSmoothAnchorScroll() {
     if (!a) return;
 
     const href = a.getAttribute("href");
-    if (!href || href === "#") return;
+    if (!href || href === "#" || href === "#top") return;
 
     const target = document.querySelector(href);
     if (!target) return;
@@ -5587,9 +5701,7 @@ function setupSmoothAnchorScroll() {
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
-    const scrollOffset = getScrollOffset();
-    const targetTop =
-      window.scrollY + target.getBoundingClientRect().top - scrollOffset - 8;
+    const targetTop = getHomeSectionScrollTop(target);
 
     window.scrollTo({
       top: Math.max(0, Math.round(targetTop)),
@@ -5597,17 +5709,7 @@ function setupSmoothAnchorScroll() {
       behavior: reduceMotion ? "auto" : "smooth",
     });
 
-    const activeLinks = navLinks.filter((link) => link.getAttribute("href") === href);
-    if (activeLinks.length > 0) {
-      navLinks.forEach((link) => {
-        link.removeAttribute("aria-current");
-        link.classList.remove("is-active");
-      });
-      activeLinks.forEach((activeLink) => {
-        activeLink.setAttribute("aria-current", "true");
-        activeLink.classList.add("is-active");
-      });
-    }
+    if (target instanceof HTMLElement && target.id) setActiveHomeNavLink(target.id);
 
     history.pushState(null, "", href);
   });
@@ -5782,8 +5884,8 @@ function setupBackToTopButton() {
       behavior: reduceMotion ? "auto" : "smooth",
     });
 
-    // Evita dejar "#top" en la URL al usar el botón flotante.
-    if (location.hash === "#top") {
+    setActiveHomeNavLink("inicio");
+    if (location.hash) {
       history.replaceState(null, "", `${location.pathname}${location.search}`);
     }
   });
@@ -5888,6 +5990,7 @@ function setupLookerModal() {
 async function init() {
   await loadProgramConfigOnInit();
   setupStationBridge();
+  stabilizeHomeShellBody();
   setMetaText();
   renderPartnerLogos();
   initEmbeds();
@@ -5910,6 +6013,14 @@ async function init() {
   setupHomeDataAnimateReveal();
   setupBackToTopButton();
   setupLookerModal();
+  if (!syncHomeShellHashTargetIfPresent()) {
+    syncNavStateFromHashOrScroll({ restoreHash: true });
+  }
+  window.requestAnimationFrame(() => {
+    if (!syncHomeShellHashTargetIfPresent()) {
+      syncNavStateFromHashOrScroll({ preferHash: true, restoreHash: true });
+    }
+  });
 
   window.addEventListener(
     "resize",
@@ -5917,6 +6028,9 @@ async function init() {
       window.clearTimeout(mobileBarsResizeTimer);
       mobileBarsResizeTimer = window.setTimeout(() => {
         syncHomeShellLayout();
+        if (!syncHomeShellHashTargetIfPresent()) {
+          syncNavStateFromHashOrScroll({ preferHash: true, restoreHash: true });
+        }
       }, 120);
     },
     { passive: true },
@@ -5924,10 +6038,23 @@ async function init() {
 
   window.addEventListener("orientationchange", () => {
     syncHomeShellLayout();
+    if (!syncHomeShellHashTargetIfPresent()) {
+      syncNavStateFromHashOrScroll({ preferHash: true, restoreHash: true });
+    }
   });
 
-  window.addEventListener("hashchange", syncHomeShellLayout, { passive: true });
+  window.addEventListener(
+    "hashchange",
+    () => {
+      syncHomeShellLayout();
+      syncNavStateFromHashOrScroll({ preferHash: true, restoreHash: true });
+    },
+    { passive: true },
+  );
   window.addEventListener("ppccr:home-shell-sync", syncHomeShellLayout, {
+    passive: true,
+  });
+  window.addEventListener("ppccr:stationChanged", syncHomeShellAfterAuthChange, {
     passive: true,
   });
 

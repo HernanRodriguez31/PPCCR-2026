@@ -35,6 +35,11 @@ body.page-home .reveal.is-visible {
 }
 
 @media (max-width: 1024px) {
+  body.page-home.is-home-shell {
+    animation: none !important;
+    transform: none !important;
+  }
+
   body.page-home.is-home-shell .container {
     width: min(100% - (var(--home-shell-gutter) * 2), 860px);
   }
@@ -183,12 +188,14 @@ body.page-home .reveal.is-visible {
   }
 
   body.page-home.is-home-shell.has-user-banner #user-banner.user-banner {
+    position: fixed !important;
     top: calc(
       env(safe-area-inset-top, 0px) + var(--header-fixed-h, var(--mobile-header-h, 0px)) +
         var(--home-shell-banner-gap)
     ) !important;
     left: 50% !important;
     right: auto !important;
+    z-index: 1700 !important;
     width: min(calc(100% - (var(--home-shell-gutter) * 2)), 860px) !important;
     max-width: 860px !important;
     transform: translateX(-50%) !important;

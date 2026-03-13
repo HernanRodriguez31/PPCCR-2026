@@ -22,10 +22,11 @@
       Object.freeze({ value: AUTH_ADMIN_EXTRA_PASS, exact: true }),
     ]),
   });
-  const AUTH_GATE_BUILD = "2026-03-10-auth-modal-polish3";
+  const AUTH_GATE_BUILD = "2026-03-13-home-phase2-release-blockers1";
   const AUTH_CLOSE_CLASS = "auth-gate--closing";
   const AUTH_HIDING_CLASS = "is-hiding";
-  const VIEWPORT_MQ = "(max-width: 767.98px)";
+  const DEFAULT_VIEWPORT_MQ = "(max-width: 767.98px)";
+  const HOME_VIEWPORT_MQ = "(max-width: 1024px)";
 
   const STORAGE_KEYS = {
     authFlag: "ppccr_auth",
@@ -156,6 +157,11 @@
     if (normalized.length > 1) normalized = normalized.replace(/\/+$/, "");
 
     return normalized === "/" || normalized.endsWith("/index.html");
+  }
+
+  function getViewportMediaQuery() {
+    if (isHomeEntry()) return HOME_VIEWPORT_MQ;
+    return DEFAULT_VIEWPORT_MQ;
   }
 
   /**
@@ -815,8 +821,16 @@
       return true;
     }
 
-    if (candidate.hasAttribute("hidden")) return true;
-    if (candidate.getAttribute("aria-hidden") === "true") return true;
+    let current = candidate;
+    while (current && current !== document.documentElement) {
+      if (current instanceof HTMLElement) {
+        if (current.hidden) return true;
+        if (current.getAttribute("aria-hidden") === "true") return true;
+        const style = window.getComputedStyle(current);
+        if (style.display === "none" || style.visibility === "hidden") return true;
+      }
+      current = current.parentElement;
+    }
 
     const insideHeader = Boolean(candidate.closest("header"));
     const isHomeSideDock =
@@ -951,7 +965,9 @@
 
     removeIdentityNodes();
 
-    const isMobile = authMq ? authMq.matches : window.innerWidth < 768;
+    const isMobile = authMq
+      ? authMq.matches
+      : window.matchMedia(getViewportMediaQuery()).matches;
     const inserted = isMobile ? insertMobileBanner(station) : insertDesktopIdentityTile(station);
 
     if (!inserted && attempt < 2) {
@@ -1843,7 +1859,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     try {
       console.info("[auth-gate] build:", AUTH_GATE_BUILD);
-      authMq = window.matchMedia(VIEWPORT_MQ);
+      authMq = window.matchMedia(getViewportMediaQuery());
       viewportChangeHandler = () => {
         const station = getStoredStation();
         if (!station) return;
