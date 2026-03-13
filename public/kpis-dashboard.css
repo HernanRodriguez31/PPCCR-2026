@@ -75,6 +75,174 @@
   line-height: 1.45;
 }
 
+@keyframes kpiDashShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.kpiDash__loadingShell {
+  display: grid;
+  gap: var(--kpi-space-4);
+}
+
+.kpiDash__loadingShell .kpiDash__shell,
+.kpiDash__loadingShell .kpiDash__exec,
+.kpiDash__loadingShell .kpiDash__charts,
+.kpiDash__loadingShell .kpiDash__stockGrid,
+.kpiDash__loadingShell .kpiDash__loadingList {
+  display: grid;
+  gap: var(--kpi-space-4);
+}
+
+.kpiDash__loadingShell .kpiDash__exec,
+.kpiDash__loadingShell .kpiDash__charts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kpiDash__loadingShell .kpiDash__stockGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.kpiDash__loadingPanel {
+  border: 1px solid var(--kpi-border-soft);
+  border-radius: var(--kpi-radius-md);
+  background: linear-gradient(145deg, #ffffff 0%, var(--kpi-surface) 100%);
+  padding: var(--kpi-space-4);
+  box-shadow: var(--kpi-shadow-card);
+  min-width: 0;
+}
+
+.kpiDash__loadingPanel--tall {
+  min-height: clamp(230px, 42vh, 320px);
+}
+
+.kpiDash__loadingPanel--medium {
+  min-height: clamp(150px, 28vh, 220px);
+}
+
+.kpiDash__loadingPanel--table {
+  min-height: clamp(220px, 38vh, 300px);
+}
+
+.kpiDash__loadingPanel--stock {
+  min-height: 124px;
+}
+
+.kpiDash__loadingList {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.kpiDash__skeletonLine,
+.kpiDash__skeletonBlock,
+.kpiDash__skeletonDot {
+  position: relative;
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(219, 229, 241, 0.62) 0%,
+    rgba(255, 255, 255, 0.94) 50%,
+    rgba(219, 229, 241, 0.62) 100%
+  );
+  background-size: 200% 100%;
+  animation: kpiDashShimmer 1.45s linear infinite;
+}
+
+.kpiDash__skeletonLine {
+  height: 0.82rem;
+}
+
+.kpiDash__skeletonLine--title {
+  width: min(240px, 78%);
+  height: 1.05rem;
+}
+
+.kpiDash__skeletonLine--subtitle {
+  width: min(320px, 92%);
+}
+
+.kpiDash__skeletonLine--meta {
+  width: 86px;
+}
+
+.kpiDash__skeletonLine--metric {
+  width: 78px;
+  height: 1.85rem;
+}
+
+.kpiDash__skeletonLine--short {
+  width: 42%;
+}
+
+.kpiDash__skeletonLine--tiny {
+  width: 28%;
+}
+
+.kpiDash__skeletonBlock {
+  border-radius: var(--kpi-radius-sm);
+  min-height: 110px;
+}
+
+.kpiDash__skeletonBlock--chart {
+  min-height: clamp(230px, 42vh, 320px);
+}
+
+.kpiDash__skeletonBlock--bar {
+  min-height: 10px;
+  border-radius: 999px;
+}
+
+.kpiDash__skeletonDot {
+  width: 0.82rem;
+  height: 0.82rem;
+}
+
+.kpiDash__loadingHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--kpi-space-4);
+}
+
+.kpiDash__loadingStack {
+  display: grid;
+  gap: 0.62rem;
+  min-width: 0;
+}
+
+.kpiDash__loadingRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kpiDash__loadingBars {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.kpiDash__loadingBars .kpiDash__loadingRow:nth-child(2) .kpiDash__skeletonBlock--bar {
+  width: 88%;
+}
+
+.kpiDash__loadingBars .kpiDash__loadingRow:nth-child(3) .kpiDash__skeletonBlock--bar {
+  width: 72%;
+}
+
+.kpiDash__loadingBars .kpiDash__loadingRow:nth-child(4) .kpiDash__skeletonBlock--bar {
+  width: 61%;
+}
+
+.kpiDash__loadingBars .kpiDash__skeletonBlock--bar {
+  width: 100%;
+}
+
 .kpiDash__reportRoot {
   background: #ffffff;
 }
@@ -2319,6 +2487,35 @@
   .kpiDash__stockGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .kpiDash__loadingShell .kpiDash__exec,
+  .kpiDash__loadingShell .kpiDash__charts {
+    grid-template-columns: 1fr;
+  }
+
+  .kpiDash__loadingShell .kpiDash__stockGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 621px) and (max-width: 1024px) {
+  .kpiDash__panel,
+  .kpiDash__execPanel,
+  .kpiDash__fitFlow,
+  .kpiDash__funnel,
+  .kpiDash__stock,
+  .kpiDash__reportHeader {
+    padding: 0.96rem;
+  }
+
+  .kpiDash__panel--bars .kpiDash__chart,
+  .kpiDash__panel--bars .kpiDash__chartFallback {
+    min-height: clamp(290px, 36vw, 360px);
+  }
+
+  .kpiDash__panel--aux .ppccr-sankey {
+    min-height: clamp(260px, 34vw, 330px);
+  }
 }
 
 @media (max-width: 620px) {
@@ -2390,6 +2587,15 @@
     font-size: 1rem;
   }
 
+  .kpiDash__reportHeadMain p,
+  .kpiDash__panelHeader p {
+    font-size: 0.72rem;
+  }
+
+  .kpiDash__panelHeader h4 {
+    font-size: 0.94rem;
+  }
+
   .kpiDash__reportActions {
     width: 100%;
   }
@@ -2400,11 +2606,24 @@
 
   .kpiDash__chart,
   .kpiDash__chartFallback {
-    min-height: 250px;
+    min-height: clamp(260px, 52vh, 340px);
+  }
+
+  .ppccr-sankey {
+    min-height: clamp(245px, 50vh, 330px);
   }
 
   .kpiDash__stockGrid {
     grid-template-columns: 1fr;
+  }
+
+  .kpiDash__loadingShell .kpiDash__stockGrid,
+  .kpiDash__loadingShell .kpiDash__loadingList {
+    grid-template-columns: 1fr;
+  }
+
+  .kpiDash__loadingPanel {
+    padding: 0.82rem;
   }
 }
 

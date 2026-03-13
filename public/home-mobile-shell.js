@@ -19,6 +19,7 @@
     resizeRaf = window.requestAnimationFrame(() => {
       resizeRaf = 0;
       window.dispatchEvent(new Event("resize"));
+      window.dispatchEvent(new CustomEvent("ppccr:home-shell-sync"));
     });
   };
 
@@ -68,6 +69,7 @@
   });
 
   window.addEventListener("orientationchange", syncShellState, { passive: true });
+  window.addEventListener("hashchange", syncShellState, { passive: true });
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", syncShellState, {
       passive: true,

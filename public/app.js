@@ -274,6 +274,14 @@ function isHomeAuthLocked() {
   return !!document.body?.classList.contains("is-auth-locked");
 }
 
+function syncHomeShellLayout() {
+  if (!document.body?.classList.contains("page-home")) return;
+  setupHomeMobileBottomNavDock();
+  setHeaderOffset();
+  updateMobileBars();
+  flushDeferredHomeEmbeds();
+}
+
 const STATION_NAME_BY_ID = Object.freeze({
   saavedra: "Parque Saavedra",
   aristobulo: "Aristóbulo del Valle",
@@ -964,6 +972,7 @@ function loadEmbedResponsively(iframeEl, wrapperEl, src, options = {}) {
     deferredHintText = "",
     readyHintText = "",
     rootMargin = "240px 0px",
+    deferInHomeShell = true,
   } = options;
 
   const applyHint = (text) => {
@@ -975,6 +984,7 @@ function loadEmbedResponsively(iframeEl, wrapperEl, src, options = {}) {
   wrapperEl.dataset.embedSrc = src;
   const hiddenAncestor = wrapperEl.closest("[hidden]");
   const shouldDefer =
+    deferInHomeShell &&
     isHomeShellViewport() &&
     !hiddenAncestor &&
     "IntersectionObserver" in window;
@@ -1127,8 +1137,6 @@ function renderGuides() {
     const a = document.createElement("a");
     a.className = "pill";
     a.dataset.key = g.key;
-    a.dataset.animate = "";
-    a.style.setProperty("--delay", `${Math.min(index * 35, 210)}ms`);
 
     const icon = document.createElement("span");
     icon.className = "pill__icon";
@@ -1239,8 +1247,6 @@ function renderRoles() {
 
     const card = document.createElement("article");
     card.className = "role-card";
-    card.dataset.animate = "";
-    card.style.setProperty("--delay", `${120 + roleIndex * 70}ms`);
 
     const titleText = String(roleCfg.title || "").trim();
     const descText = String(roleCfg.desc || "").trim();
@@ -1564,10 +1570,10 @@ function renderEmbeds() {
     calWrap.hidden = false;
     loadEmbedResponsively(calIframe, calWrap, CONFIG.embeds.calendar.embedUrl, {
       hintEl: calHint,
-      deferredHintText:
-        "Vista mensual disponible. El calendario se cargará al acercarte a esta sección.",
+      deferredHintText: "",
       readyHintText: "Vista mensual disponible en el calendario embebido.",
-      rootMargin: "260px 0px",
+      rootMargin: "120px 0px",
+      deferInHomeShell: false,
     });
     calFallback.hidden = true;
   } else {
@@ -5294,11 +5300,13 @@ function setupHomeMobileBottomNavDock() {
     sourceNav.setAttribute("aria-hidden", "true");
     fixedDock.hidden = false;
     fixedDock.classList.add("is-visible");
+    fixedDock.setAttribute("aria-hidden", "false");
   } else {
     sourceNav.classList.remove("is-mobile-source-hidden");
     sourceNav.removeAttribute("aria-hidden");
     fixedDock.classList.remove("is-visible");
     fixedDock.hidden = true;
+    fixedDock.setAttribute("aria-hidden", "true");
   }
 
   updateMobileBars();
@@ -5392,12 +5400,7 @@ function initMobilePremiumHeader() {
   };
 
   const onResize = () => {
-    if (!mq.matches) {
-      syncMobileState();
-      return;
-    }
-    measureShell();
-    updateMobileBars();
+    syncMobileState();
   };
 
   window.addEventListener("scroll", onScroll, { passive: true });
@@ -5412,6 +5415,8 @@ function initMobilePremiumHeader() {
   } else if (typeof mq.addListener === "function") {
     mq.addListener(syncMobileState);
   }
+
+  window.addEventListener("ppccr:home-shell-sync", syncMobileState);
 
   window.addEventListener(
     "load",
@@ -5592,14 +5597,16 @@ function setupSmoothAnchorScroll() {
       behavior: reduceMotion ? "auto" : "smooth",
     });
 
-    const activeLink = navLinks.find((link) => link.getAttribute("href") === href);
-    if (activeLink) {
+    const activeLinks = navLinks.filter((link) => link.getAttribute("href") === href);
+    if (activeLinks.length > 0) {
       navLinks.forEach((link) => {
         link.removeAttribute("aria-current");
         link.classList.remove("is-active");
       });
-      activeLink.setAttribute("aria-current", "true");
-      activeLink.classList.add("is-active");
+      activeLinks.forEach((activeLink) => {
+        activeLink.setAttribute("aria-current", "true");
+        activeLink.classList.add("is-active");
+      });
     }
 
     history.pushState(null, "", href);
@@ -5683,6 +5690,8 @@ function setupHeaderScrollState() {
 }
 
 function setupRevealAnimations() {
+  if (document.body.classList.contains("page-home")) return;
+
   const targets = Array.from(
     document.querySelectorAll(
       ".section > .container, .site-footer .container",
@@ -5720,29 +5729,7 @@ function setupHomeDataAnimateReveal() {
   const targets = Array.from(document.querySelectorAll("[data-animate]"));
   if (targets.length === 0) return;
 
-  const reduceMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)",
-  ).matches;
-  if (reduceMotion || !("IntersectionObserver" in window)) {
-    targets.forEach((el) => el.classList.add("is-inview"));
-    return;
-  }
-
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add("is-inview");
-        observer.unobserve(entry.target);
-      });
-    },
-    {
-      threshold: 0.22,
-      rootMargin: "0px 0px -12% 0px",
-    },
-  );
-
-  targets.forEach((el) => observer.observe(el));
+  targets.forEach((el) => el.classList.add("is-inview"));
 }
 
 function setupBackToTopButton() {
@@ -5929,20 +5916,19 @@ async function init() {
     () => {
       window.clearTimeout(mobileBarsResizeTimer);
       mobileBarsResizeTimer = window.setTimeout(() => {
-        setupHomeMobileBottomNavDock();
-        setHeaderOffset();
-        updateMobileBars();
-        flushDeferredHomeEmbeds();
+        syncHomeShellLayout();
       }, 120);
     },
     { passive: true },
   );
 
   window.addEventListener("orientationchange", () => {
-    setupHomeMobileBottomNavDock();
-    setHeaderOffset();
-    updateMobileBars();
-    flushDeferredHomeEmbeds();
+    syncHomeShellLayout();
+  });
+
+  window.addEventListener("hashchange", syncHomeShellLayout, { passive: true });
+  window.addEventListener("ppccr:home-shell-sync", syncHomeShellLayout, {
+    passive: true,
   });
 
   if ("ResizeObserver" in window && !mobileBarsObserver) {

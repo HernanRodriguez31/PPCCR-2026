@@ -213,18 +213,28 @@
     const calcFuera = data.total - data.fit;
     const sumMotivos = data.motivos.reduce((acc, motivo) => acc + motivo.n, 0);
     const hasMismatch = calcFuera !== data.fuera || sumMotivos !== data.fuera;
+    const containerWidth = Math.max(
+      0,
+      Math.round(container?.clientWidth || 0),
+    );
+    const isMobile = containerWidth > 0 && containerWidth <= 620;
+    const isTablet = !isMobile && containerWidth > 0 && containerWidth <= 1024;
 
-    const W = 520;
-    const H = 236;
-    const x0 = 130;
-    const x1 = 254;
-    const x2 = 402;
-    const y0 = 28;
-    const nodeW = 10;
-    const splitGap = 5;
-    const motivoGap = 6;
+    const W = isMobile ? 360 : isTablet ? 460 : 520;
+    const H = isMobile ? 288 : isTablet ? 256 : 236;
+    const x0 = isMobile ? 72 : isTablet ? 104 : 130;
+    const x1 = isMobile ? 170 : isTablet ? 226 : 254;
+    const x2 = isMobile ? 284 : isTablet ? 362 : 402;
+    const y0 = isMobile ? 30 : 28;
+    const nodeW = isMobile ? 12 : 10;
+    const splitGap = isMobile ? 7 : 5;
+    const motivoGap = isMobile ? 10 : isTablet ? 8 : 6;
+    const availableHeight = isMobile ? 186 : isTablet ? 168 : 150;
 
-    const k = Math.max(3.5, Math.min(4.4, 150 / Math.max(1, data.total)));
+    const k = Math.max(
+      isMobile ? 4.1 : 3.5,
+      Math.min(isMobile ? 5.4 : 4.7, availableHeight / Math.max(1, data.total)),
+    );
 
     const nodes = {
       total: {
@@ -534,13 +544,13 @@
     addCallout({
       node: nodes.total,
       side: "left",
-      textX: x0 - 18,
-      y: nodes.total.y + 28,
-      maxChars: 16,
+      textX: x0 - (isMobile ? 10 : 18),
+      y: nodes.total.y + (isMobile ? 24 : 28),
+      maxChars: isMobile ? 12 : 16,
       fromX: nodes.total.x,
       fromY: nodes.total.y + nodes.total.h * 0.36,
-      toX: x0 - 22,
-      toY: nodes.total.y + 30,
+      toX: x0 - (isMobile ? 14 : 22),
+      toY: nodes.total.y + (isMobile ? 26 : 30),
     });
 
     const leftFlowStartX = nodes.total.x + nodeW;
@@ -548,21 +558,32 @@
     const leftFlowLabelX =
       leftFlowStartX + (leftFlowEndX - leftFlowStartX) * 0.54;
 
-    addNodeCenterLabel(nodes.fit, "N " + data.fit, "Criterio FIT", {
+    addNodeCenterLabel(nodes.fit, "N " + data.fit, isMobile ? "FIT kits" : "Criterio FIT", {
       x: leftFlowLabelX,
       y: nodes.fit.y + nodes.fit.h * 0.5,
     });
-    addNodeCenterLabel(nodes.fuera, "N " + data.fuera, "Fuera de screening", {
+    addNodeCenterLabel(
+      nodes.fuera,
+      "N " + data.fuera,
+      isMobile ? "Fuera scr." : "Fuera de screening",
+      {
       x: leftFlowLabelX,
       y: nodes.fuera.y + nodes.fuera.h * 0.5,
-    });
+      },
+    );
 
-    const motivoInlineLabels = {
-      edad: "Edad < 45",
-      seguimiento: "Seg. Vigente",
-      riesgo: "Mayor riesgo",
-    };
-    const motivoInlineLabelX = x2 - 12;
+    const motivoInlineLabels = isMobile
+      ? {
+          edad: "Edad <45",
+          seguimiento: "Seguim.",
+          riesgo: "Riesgo",
+        }
+      : {
+          edad: "Edad < 45",
+          seguimiento: "Seg. Vigente",
+          riesgo: "Mayor riesgo",
+        };
+    const motivoInlineLabelX = isMobile ? x2 - 8 : x2 - 12;
 
     motivoNodes.forEach((motivo) => {
       const inlineLabel = motivoInlineLabels[motivo.key] || motivo.label;
@@ -576,24 +597,26 @@
       svg.appendChild(inlineText);
     });
 
-    let minCalloutY = nodes.fuera.y + 6;
+    let minCalloutY = nodes.fuera.y + (isMobile ? 10 : 6);
     motivoNodes.forEach((motivo) => {
       // Evita solapado cuando los nodos son pequeños o hay más de 3 motivos.
-      const centeredY = Math.round(motivo.y + Math.max(9, motivo.h * 0.52));
+      const centeredY = Math.round(
+        motivo.y + Math.max(isMobile ? 11 : 9, motivo.h * 0.52),
+      );
       const calloutY = Math.max(minCalloutY, centeredY);
-      minCalloutY = calloutY + 18;
+      minCalloutY = calloutY + (isMobile ? 20 : 18);
 
       addCallout({
         node: motivo,
         side: "right",
-        textX: x2 + nodeW + 20,
+        textX: x2 + nodeW + (isMobile ? 16 : 20),
         y: calloutY,
         label: "",
-        maxChars: 17,
+        maxChars: isMobile ? 12 : 17,
         meta: "",
         fromX: motivo.x + nodeW,
         fromY: motivo.y + motivo.h * 0.52,
-        toX: x2 + nodeW + 16,
+        toX: x2 + nodeW + (isMobile ? 12 : 16),
         toY: calloutY - 2,
       });
     });

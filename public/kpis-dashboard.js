@@ -150,10 +150,114 @@
     );
   }
 
+  function getKpiDashboardViewportMode(root) {
+    const rootWidth = Math.max(
+      0,
+      Math.round(root?.getBoundingClientRect?.().width || 0),
+    );
+    const viewportWidth = Math.max(rootWidth, window.innerWidth || 0);
+
+    if (viewportWidth <= 620) {
+      return "mobile";
+    }
+    if (viewportWidth <= 1024) {
+      return "tablet";
+    }
+    return "desktop";
+  }
+
+  function formatStationAxisLabel(name, mode) {
+    const stationKey = normalizeStationKey(name);
+    if (mode === "mobile") {
+      if (stationKey === "saavedra") return "P. Saavedra";
+      if (stationKey === "rivadavia") return "P. Rivadavia";
+      if (stationKey === "chacabuco") return "P. Chacabuco";
+      if (stationKey === "aristobulo") return "Aristóbulo\ndel Valle";
+      return String(name || "").replace(/\s+/g, "\n");
+    }
+
+    if (stationKey === "saavedra") return "Saavedra";
+    if (stationKey === "rivadavia") return "Rivadavia";
+    if (stationKey === "chacabuco") return "Chacabuco";
+    if (stationKey === "aristobulo") return "Aristóbulo";
+    return name;
+  }
+
+  function buildLoadingShellMarkup() {
+    return [
+      '<div class="kpiDash__loadingShell" role="status" aria-live="polite">',
+      '<div class="kpiDash__reportHeader kpiDash__loadingPanel">',
+      '<div class="kpiDash__loadingHead">',
+      '<div class="kpiDash__loadingStack">',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--title" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--subtitle" aria-hidden="true"></span>',
+      "</div>",
+      '<div class="kpiDash__loadingStack" style="justify-items:end">',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--meta" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--meta" aria-hidden="true"></span>',
+      "</div>",
+      "</div>",
+      "</div>",
+      '<div class="kpiDash__exec">',
+      '<section class="kpiDash__loadingPanel kpiDash__loadingPanel--medium">',
+      '<div class="kpiDash__loadingStack">',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--title" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--metric" aria-hidden="true"></span>',
+      '<div class="kpiDash__loadingBars">',
+      '<div class="kpiDash__loadingRow"><span class="kpiDash__skeletonDot" aria-hidden="true"></span><span class="kpiDash__skeletonBlock kpiDash__skeletonBlock--bar" aria-hidden="true"></span></div>',
+      '<div class="kpiDash__loadingRow"><span class="kpiDash__skeletonDot" aria-hidden="true"></span><span class="kpiDash__skeletonBlock kpiDash__skeletonBlock--bar" aria-hidden="true"></span></div>',
+      '<div class="kpiDash__loadingRow"><span class="kpiDash__skeletonDot" aria-hidden="true"></span><span class="kpiDash__skeletonBlock kpiDash__skeletonBlock--bar" aria-hidden="true"></span></div>',
+      "</div>",
+      "</div>",
+      "</section>",
+      '<section class="kpiDash__loadingPanel kpiDash__loadingPanel--medium">',
+      '<div class="kpiDash__loadingStack">',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--title" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--short" aria-hidden="true"></span>',
+      '<div class="kpiDash__loadingList">',
+      '<span class="kpiDash__skeletonBlock" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonBlock" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonBlock" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonBlock" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonBlock" aria-hidden="true"></span>',
+      "</div>",
+      "</div>",
+      "</section>",
+      "</div>",
+      '<section class="kpiDash__charts">',
+      '<article class="kpiDash__loadingPanel kpiDash__loadingPanel--tall">',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--title" aria-hidden="true"></span>',
+      '<div class="kpiDash__skeletonBlock kpiDash__skeletonBlock--chart" aria-hidden="true"></div>',
+      "</article>",
+      '<article class="kpiDash__loadingPanel kpiDash__loadingPanel--tall">',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--title" aria-hidden="true"></span>',
+      '<div class="kpiDash__skeletonBlock kpiDash__skeletonBlock--chart" aria-hidden="true"></div>',
+      "</article>",
+      "</section>",
+      '<section class="kpiDash__loadingPanel kpiDash__loadingPanel--table">',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--title" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--short" aria-hidden="true"></span>',
+      '<div class="kpiDash__loadingBars">',
+      '<span class="kpiDash__skeletonBlock kpiDash__skeletonBlock--bar" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonBlock kpiDash__skeletonBlock--bar" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonBlock kpiDash__skeletonBlock--bar" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonBlock kpiDash__skeletonBlock--bar" aria-hidden="true"></span>',
+      "</div>",
+      "</section>",
+      '<section class="kpiDash__loadingPanel">',
+      '<span class="kpiDash__skeletonLine kpiDash__skeletonLine--title" aria-hidden="true"></span>',
+      '<div class="kpiDash__stockGrid">',
+      '<span class="kpiDash__skeletonBlock kpiDash__loadingPanel--stock" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonBlock kpiDash__loadingPanel--stock" aria-hidden="true"></span>',
+      '<span class="kpiDash__skeletonBlock kpiDash__loadingPanel--stock" aria-hidden="true"></span>',
+      "</div>",
+      "</section>",
+      "</div>",
+    ].join("");
+  }
+
   function renderLoading(root) {
-    root.innerHTML =
-      '<div class="kpiDash__loading"><h3>Construyendo tablero local</h3><p>Sincronizando participantes y flujo FIT con fuentes agregadas.</p></div>' +
-      '<div id="ppccrSankeyParticipantes" class="ppccr-sankey" style="display:none" aria-hidden="true"></div>';
+    root.innerHTML = buildLoadingShellMarkup();
   }
 
   function renderEmptyState(root) {
@@ -2239,150 +2343,191 @@
       });
 
       const fullStationNames = orderedStations.map((station) => station.station);
-      const shortStationNames = fullStationNames.map((name) => {
-        const stationKey = normalizeStationKey(name);
-        if (stationKey === "saavedra") {
-          return "Saavedra";
-        }
-        if (stationKey === "rivadavia") {
-          return "Rivadavia";
-        }
-        if (stationKey === "chacabuco") {
-          return "Chacabuco";
-        }
-        if (stationKey === "aristobulo") {
-          return "Aristóbulo";
-        }
-        return name;
-      });
-
       const participants = orderedStations.map((station) => station.participantesTotal);
       const fit = orderedStations.map((station) => station.criterioFitKits);
       const outside = orderedStations.map((station) => station.fueraDeScreening);
-      const barValueLabel = {
-        show: true,
-        position: "top",
-        distance: 6,
-        color: chartPalette.axisText,
-        fontSize: 10.5,
-        fontWeight: 600,
-        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-        formatter: function (params) {
-          if (
-            params.value === null ||
-            params.value === undefined ||
-            Number(params.value) <= 0
-          ) {
-            return "";
-          }
-          return formatNumber(params.value);
-        },
-      };
+      let lastViewMode = null;
+      let lastSankeyWidth = 0;
 
-      barChart.setOption({
-        animationDuration: 550,
-        animationEasing: "cubicOut",
-        color: [chartPalette.blueDark, chartPalette.blueMid, chartPalette.blueLight],
-        tooltip: {
-          trigger: "axis",
-          backgroundColor: "rgba(255, 255, 255, 0.97)",
-          borderColor: "rgba(95, 115, 147, 0.18)",
-          borderWidth: 1,
-          extraCssText:
-            "box-shadow: 0 10px 24px rgba(19,41,75,0.12); border-radius: 10px; padding: 8px 10px;",
-          axisPointer: {
-            type: "shadow",
-            shadowStyle: { color: "rgba(0, 75, 143, 0.04)" },
-          },
-          textStyle: {
-            color: chartPalette.tooltipText,
-            fontSize: 11,
-            fontWeight: 500,
-          },
+      const buildBarOption = (viewMode) => {
+        const isMobile = viewMode === "mobile";
+        const isTablet = viewMode === "tablet";
+        const axisLabels = fullStationNames.map((name) =>
+          formatStationAxisLabel(name, isMobile ? "mobile" : "desktop"),
+        );
+        const barValueLabel = {
+          show: true,
+          position: isMobile ? "right" : "top",
+          distance: isMobile ? 8 : 6,
+          color: chartPalette.axisText,
+          fontSize: isMobile ? 10 : 10.5,
+          fontWeight: 600,
+          fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
           formatter: function (params) {
-            if (!Array.isArray(params) || params.length === 0) {
+            if (
+              params.value === null ||
+              params.value === undefined ||
+              Number(params.value) <= 0
+            ) {
               return "";
             }
+            return formatNumber(params.value);
+          },
+        };
 
-            const rowIndex = params[0].dataIndex;
-            const stationName = fullStationNames[rowIndex] || params[0].axisValue;
-            const rows = params.map((item) => {
-              const value =
-                item.value === null || item.value === undefined
-                  ? "—"
-                  : formatNumber(item.value);
-              return item.marker + item.seriesName + ": " + value;
-            });
-            return [stationName].concat(rows).join("<br/>");
-          },
-        },
-        legend: {
-          top: 0,
-          left: "center",
-          textStyle: { color: chartPalette.axisText, fontSize: 10.5, fontWeight: 500 },
-          itemWidth: 10,
-          itemHeight: 8,
-          itemGap: 8,
-          padding: [0, 0, 0, 0],
-        },
-        grid: { left: 44, right: 16, top: 54, bottom: 34 },
-        xAxis: {
-          type: "category",
-          data: shortStationNames,
-          axisLabel: {
-            color: chartPalette.axisText,
-            fontSize: 10.5,
-            fontWeight: 500,
-            interval: 0,
-            rotate: 0,
-            margin: 10,
-          },
-          axisTick: { show: false },
-          axisLine: { lineStyle: { color: chartPalette.axisLine } },
-        },
-        yAxis: {
-          type: "value",
-          splitNumber: 4,
-          axisLabel: { color: chartPalette.axisText, fontSize: 10.5 },
-          axisLine: { show: false },
-          axisTick: { show: false },
-          splitLine: {
-            lineStyle: {
-              color: chartPalette.gridLine,
-              type: "dashed",
-            },
-          },
-        },
-        series: [
+        const series = [
           {
             name: "Participantes",
             type: "bar",
-            barMaxWidth: 30,
+            barMaxWidth: isMobile ? 14 : isTablet ? 26 : 30,
             data: participants,
-            itemStyle: { borderRadius: [5, 5, 0, 0] },
+            itemStyle: {
+              borderRadius: isMobile ? [0, 5, 5, 0] : [5, 5, 0, 0],
+            },
             label: barValueLabel,
             emphasis: { focus: "series" },
           },
           {
             name: "Criterio FIT (kits)",
             type: "bar",
-            barMaxWidth: 28,
+            barMaxWidth: isMobile ? 13 : isTablet ? 24 : 28,
             data: fit,
-            itemStyle: { borderRadius: [5, 5, 0, 0] },
+            itemStyle: {
+              borderRadius: isMobile ? [0, 5, 5, 0] : [5, 5, 0, 0],
+            },
             label: barValueLabel,
             emphasis: { focus: "series" },
           },
           {
             name: "Fuera de screening",
             type: "bar",
-            barMaxWidth: 26,
+            barMaxWidth: isMobile ? 12 : isTablet ? 22 : 26,
             data: outside,
-            itemStyle: { borderRadius: [5, 5, 0, 0] },
+            itemStyle: {
+              borderRadius: isMobile ? [0, 5, 5, 0] : [5, 5, 0, 0],
+            },
             label: barValueLabel,
             emphasis: { focus: "series" },
           },
-        ],
-      });
+        ];
+
+        return {
+          animationDuration: 0,
+          animationEasing: "linear",
+          color: [chartPalette.blueDark, chartPalette.blueMid, chartPalette.blueLight],
+          tooltip: {
+            trigger: "axis",
+            axisPointer: {
+              type: "shadow",
+              shadowStyle: { color: "rgba(0, 75, 143, 0.04)" },
+            },
+            backgroundColor: "rgba(255, 255, 255, 0.97)",
+            borderColor: "rgba(95, 115, 147, 0.18)",
+            borderWidth: 1,
+            extraCssText:
+              "box-shadow: 0 10px 24px rgba(19,41,75,0.12); border-radius: 10px; padding: 8px 10px;",
+            textStyle: {
+              color: chartPalette.tooltipText,
+              fontSize: 11,
+              fontWeight: 500,
+            },
+            formatter: function (params) {
+              if (!Array.isArray(params) || params.length === 0) {
+                return "";
+              }
+
+              const rowIndex = params[0].dataIndex;
+              const stationName = fullStationNames[rowIndex] || params[0].axisValue;
+              const rows = params.map((item) => {
+                const value =
+                  item.value === null || item.value === undefined
+                    ? "—"
+                    : formatNumber(item.value);
+                return item.marker + item.seriesName + ": " + value;
+              });
+              return [stationName].concat(rows).join("<br/>");
+            },
+          },
+          legend: {
+            top: 0,
+            left: "center",
+            textStyle: {
+              color: chartPalette.axisText,
+              fontSize: isMobile ? 9.5 : 10.5,
+              fontWeight: 500,
+            },
+            itemWidth: 10,
+            itemHeight: 8,
+            itemGap: isMobile ? 6 : 8,
+            padding: [0, 0, 0, 0],
+          },
+          grid: isMobile
+            ? { left: 92, right: 14, top: 48, bottom: 14 }
+            : { left: 44, right: 16, top: 54, bottom: 34 },
+          xAxis: isMobile
+            ? {
+                type: "value",
+                splitNumber: 4,
+                axisLabel: { color: chartPalette.axisText, fontSize: 10 },
+                axisLine: { show: false },
+                axisTick: { show: false },
+                splitLine: {
+                  lineStyle: {
+                    color: chartPalette.gridLine,
+                    type: "dashed",
+                  },
+                },
+              }
+            : {
+                type: "category",
+                data: axisLabels,
+                axisLabel: {
+                  color: chartPalette.axisText,
+                  fontSize: isTablet ? 10 : 10.5,
+                  fontWeight: 500,
+                  interval: 0,
+                  rotate: 0,
+                  margin: 10,
+                },
+                axisTick: { show: false },
+                axisLine: { lineStyle: { color: chartPalette.axisLine } },
+              },
+          yAxis: isMobile
+            ? {
+                type: "category",
+                data: axisLabels,
+                axisLabel: {
+                  color: chartPalette.axisText,
+                  fontSize: 9.6,
+                  lineHeight: 13,
+                  margin: 12,
+                },
+                axisTick: { show: false },
+                axisLine: { show: false },
+              }
+            : {
+                type: "value",
+                splitNumber: 4,
+                axisLabel: {
+                  color: chartPalette.axisText,
+                  fontSize: isTablet ? 10 : 10.5,
+                },
+                axisLine: { show: false },
+                axisTick: { show: false },
+                splitLine: {
+                  lineStyle: {
+                    color: chartPalette.gridLine,
+                    type: "dashed",
+                  },
+                },
+              },
+          series: series.map((serie) =>
+            isMobile
+              ? Object.assign({}, serie, { barGap: "18%", barCategoryGap: "34%" })
+              : serie,
+          ),
+        };
+      };
 
       if (sankeyChart && sankeyEl) {
         const links = [
@@ -2462,7 +2607,7 @@
           );
         });
         sankeyChart.setOption({
-          animationDuration: 620,
+          animationDuration: 0,
           tooltip: {
             trigger: "item",
             formatter: function (params) {
@@ -2581,14 +2726,15 @@
         syncSankeySvgViewBox();
       }
 
-      if (posnegChart) {
-        const positives = model.fitFlowTotals.positivos;
-        const negatives = model.fitFlowTotals.negativos;
-        const hasPosNegData = positives !== null && negatives !== null;
-        const posNegTotal = hasPosNegData ? positives + negatives : 0;
+      const positives = model.fitFlowTotals.positivos;
+      const negatives = model.fitFlowTotals.negativos;
+      const hasPosNegData = positives !== null && negatives !== null;
+      const posNegTotal = hasPosNegData ? positives + negatives : 0;
 
-        posnegChart.setOption({
-          animationDuration: 520,
+      const buildPosNegOption = (viewMode) => {
+        const isMobile = viewMode === "mobile";
+        return {
+          animationDuration: 0,
           color: [chartPalette.blueMid, chartPalette.blueLight],
           tooltip: {
             trigger: "item",
@@ -2605,7 +2751,11 @@
           },
           legend: {
             bottom: 0,
-            textStyle: { color: chartPalette.axisText, fontSize: 11 },
+            left: "center",
+            textStyle: {
+              color: chartPalette.axisText,
+              fontSize: isMobile ? 10 : 11,
+            },
           },
           graphic:
             hasPosNegData && posNegTotal > 0
@@ -2621,7 +2771,7 @@
                         : "Resultados informados\nno disponibles",
                       textAlign: "center",
                       fill: chartPalette.axisText,
-                      fontSize: 12,
+                      fontSize: isMobile ? 11 : 12,
                     },
                   },
                 ],
@@ -2629,15 +2779,20 @@
             {
               name: "Resultados informados",
               type: "pie",
-              radius: ["55%", "74%"],
-              center: ["50%", "44%"],
+              radius: isMobile ? ["50%", "68%"] : ["55%", "74%"],
+              center: isMobile ? ["50%", "42%"] : ["50%", "44%"],
               avoidLabelOverlap: true,
               label: {
                 show: true,
                 color: chartPalette.tooltipText,
+                fontSize: isMobile ? 10 : 11,
                 formatter: "{d}%",
               },
-              labelLine: { show: true, length: 10, length2: 6 },
+              labelLine: {
+                show: true,
+                length: isMobile ? 7 : 10,
+                length2: isMobile ? 5 : 6,
+              },
               data:
                 hasPosNegData && posNegTotal > 0
                   ? [
@@ -2647,8 +2802,32 @@
                   : [],
             },
           ],
-        });
-      }
+        };
+      };
+
+      const applyChartsForViewport = () => {
+        const nextMode = getKpiDashboardViewportMode(root);
+        const nextSankeyWidth = sankeyEl ? Math.round(sankeyEl.clientWidth || 0) : 0;
+
+        if (nextMode !== lastViewMode) {
+          barChart.setOption(buildBarOption(nextMode), true);
+          if (posnegChart) {
+            posnegChart.setOption(buildPosNegOption(nextMode), true);
+          }
+        }
+
+        if (
+          document.getElementById("ppccrSankeyParticipantes") &&
+          (nextMode !== lastViewMode || Math.abs(nextSankeyWidth - lastSankeyWidth) > 6)
+        ) {
+          renderParticipantSankey(model);
+        }
+
+        lastViewMode = nextMode;
+        lastSankeyWidth = nextSankeyWidth;
+      };
+
+      applyChartsForViewport();
 
       const resize = () => {
         barChart.resize();
@@ -2659,6 +2838,7 @@
         if (posnegChart) {
           posnegChart.resize();
         }
+        applyChartsForViewport();
       };
 
       if (window.ResizeObserver) {
