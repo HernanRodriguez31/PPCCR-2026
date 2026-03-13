@@ -1,26 +1,26 @@
 "use strict";
 
-const SHELL_CACHE = "ppccr-shell-v20260312-phase2-1";
-const STATIC_CACHE = "ppccr-static-v20260312-phase2-1";
+const SHELL_CACHE = "ppccr-shell-v20260313-release-blockers-1";
+const STATIC_CACHE = "ppccr-static-v20260313-release-blockers-1";
 const ACTIVE_CACHES = [SHELL_CACHE, STATIC_CACHE];
 const PRECACHE_URLS = [
   "/",
   "/index.html",
-  "/manifest.webmanifest?v=20260312-home-phase2-polish1",
+  "/manifest.webmanifest?v=20260313-home-phase2-release-blockers1",
   "/styles.css?v=20260311-home-sponsors-spacing1",
-  "/kpis-dashboard.css?v=20260312-home-phase2-polish1",
-  "/ppccr-sankey-participantes.css?v=20260312-home-phase2-polish1",
-  "/home-mobile-shell.css?v=20260312-home-phase2-polish1",
+  "/kpis-dashboard.css?v=20260313-home-phase2-release-blockers1",
+  "/ppccr-sankey-participantes.css?v=20260313-home-phase2-release-blockers1",
+  "/home-mobile-shell.css?v=20260313-home-phase2-release-blockers1",
   "/host-guard.js",
   "/page-transitions.js",
   "/domain/home-algorithm-domain.js",
   "/app/home-algorithm-service.js",
-  "/app.js?v=20260312-home-phase2-polish1",
-  "/kpis-dashboard.js?v=20260312-home-phase2-polish1",
-  "/ppccr-sankey-participantes.js?v=20260312-home-phase2-polish1",
-  "/auth-gate.js?v=20260310-auth-modal-polish3",
-  "/home-mobile-shell.js?v=20260312-home-phase2-polish1",
-  "/pwa-register.js?v=20260312-home-phase2-polish1",
+  "/app.js?v=20260313-home-phase2-release-blockers1",
+  "/kpis-dashboard.js?v=20260313-home-phase2-release-blockers1",
+  "/ppccr-sankey-participantes.js?v=20260313-home-phase2-release-blockers1",
+  "/auth-gate.js?v=20260313-home-phase2-release-blockers1",
+  "/home-mobile-shell.js?v=20260313-home-phase2-release-blockers1",
+  "/pwa-register.js?v=20260313-home-phase2-release-blockers1",
   "/assets/favicon.png",
   "/assets/logo-ppccr.png",
   "/assets/logo%20cinta%20azul.png",
