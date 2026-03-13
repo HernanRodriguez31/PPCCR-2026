@@ -2352,13 +2352,15 @@
       const buildBarOption = (viewMode) => {
         const isMobile = viewMode === "mobile";
         const isTablet = viewMode === "tablet";
+        const isDesktop = viewMode === "desktop";
+        const isHorizontal = isMobile || isDesktop;
         const axisLabels = fullStationNames.map((name) =>
           formatStationAxisLabel(name, isMobile ? "mobile" : "desktop"),
         );
         const barValueLabel = {
           show: true,
-          position: isMobile ? "right" : "top",
-          distance: isMobile ? 8 : 6,
+          position: isHorizontal ? "right" : "top",
+          distance: isHorizontal ? 8 : 6,
           color: chartPalette.axisText,
           fontSize: isMobile ? 10 : 10.5,
           fontWeight: 600,
@@ -2382,7 +2384,7 @@
             barMaxWidth: isMobile ? 14 : isTablet ? 26 : 30,
             data: participants,
             itemStyle: {
-              borderRadius: isMobile ? [0, 5, 5, 0] : [5, 5, 0, 0],
+              borderRadius: isHorizontal ? [0, 6, 6, 0] : [5, 5, 0, 0],
             },
             label: barValueLabel,
             emphasis: { focus: "series" },
@@ -2393,7 +2395,7 @@
             barMaxWidth: isMobile ? 13 : isTablet ? 24 : 28,
             data: fit,
             itemStyle: {
-              borderRadius: isMobile ? [0, 5, 5, 0] : [5, 5, 0, 0],
+              borderRadius: isHorizontal ? [0, 6, 6, 0] : [5, 5, 0, 0],
             },
             label: barValueLabel,
             emphasis: { focus: "series" },
@@ -2404,7 +2406,7 @@
             barMaxWidth: isMobile ? 12 : isTablet ? 22 : 26,
             data: outside,
             itemStyle: {
-              borderRadius: isMobile ? [0, 5, 5, 0] : [5, 5, 0, 0],
+              borderRadius: isHorizontal ? [0, 6, 6, 0] : [5, 5, 0, 0],
             },
             label: barValueLabel,
             emphasis: { focus: "series" },
@@ -2461,14 +2463,19 @@
             itemGap: isMobile ? 6 : 8,
             padding: [0, 0, 0, 0],
           },
-          grid: isMobile
-            ? { left: 92, right: 14, top: 48, bottom: 14 }
+          grid: isHorizontal
+            ? isMobile
+              ? { left: 92, right: 14, top: 48, bottom: 14 }
+              : { left: 128, right: 24, top: 54, bottom: 18 }
             : { left: 44, right: 16, top: 54, bottom: 34 },
-          xAxis: isMobile
+          xAxis: isHorizontal
             ? {
                 type: "value",
-                splitNumber: 4,
-                axisLabel: { color: chartPalette.axisText, fontSize: 10 },
+                splitNumber: isDesktop ? 5 : 4,
+                axisLabel: {
+                  color: chartPalette.axisText,
+                  fontSize: isDesktop ? 10.5 : 10,
+                },
                 axisLine: { show: false },
                 axisTick: { show: false },
                 splitLine: {
@@ -2492,15 +2499,15 @@
                 axisTick: { show: false },
                 axisLine: { lineStyle: { color: chartPalette.axisLine } },
               },
-          yAxis: isMobile
+          yAxis: isHorizontal
             ? {
                 type: "category",
                 data: axisLabels,
                 axisLabel: {
                   color: chartPalette.axisText,
-                  fontSize: 9.6,
-                  lineHeight: 13,
-                  margin: 12,
+                  fontSize: isDesktop ? 10.8 : 9.6,
+                  lineHeight: isDesktop ? 15 : 13,
+                  margin: isDesktop ? 14 : 12,
                 },
                 axisTick: { show: false },
                 axisLine: { show: false },
@@ -2522,8 +2529,11 @@
                 },
               },
           series: series.map((serie) =>
-            isMobile
-              ? Object.assign({}, serie, { barGap: "18%", barCategoryGap: "34%" })
+            isHorizontal
+              ? Object.assign({}, serie, {
+                  barGap: "18%",
+                  barCategoryGap: isMobile ? "34%" : "30%",
+                })
               : serie,
           ),
         };

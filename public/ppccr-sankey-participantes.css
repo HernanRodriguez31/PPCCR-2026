@@ -125,6 +125,31 @@
   color:var(--ppccr-muted);
 }
 
+@media (min-width: 1025px) {
+  .ppccr-sankey{
+    padding:16px 20px 14px;
+    border-radius:20px;
+  }
+
+  .ppccr-sankey .viz--solo{
+    padding-left:6px;
+  }
+
+  .ppccr-sankey .node-value{
+    font-size:14px;
+  }
+
+  .ppccr-sankey .node-label{
+    font-size:9.4px;
+    font-weight:680;
+    letter-spacing:.04px;
+  }
+
+  .ppccr-sankey .node-meta{
+    font-size:9px;
+  }
+}
+
 @media (max-width: 1024px) {
   .ppccr-sankey{
     padding:11px 12px;

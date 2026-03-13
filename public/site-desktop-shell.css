@@ -49,6 +49,10 @@
     padding-bottom: 112px;
   }
 
+  body.page-home .site-main {
+    padding-bottom: 72px;
+  }
+
   body.page-home .site-topbar__inner,
   body.page-internal .site-topbar__inner {
     width: min(calc(100% - (var(--desktop-gutter) * 2)), var(--desktop-wide-max));
@@ -161,6 +165,25 @@
     text-align: right;
   }
 
+  body.page-home .footer-meta.footer-meta--home {
+    display: grid;
+    gap: 4px;
+    justify-items: end;
+  }
+
+  body.page-home .footer-meta__main {
+    display: block;
+  }
+
+  body.page-home .footer-meta__credit {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 780;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(11, 58, 102, 0.8);
+  }
+
   body.page-home .modal__dialog,
   body.page-home .home-algo__modal-card,
   body.page-home .telemodal__card,
@@ -229,10 +252,10 @@
 
   body.page-home .hero-card {
     display: grid;
-    grid-template-columns: minmax(0, 1.16fr) minmax(360px, 0.84fr);
-    gap: clamp(20px, 2vw, 28px);
+    grid-template-columns: minmax(0, 1.02fr) minmax(470px, 0.98fr);
+    gap: clamp(24px, 2.4vw, 34px);
     align-items: stretch;
-    padding: clamp(28px, 2.8vw, 38px);
+    padding: clamp(30px, 2.8vw, 40px);
     border-radius: 34px;
     border: var(--desktop-panel-border);
     background: var(--desktop-panel-bg);
@@ -244,7 +267,7 @@
   }
 
   body.page-home .hero-left__main {
-    max-width: 58ch;
+    max-width: 52ch;
     min-height: 100%;
     justify-content: center;
   }
@@ -255,13 +278,13 @@
   }
 
   body.page-home .hero-text {
-    max-width: 54ch;
-    font-size: 1.08rem;
-    line-height: 1.7;
+    max-width: 50ch;
+    font-size: 1.05rem;
+    line-height: 1.72;
   }
 
   body.page-home .hero-highlights {
-    max-width: 52ch;
+    max-width: 49ch;
     gap: 12px;
   }
 
@@ -277,47 +300,64 @@
   body.page-home .hero-right {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
+    gap: 18px;
     align-content: start;
   }
 
   body.page-home .hero-action-card {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 18px;
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 280px);
+    gap: 22px;
     align-items: center;
-    min-height: 168px;
-    padding: 22px 24px;
+    min-height: 182px;
+    padding: 24px 26px;
     border-radius: 26px;
   }
 
   body.page-home .hero-action-card__title {
-    font-size: 1.42rem;
+    font-size: 1.52rem;
+    line-height: 1.02;
   }
 
   body.page-home .hero-action-card__subtitle {
-    max-width: 28ch;
+    max-width: 30ch;
+    font-size: 1rem;
     line-height: 1.55;
   }
 
   body.page-home .hero-action-card__btn {
-    min-height: 58px;
+    min-height: 60px;
+    width: 100%;
     padding-inline: 24px;
+    justify-content: center;
   }
 
   body.page-home .mini-panels {
     display: grid;
+    grid-column: 1 / -1;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
+    gap: 18px;
+    width: 100%;
   }
 
   body.page-home .mini-panel {
-    min-height: 138px;
-    padding: 18px 18px 20px;
+    min-height: 154px;
+    width: 100%;
+    padding: 20px 20px 22px;
     border-radius: 24px;
     border: 1px solid rgba(15, 95, 166, 0.12);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(242, 248, 255, 0.9));
+  }
+
+  body.page-home .mini-panel__title {
+    font-size: 1.18rem;
+    line-height: 1.08;
+  }
+
+  body.page-home .mini-panel__text {
+    font-size: 1rem;
+    line-height: 1.5;
   }
 
   body.page-home .pill-grid {
@@ -414,8 +454,8 @@
   }
 
   body.page-home #kpi-dashboard-ppccr {
-    padding: clamp(18px, 1.8vw, 24px);
-    border-radius: 30px;
+    padding: clamp(20px, 1.9vw, 26px);
+    border-radius: 32px;
     border: var(--desktop-panel-border);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(243, 249, 255, 0.9));
     box-shadow: var(--desktop-panel-shadow);
@@ -423,8 +463,8 @@
 
   body.page-home #kpis .embed-card,
   body.page-home #cronograma .embed-card {
-    padding: 18px;
-    border-radius: 30px;
+    padding: 20px;
+    border-radius: 32px;
     border: var(--desktop-panel-border);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(243, 249, 255, 0.9));
     box-shadow: var(--desktop-panel-shadow);
@@ -437,12 +477,38 @@
   }
 
   body.page-home #cronograma .embed-shell--calendar {
-    min-height: 780px;
+    min-height: 738px;
   }
 
   body.page-home #kpis .section-header,
   body.page-home #cronograma .section-header {
     max-width: none;
+  }
+
+  body.page-home .brand-seal {
+    padding: 6px 0 0;
+    margin-top: 4px;
+  }
+
+  body.page-home .brand-seal__img {
+    width: clamp(148px, 12vw, 180px);
+    filter: drop-shadow(0 14px 26px rgba(16, 58, 104, 0.16));
+  }
+
+  body.page-home .site-footer {
+    margin-top: 12px;
+    padding-block: 24px 26px;
+  }
+
+  body.page-home [data-animate],
+  body.page-home [data-animate].is-inview,
+  body.page-home .reveal,
+  body.page-home .reveal.is-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+    animation: none !important;
   }
 
   @media (min-width: 1180px) {
@@ -452,30 +518,32 @@
     body.page-home #registro .container,
     body.page-home #kpis .container,
     body.page-home #cronograma .container {
-      padding-left: 96px;
+      padding-left: 84px;
     }
 
     body.page-home .site-nav {
-      left: max(18px, calc((100vw - var(--desktop-wide-max)) / 2 + 18px));
-      top: calc(var(--header-fixed-h, 118px) + 22px);
-      width: 96px;
+      --left-dock-cube-size: 80px;
+      --left-dock-cube-gap: 11px;
+      left: max(14px, calc((100vw - var(--desktop-wide-max)) / 2 - 24px));
+      top: calc(var(--header-fixed-h, 118px) + 18px);
+      width: 92px;
     }
 
     body.page-home .site-nav .nav-link,
     body.page-home .site-nav .station-chip.user-dock-tile,
     body.page-home .site-nav #station-switch-trigger.station-chip {
-      width: 86px;
-      min-width: 86px;
-      height: 86px;
-      min-height: 86px;
-      border-radius: 20px;
+      width: 84px;
+      min-width: 84px;
+      height: 84px;
+      min-height: 84px;
+      border-radius: 18px;
       box-shadow:
         0 16px 34px rgba(10, 34, 64, 0.12),
         0 7px 18px rgba(10, 34, 64, 0.08);
     }
 
     body.page-home .site-nav .nav-link__label {
-      font-size: 0.68rem;
+      font-size: 0.64rem;
       line-height: 1.12;
     }
   }
