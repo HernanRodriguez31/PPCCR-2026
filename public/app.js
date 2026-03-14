@@ -3159,10 +3159,16 @@ function renderHomeAlgorithm() {
   mountHomeAlgorithmStepActionsFooter();
   mountHomeAlgorithmFlowStatus();
   mountHomeAlgorithmRestartAction();
+  const currentStep = Number(homeAlgorithmState.currentStep || 0);
+  const selectionStepChanged =
+    homeAlgorithmState.selectedActionStep !== currentStep;
+  const activeElement =
+    document.activeElement instanceof HTMLElement ? document.activeElement : null;
   syncHomeAlgoFooterSelection({
-    focus: false,
-    forcePrimary:
-      homeAlgorithmState.selectedActionStep !== Number(homeAlgorithmState.currentStep || 0),
+    focus:
+      homeAlgorithmState.selectedActionStep > 0 &&
+      !homeAlgorithmState.root.contains(activeElement),
+    forcePrimary: selectionStepChanged,
   });
   refreshHomeAlgorithmOverflowHints();
 }
