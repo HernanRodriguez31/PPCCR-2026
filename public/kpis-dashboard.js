@@ -2466,7 +2466,7 @@
           grid: isHorizontal
             ? isMobile
               ? { left: 92, right: 14, top: 48, bottom: 14 }
-              : { left: 154, right: 24, top: 54, bottom: 18 }
+              : { left: 144, right: 24, top: 54, bottom: 18 }
             : { left: 44, right: 16, top: 54, bottom: 34 },
           xAxis: isHorizontal
             ? {
@@ -2507,7 +2507,7 @@
                   color: chartPalette.axisText,
                   fontSize: isDesktop ? 10.2 : 9.6,
                   lineHeight: isDesktop ? 13.5 : 13,
-                  margin: isDesktop ? 12 : 12,
+                  margin: isDesktop ? 10 : 12,
                 },
                 axisTick: { show: false },
                 axisLine: { show: false },
