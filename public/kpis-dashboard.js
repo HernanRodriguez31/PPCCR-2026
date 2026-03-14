@@ -176,11 +176,11 @@
       return String(name || "").replace(/\s+/g, "\n");
     }
 
-    if (stationKey === "saavedra") return "Saavedra";
-    if (stationKey === "rivadavia") return "Rivadavia";
-    if (stationKey === "chacabuco") return "Chacabuco";
-    if (stationKey === "aristobulo") return "Aristóbulo";
-    return name;
+    if (stationKey === "saavedra") return "Parque\nSaavedra";
+    if (stationKey === "rivadavia") return "Parque\nRivadavia";
+    if (stationKey === "chacabuco") return "Parque\nChacabuco";
+    if (stationKey === "aristobulo") return "Aristóbulo\ndel Valle";
+    return String(name || "").replace(/\s+/g, "\n");
   }
 
   function buildLoadingShellMarkup() {
@@ -2466,7 +2466,7 @@
           grid: isHorizontal
             ? isMobile
               ? { left: 92, right: 14, top: 48, bottom: 14 }
-              : { left: 128, right: 24, top: 54, bottom: 18 }
+              : { left: 154, right: 24, top: 54, bottom: 18 }
             : { left: 44, right: 16, top: 54, bottom: 34 },
           xAxis: isHorizontal
             ? {
@@ -2505,9 +2505,9 @@
                 data: axisLabels,
                 axisLabel: {
                   color: chartPalette.axisText,
-                  fontSize: isDesktop ? 10.8 : 9.6,
-                  lineHeight: isDesktop ? 15 : 13,
-                  margin: isDesktop ? 14 : 12,
+                  fontSize: isDesktop ? 10.2 : 9.6,
+                  lineHeight: isDesktop ? 13.5 : 13,
+                  margin: isDesktop ? 12 : 12,
                 },
                 axisTick: { show: false },
                 axisLine: { show: false },
