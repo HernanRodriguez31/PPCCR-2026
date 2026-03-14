@@ -418,6 +418,14 @@ const HOME_ALGO_PRIMARY_BUTTON_CLASS = "btn btn-primary";
 const HOME_ALGO_SECONDARY_BUTTON_CLASS = "btn btn-outline-secondary";
 const HOME_ALGO_CONTINUE_BUTTON_CLASS = "btn btn-primary px-4 fw-bold";
 const HOME_ALGO_UI_TRANSITION_MS = 180;
+const HOME_ALGO_COMPLETION_MODE = Object.freeze({
+  SUCCESS: "success",
+  ADMIN_TEST: "admin-test",
+});
+const HOME_ALGO_COMPLETION_DEFAULT_TITLE = "Registro completado";
+const HOME_ALGO_COMPLETION_DEFAULT_MESSAGE = "La entrevista se guardó correctamente.";
+const HOME_ALGO_ADMIN_TEST_MESSAGE =
+  "Modo administrador: esta acción se ejecuta solo como prueba. No se guardará información en la base de datos.";
 
 let homeAlgorithmState = null;
 let homeAlgorithmFlowModalState = {
@@ -427,9 +435,11 @@ let homeAlgorithmFlowModalState = {
   source: null,
   completionDialog: null,
   completionCard: null,
+  completionTitle: null,
   completionText: null,
   completionCloseBtn: null,
   completionNewBtn: null,
+  completionMode: HOME_ALGO_COMPLETION_MODE.SUCCESS,
   lastFocused: null,
   escListenerBound: false,
   captureListenerBound: false,
@@ -3612,6 +3622,21 @@ async function finalizeAndPersistHomeInterview(
     setHomeAlgorithmFeedback(feedbackElement, "Guardando entrevista final...", "neutral");
   }
 
+  if (isHomeAlgorithmAdminMode()) {
+    if (feedbackElement) {
+      setHomeAlgorithmFeedback(feedbackElement, "", "neutral");
+    }
+    if (loadingButton) {
+      setHomeAlgorithmButtonLoading(loadingButton, { loading: false });
+    }
+    openHomeAlgorithmCompletionDialog({
+      title: "Modo administrador",
+      message: HOME_ALGO_ADMIN_TEST_MESSAGE,
+      mode: HOME_ALGO_COMPLETION_MODE.ADMIN_TEST,
+    });
+    return;
+  }
+
   const result = await saveHomeAlgorithmInterview(finalResult);
   if (!result.ok) {
     const message =
@@ -4093,6 +4118,7 @@ function syncHomeAlgorithmFlowModalElements() {
   homeAlgorithmFlowModalState.source = $("#ppccr-algo-source");
   homeAlgorithmFlowModalState.completionDialog = $("#home-algo-complete-dialog");
   homeAlgorithmFlowModalState.completionCard = $(".home-algo-complete__card", homeAlgorithmFlowModalState.modal || document);
+  homeAlgorithmFlowModalState.completionTitle = $("#home-algo-complete-title");
   homeAlgorithmFlowModalState.completionText = $("#home-algo-complete-text");
   homeAlgorithmFlowModalState.completionCloseBtn = $("#home-algo-complete-close");
   homeAlgorithmFlowModalState.completionNewBtn = $("#home-algo-complete-new");
@@ -4280,14 +4306,140 @@ function getHomeAlgorithmCompletionFocusableElements() {
   });
 }
 
+function isHomeAlgorithmAdminMode() {
+  const stationFromApi =
+    window.PPCCR?.station && typeof window.PPCCR.station.get === "function"
+      ? normalizeStationDetail(window.PPCCR.station.get())
+      : null;
+  const stationFromBridge = resolveHomeAlgorithmStationFromBridge();
+  const fallbackStationId =
+    homeAlgorithmState?.interview?.stationId || homeAlgorithmState?.interview?.stationName || "";
+  const resolvedStationId = normalizeAlgorithmStationId(
+    stationFromApi?.stationId || stationFromBridge.stationId || fallbackStationId,
+  );
+  return resolvedStationId === "admin";
+}
+
+function isHomeAlgorithmFinishModalOpen() {
+  return Boolean(
+    homeAlgorithmState?.modal &&
+      !homeAlgorithmState.modal.hidden &&
+      homeAlgorithmState.modal.getAttribute("aria-hidden") === "false",
+  );
+}
+
+function isHomeAlgoInteractiveElementVisible(element) {
+  if (!(element instanceof HTMLElement)) return false;
+  if (element.hidden) return false;
+  if (element.getAttribute("aria-hidden") === "true") return false;
+  const styles = window.getComputedStyle(element);
+  return styles.display !== "none" && styles.visibility !== "hidden";
+}
+
+function isHomeAlgoEditableTarget(target, { forArrowNav = false } = {}) {
+  if (!(target instanceof Element)) return false;
+  if (target.closest('[contenteditable]:not([contenteditable="false"])')) return true;
+
+  const field = target.closest("textarea, select, input");
+  if (!(field instanceof HTMLElement)) return false;
+
+  if (field instanceof HTMLTextAreaElement) return true;
+  if (!forArrowNav) return false;
+  if (field instanceof HTMLSelectElement) return true;
+  if (field instanceof HTMLInputElement) return true;
+  return false;
+}
+
+function getVisibleHomeAlgoFooterButtons() {
+  if (!homeAlgorithmState?.actionsDock) return [];
+  const buttons = Array.from(homeAlgorithmState.actionsDock.querySelectorAll("button"));
+  return buttons.filter((button) => {
+    if (!(button instanceof HTMLButtonElement)) return false;
+    if (button.disabled || button.getAttribute("aria-disabled") === "true") return false;
+    return isHomeAlgoInteractiveElementVisible(button);
+  });
+}
+
+function getVisibleHomeAlgoPrimaryButton() {
+  const finishModalPrimary = homeAlgorithmState?.modalFinalizeBtn;
+  if (
+    isHomeAlgorithmFinishModalOpen() &&
+    finishModalPrimary instanceof HTMLButtonElement &&
+    !finishModalPrimary.disabled &&
+    isHomeAlgoInteractiveElementVisible(finishModalPrimary)
+  ) {
+    return finishModalPrimary;
+  }
+
+  return (
+    getVisibleHomeAlgoFooterButtons().find((button) =>
+      button.matches(".btn-primary, .btn-success, .btn-danger"),
+    ) || null
+  );
+}
+
+function moveHomeAlgoFooterFocus(direction) {
+  const buttons = getVisibleHomeAlgoFooterButtons();
+  if (buttons.length < 2) return false;
+
+  const activeElement = document.activeElement;
+  if (!(activeElement instanceof HTMLElement)) return false;
+
+  const activeButton =
+    activeElement instanceof HTMLButtonElement
+      ? activeElement
+      : activeElement.closest("button");
+  if (!(activeButton instanceof HTMLButtonElement)) return false;
+
+  const currentIndex = buttons.indexOf(activeButton);
+  if (currentIndex < 0) return false;
+
+  const nextIndex = (currentIndex + direction + buttons.length) % buttons.length;
+  buttons[nextIndex].focus();
+  return true;
+}
+
+function shouldIgnoreHomeAlgoKeyCommand(event) {
+  return Boolean(
+    event.defaultPrevented ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.altKey ||
+      event.isComposing ||
+      event.keyCode === 229,
+  );
+}
+
+function shouldHandleHomeAlgoEnterFromTarget(target) {
+  if (!(target instanceof Element)) return false;
+  if (isHomeAlgorithmFinishModalOpen()) return true;
+  if (target.closest(".ppccr-modal__close, .home-algo__stepper-button")) return false;
+  if (target.closest(".home-algo__actions, .home-algo__panel, .interview-footer")) return true;
+  return false;
+}
+
 function closeHomeAlgorithmCompletionDialog() {
+  homeAlgorithmFlowModalState.completionMode = HOME_ALGO_COMPLETION_MODE.SUCCESS;
+  if (homeAlgorithmFlowModalState.completionTitle) {
+    homeAlgorithmFlowModalState.completionTitle.textContent =
+      HOME_ALGO_COMPLETION_DEFAULT_TITLE;
+  }
+  if (homeAlgorithmFlowModalState.completionText) {
+    homeAlgorithmFlowModalState.completionText.textContent =
+      HOME_ALGO_COMPLETION_DEFAULT_MESSAGE;
+  }
+  if (homeAlgorithmFlowModalState.completionNewBtn) {
+    homeAlgorithmFlowModalState.completionNewBtn.hidden = false;
+  }
   if (!homeAlgorithmFlowModalState.completionDialog) return;
   homeAlgorithmFlowModalState.completionDialog.hidden = true;
   homeAlgorithmFlowModalState.completionDialog.setAttribute("aria-hidden", "true");
 }
 
 function openHomeAlgorithmCompletionDialog({
-  message = "La entrevista se registró correctamente.",
+  title = HOME_ALGO_COMPLETION_DEFAULT_TITLE,
+  message = HOME_ALGO_COMPLETION_DEFAULT_MESSAGE,
+  mode = HOME_ALGO_COMPLETION_MODE.SUCCESS,
 } = {}) {
   syncHomeAlgorithmFlowModalElements();
   if (!homeAlgorithmFlowModalState.completionDialog) return;
@@ -4297,13 +4449,30 @@ function openHomeAlgorithmCompletionDialog({
   closeHomeAlgorithmCompletionDialog();
   closeHomeAlgorithmModal();
 
+  homeAlgorithmFlowModalState.completionMode =
+    mode === HOME_ALGO_COMPLETION_MODE.ADMIN_TEST
+      ? HOME_ALGO_COMPLETION_MODE.ADMIN_TEST
+      : HOME_ALGO_COMPLETION_MODE.SUCCESS;
+
+  if (homeAlgorithmFlowModalState.completionTitle) {
+    homeAlgorithmFlowModalState.completionTitle.textContent =
+      title || HOME_ALGO_COMPLETION_DEFAULT_TITLE;
+  }
   if (homeAlgorithmFlowModalState.completionText) {
     homeAlgorithmFlowModalState.completionText.textContent = message;
+  }
+  if (homeAlgorithmFlowModalState.completionNewBtn) {
+    homeAlgorithmFlowModalState.completionNewBtn.hidden =
+      homeAlgorithmFlowModalState.completionMode ===
+      HOME_ALGO_COMPLETION_MODE.ADMIN_TEST;
   }
 
   homeAlgorithmFlowModalState.completionDialog.hidden = false;
   homeAlgorithmFlowModalState.completionDialog.setAttribute("aria-hidden", "false");
-  const preferredButton = homeAlgorithmFlowModalState.completionNewBtn;
+  const preferredButton =
+    homeAlgorithmFlowModalState.completionMode === HOME_ALGO_COMPLETION_MODE.ADMIN_TEST
+      ? homeAlgorithmFlowModalState.completionCloseBtn
+      : homeAlgorithmFlowModalState.completionNewBtn;
   if (preferredButton instanceof HTMLElement) {
     preferredButton.focus();
   } else if (homeAlgorithmFlowModalState.completionCard instanceof HTMLElement) {
@@ -4640,7 +4809,11 @@ function onAlgoFlowModalCaptureKeydown(event) {
     if (event.key === "Enter") {
       event.preventDefault();
       event.stopPropagation();
-      startNewHomeAlgorithmInterviewInModal();
+      if (homeAlgorithmFlowModalState.completionMode === HOME_ALGO_COMPLETION_MODE.ADMIN_TEST) {
+        closeAlgoFlowModalFromCompletion();
+      } else {
+        startNewHomeAlgorithmInterviewInModal();
+      }
       return;
     }
     trapHomeAlgorithmCompletionFocus(event);
@@ -4652,6 +4825,34 @@ function onAlgoFlowModalCaptureKeydown(event) {
     event.stopPropagation();
     closeAlgoFlowModal();
     return;
+  }
+
+  if (
+    event.key === "Enter" &&
+    !shouldIgnoreHomeAlgoKeyCommand(event) &&
+    !isHomeAlgoEditableTarget(event.target, { forArrowNav: false }) &&
+    shouldHandleHomeAlgoEnterFromTarget(event.target)
+  ) {
+    const primaryButton = getVisibleHomeAlgoPrimaryButton();
+    if (primaryButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      primaryButton.click();
+      return;
+    }
+  }
+
+  if (
+    (event.key === "ArrowLeft" || event.key === "ArrowRight") &&
+    !shouldIgnoreHomeAlgoKeyCommand(event) &&
+    !isHomeAlgoEditableTarget(event.target, { forArrowNav: true })
+  ) {
+    const didMoveFocus = moveHomeAlgoFooterFocus(event.key === "ArrowRight" ? 1 : -1);
+    if (didMoveFocus) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
   }
 
   trapAlgoFlowModalFocus(event);
