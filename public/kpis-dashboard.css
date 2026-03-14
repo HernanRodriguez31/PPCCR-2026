@@ -1823,34 +1823,44 @@
 
 @media (min-width: 1025px) {
   body.page-home .kpiDash__charts {
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.1rem;
     align-items: stretch;
   }
 
   body.page-home .kpiDash__panel--bars {
-    padding-inline: 1rem;
+    grid-column: auto;
+    padding: 1rem 1.05rem 1.05rem;
   }
 
   body.page-home .kpiDash__panel--aux {
-    padding-inline: 1rem;
+    grid-column: auto;
+    padding: 1rem 1.05rem 1.05rem;
   }
 
   body.page-home .kpiDash__panelHeader {
     align-items: flex-start;
-    margin-bottom: 0.95rem;
+    margin-bottom: 0.8rem;
+  }
+
+  body.page-home .kpiDash__panelHeader h4 {
+    font-size: 1.08rem;
+    letter-spacing: -0.02em;
   }
 
   body.page-home .kpiDash__panelHeader p {
-    padding-top: 0.18rem;
+    padding-top: 0.12rem;
+    font-size: 0.76rem;
+    line-height: 1.35;
   }
 
   body.page-home .kpiDash__panel--bars .kpiDash__chart,
   body.page-home .kpiDash__panel--bars .kpiDash__chartFallback {
-    min-height: 372px;
+    min-height: 388px;
   }
 
   body.page-home .kpiDash__panel--aux .ppccr-sankey {
-    min-height: 372px;
+    min-height: 388px;
   }
 }
 
