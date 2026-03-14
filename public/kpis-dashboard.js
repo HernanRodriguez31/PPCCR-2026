@@ -2466,7 +2466,7 @@
           grid: isHorizontal
             ? isMobile
               ? { left: 92, right: 14, top: 48, bottom: 14 }
-              : { left: 144, right: 24, top: 54, bottom: 18 }
+              : { left: 140, right: 24, top: 54, bottom: 18 }
             : { left: 44, right: 16, top: 54, bottom: 34 },
           xAxis: isHorizontal
             ? {
