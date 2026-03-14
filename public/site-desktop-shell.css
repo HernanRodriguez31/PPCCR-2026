@@ -311,8 +311,8 @@
 
   body.page-home .hero-card {
     display: grid;
-    grid-template-columns: minmax(0, 1.16fr) minmax(408px, 0.84fr);
-    gap: clamp(8px, 0.85vw, 11px);
+    grid-template-columns: minmax(0, 1fr) minmax(388px, 430px);
+    gap: clamp(6px, 0.65vw, 8px);
     align-items: stretch;
     padding: clamp(22px, 1.95vw, 28px);
     border-radius: 30px;
@@ -323,11 +323,13 @@
 
   body.page-home .hero-left {
     min-height: 100%;
-    padding-inline: 20px;
+    padding-left: 20px;
+    padding-right: 8px;
   }
 
   body.page-home .hero-left__main {
-    max-width: 52ch;
+    max-width: 57ch;
+    width: 100%;
     min-height: 100%;
     grid-template-rows: auto auto auto auto 1fr auto;
     justify-content: start;
@@ -339,47 +341,49 @@
   body.page-home .hero-badge {
     display: block;
     justify-self: start;
-    margin: 0 0 10px;
+    margin: 0 0 8px;
     padding: 0;
     border: 0;
     background: none;
     box-shadow: none;
     color: var(--blue-900);
-    font-size: clamp(1.72rem, 1.96vw, 2.08rem);
+    font-size: clamp(1.7rem, 1.86vw, 1.98rem);
     font-weight: 820;
     line-height: 1.02;
     letter-spacing: -0.012em;
     text-transform: none;
+    white-space: nowrap;
   }
 
   body.page-home .hero-subtitle {
-    margin: 0 0 18px;
-    max-width: 22ch;
+    margin: 0 0 14px;
+    max-width: none;
     color: var(--blue-900);
-    font-size: clamp(1.12rem, 1.22vw, 1.34rem);
+    font-size: clamp(1rem, 1.02vw, 1.14rem);
     font-weight: 780;
-    line-height: 1.14;
-    letter-spacing: -0.012em;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
     text-wrap: balance;
+    white-space: nowrap;
   }
 
   body.page-home .hero-text {
-    margin: 0 0 20px;
-    max-width: 47ch;
-    font-size: 0.96rem;
-    line-height: 1.44;
+    margin: 0 0 18px;
+    max-width: 54ch;
+    font-size: 0.95rem;
+    line-height: 1.38;
   }
 
   body.page-home .hero-highlights {
-    margin: 0 0 20px;
-    max-width: 45ch;
-    gap: 9px;
+    margin: 0 0 18px;
+    max-width: 51ch;
+    gap: 8px;
   }
 
   body.page-home .hero-highlights li {
     padding-left: 20px;
-    font-size: 0.95rem;
-    line-height: 1.3;
+    font-size: 0.93rem;
+    line-height: 1.28;
   }
 
   body.page-home .hero-cta {
@@ -469,17 +473,17 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     align-content: start;
-    padding-right: 20px;
+    padding-right: 16px;
   }
 
   body.page-home .hero-action-card {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(208px, 228px);
-    gap: 14px;
+    grid-template-columns: minmax(0, 1fr) minmax(196px, 214px);
+    gap: 12px;
     align-items: center;
     min-height: 132px;
-    padding: 15px 17px;
+    padding: 15px 16px;
     border-radius: 22px;
   }
 
@@ -489,7 +493,7 @@
   }
 
   body.page-home .hero-action-card__subtitle {
-    max-width: 31ch;
+    max-width: 27ch;
     font-size: 0.9rem;
     line-height: 1.36;
   }
