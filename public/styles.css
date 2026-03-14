@@ -9635,6 +9635,14 @@ body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn {
   letter-spacing: 0.003em;
 }
 
+body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn.is-selected {
+  outline: 3px solid rgba(13, 109, 193, 0.44);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 4px rgba(13, 109, 193, 0.16),
+    0 12px 24px rgba(9, 48, 95, 0.12);
+}
+
 body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-primary,
 body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-success,
 body.page-home .ppccr-modal.modal--interview .home-algo__actions .btn-danger {

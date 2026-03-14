@@ -3159,6 +3159,11 @@ function renderHomeAlgorithm() {
   mountHomeAlgorithmStepActionsFooter();
   mountHomeAlgorithmFlowStatus();
   mountHomeAlgorithmRestartAction();
+  syncHomeAlgoFooterSelection({
+    focus: false,
+    forcePrimary:
+      homeAlgorithmState.selectedActionStep !== Number(homeAlgorithmState.currentStep || 0),
+  });
   refreshHomeAlgorithmOverflowHints();
 }
 
@@ -4291,6 +4296,65 @@ function mountHomeAlgorithmRestartAction() {
   homeAlgorithmState.restartBtn.hidden = false;
 }
 
+function clearHomeAlgoFooterSelectionVisuals() {
+  if (!homeAlgorithmState?.root) return;
+  homeAlgorithmState.root
+    .querySelectorAll(".home-algo__actions .btn.is-selected")
+    .forEach((button) => button.classList.remove("is-selected"));
+}
+
+function getHomeAlgoVisibleFooterButtonById(buttonId) {
+  if (!buttonId) return null;
+  return (
+    getVisibleHomeAlgoFooterButtons().find((button) => button.id === buttonId) || null
+  );
+}
+
+function getHomeAlgoFooterButtonFromElement(element) {
+  if (!(element instanceof HTMLElement)) return null;
+  const button =
+    element instanceof HTMLButtonElement ? element : element.closest("button");
+  if (!(button instanceof HTMLButtonElement)) return null;
+  return getVisibleHomeAlgoFooterButtons().includes(button) ? button : null;
+}
+
+function getHomeAlgoSelectedFooterButton() {
+  if (!homeAlgorithmState) return null;
+  const currentStep = Number(homeAlgorithmState.currentStep || 0);
+  if (
+    !Number.isFinite(currentStep) ||
+    currentStep <= 0 ||
+    homeAlgorithmState.selectedActionStep !== currentStep
+  ) {
+    return null;
+  }
+  return getHomeAlgoVisibleFooterButtonById(homeAlgorithmState.selectedActionId);
+}
+
+function setHomeAlgoSelectedFooterButton(button, { focus = true } = {}) {
+  if (!homeAlgorithmState) return null;
+  const selectableButton = getHomeAlgoFooterButtonFromElement(button);
+  if (!(selectableButton instanceof HTMLButtonElement)) return null;
+
+  clearHomeAlgoFooterSelectionVisuals();
+  selectableButton.classList.add("is-selected");
+  homeAlgorithmState.selectedActionId = selectableButton.id || "";
+  homeAlgorithmState.selectedActionStep = Number(homeAlgorithmState.currentStep || 0);
+
+  if (focus && document.activeElement !== selectableButton) {
+    selectableButton.focus();
+  }
+
+  return selectableButton;
+}
+
+function resetHomeAlgoFooterSelection() {
+  if (!homeAlgorithmState) return;
+  homeAlgorithmState.selectedActionId = "";
+  homeAlgorithmState.selectedActionStep = 0;
+  clearHomeAlgoFooterSelectionVisuals();
+}
+
 function getHomeAlgorithmCompletionFocusableElements() {
   if (!homeAlgorithmFlowModalState.completionDialog) return [];
   const selectors =
@@ -4378,25 +4442,43 @@ function getVisibleHomeAlgoPrimaryButton() {
   );
 }
 
-function moveHomeAlgoFooterFocus(direction) {
+function syncHomeAlgoFooterSelection({ focus = false, forcePrimary = false } = {}) {
+  if (!homeAlgorithmState) return null;
+
+  const visibleButtons = getVisibleHomeAlgoFooterButtons();
+  if (visibleButtons.length === 0) {
+    resetHomeAlgoFooterSelection();
+    return null;
+  }
+
+  const activeFooterButton = getHomeAlgoFooterButtonFromElement(document.activeElement);
+  const currentSelection = forcePrimary ? null : getHomeAlgoSelectedFooterButton();
+  const nextSelection =
+    currentSelection ||
+    activeFooterButton ||
+    getVisibleHomeAlgoPrimaryButton() ||
+    visibleButtons[0];
+
+  return setHomeAlgoSelectedFooterButton(nextSelection, { focus });
+}
+
+function moveHomeAlgoFooterSelection(direction) {
   const buttons = getVisibleHomeAlgoFooterButtons();
-  if (buttons.length < 2) return false;
+  if (buttons.length === 0) return false;
 
-  const activeElement = document.activeElement;
-  if (!(activeElement instanceof HTMLElement)) return false;
+  const currentButton =
+    getHomeAlgoSelectedFooterButton() ||
+    getHomeAlgoFooterButtonFromElement(document.activeElement);
 
-  const activeButton =
-    activeElement instanceof HTMLButtonElement
-      ? activeElement
-      : activeElement.closest("button");
-  if (!(activeButton instanceof HTMLButtonElement)) return false;
+  if (!(currentButton instanceof HTMLButtonElement)) {
+    return Boolean(syncHomeAlgoFooterSelection({ focus: true }));
+  }
 
-  const currentIndex = buttons.indexOf(activeButton);
+  const currentIndex = buttons.indexOf(currentButton);
   if (currentIndex < 0) return false;
 
   const nextIndex = (currentIndex + direction + buttons.length) % buttons.length;
-  buttons[nextIndex].focus();
-  return true;
+  return Boolean(setHomeAlgoSelectedFooterButton(buttons[nextIndex], { focus: true }));
 }
 
 function shouldIgnoreHomeAlgoKeyCommand(event) {
@@ -4416,6 +4498,18 @@ function shouldHandleHomeAlgoEnterFromTarget(target) {
   if (target.closest(".ppccr-modal__close, .home-algo__stepper-button")) return false;
   if (target.closest(".home-algo__actions, .home-algo__panel, .interview-footer")) return true;
   return false;
+}
+
+function getHomeAlgoEnterActionButton(target) {
+  if (isHomeAlgorithmFinishModalOpen()) {
+    return getVisibleHomeAlgoPrimaryButton();
+  }
+
+  if (isHomeAlgoEditableTarget(target, { forArrowNav: true })) {
+    return getVisibleHomeAlgoPrimaryButton();
+  }
+
+  return getHomeAlgoSelectedFooterButton() || getVisibleHomeAlgoPrimaryButton();
 }
 
 function closeHomeAlgorithmCompletionDialog() {
@@ -4833,11 +4927,11 @@ function onAlgoFlowModalCaptureKeydown(event) {
     !isHomeAlgoEditableTarget(event.target, { forArrowNav: false }) &&
     shouldHandleHomeAlgoEnterFromTarget(event.target)
   ) {
-    const primaryButton = getVisibleHomeAlgoPrimaryButton();
-    if (primaryButton) {
+    const actionButton = getHomeAlgoEnterActionButton(event.target);
+    if (actionButton) {
       event.preventDefault();
       event.stopPropagation();
-      primaryButton.click();
+      actionButton.click();
       return;
     }
   }
@@ -4847,7 +4941,9 @@ function onAlgoFlowModalCaptureKeydown(event) {
     !shouldIgnoreHomeAlgoKeyCommand(event) &&
     !isHomeAlgoEditableTarget(event.target, { forArrowNav: true })
   ) {
-    const didMoveFocus = moveHomeAlgoFooterFocus(event.key === "ArrowRight" ? 1 : -1);
+    const didMoveFocus = moveHomeAlgoFooterSelection(
+      event.key === "ArrowRight" ? 1 : -1,
+    );
     if (didMoveFocus) {
       event.preventDefault();
       event.stopPropagation();
@@ -5031,6 +5127,8 @@ function restartHomeAlgorithm({ confirmRestart = true } = {}) {
   homeAlgorithmState.step3Reviewed = false;
   homeAlgorithmState.finalized = false;
   homeAlgorithmState.finalStep = 0;
+  homeAlgorithmState.selectedActionId = "";
+  homeAlgorithmState.selectedActionStep = 0;
 
   resetInterviewState();
   clearHomeAlgorithmAllFieldErrors();
@@ -5199,6 +5297,8 @@ function initHomeAlgorithm() {
     step3Reviewed: draft?.step3Reviewed || false,
     finalized: draft?.finalized || false,
     finalStep: draft?.finalStep || 0,
+    selectedActionId: "",
+    selectedActionStep: 0,
     interview: draft?.interview || createHomeAlgorithmInterview(stationFromBridge),
 
     stepButtons,
@@ -5333,6 +5433,13 @@ function initHomeAlgorithm() {
       const step = Number(button.dataset.homeAlgoStepTarget || "");
       goToHomeAlgorithmStep(step);
     });
+  });
+
+  homeAlgorithmState.root.addEventListener("focusin", (event) => {
+    if (!isAlgoFlowModalOpen() || isHomeAlgorithmCompletionDialogOpen()) return;
+    const button = getHomeAlgoFooterButtonFromElement(event.target);
+    if (!button) return;
+    setHomeAlgoSelectedFooterButton(button, { focus: false });
   });
 
   homeAlgorithmState.ageInput.addEventListener("input", () => {
