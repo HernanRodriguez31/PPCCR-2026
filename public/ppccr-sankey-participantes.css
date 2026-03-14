@@ -127,26 +127,26 @@
 
 @media (min-width: 1025px) {
   .ppccr-sankey{
-    padding:16px 20px 14px;
+    padding:18px 24px 16px;
     border-radius:20px;
   }
 
   .ppccr-sankey .viz--solo{
-    padding-left:6px;
+    padding-left:14px;
   }
 
   .ppccr-sankey .node-value{
-    font-size:14px;
+    font-size:13.5px;
   }
 
   .ppccr-sankey .node-label{
-    font-size:9.4px;
-    font-weight:680;
-    letter-spacing:.04px;
+    font-size:8.8px;
+    font-weight:620;
+    letter-spacing:.02px;
   }
 
   .ppccr-sankey .node-meta{
-    font-size:9px;
+    font-size:8.6px;
   }
 }
 
