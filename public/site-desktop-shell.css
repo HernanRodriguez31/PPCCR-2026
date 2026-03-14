@@ -311,8 +311,8 @@
 
   body.page-home .hero-card {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(388px, 430px);
-    gap: clamp(6px, 0.65vw, 8px);
+    grid-template-columns: minmax(0, 0.94fr) minmax(430px, 476px);
+    gap: clamp(8px, 0.8vw, 10px);
     align-items: stretch;
     padding: clamp(22px, 1.95vw, 28px);
     border-radius: 30px;
@@ -324,7 +324,7 @@
   body.page-home .hero-left {
     min-height: 100%;
     padding-left: 20px;
-    padding-right: 8px;
+    padding-right: 10px;
   }
 
   body.page-home .hero-left__main {
@@ -341,7 +341,7 @@
   body.page-home .hero-badge {
     display: block;
     justify-self: start;
-    margin: 0 0 8px;
+    margin: 0 0 18px;
     padding: 0;
     border: 0;
     background: none;
@@ -356,7 +356,7 @@
   }
 
   body.page-home .hero-subtitle {
-    margin: 0 0 14px;
+    margin: 0 0 16px;
     max-width: none;
     color: var(--blue-900);
     font-size: clamp(1rem, 1.02vw, 1.14rem);
@@ -473,17 +473,17 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     align-content: start;
-    padding-right: 16px;
+    padding-right: 14px;
   }
 
   body.page-home .hero-action-card {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(196px, 214px);
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) minmax(214px, 234px);
+    gap: 14px;
     align-items: center;
-    min-height: 132px;
-    padding: 15px 16px;
+    min-height: 124px;
+    padding: 14px 16px;
     border-radius: 22px;
   }
 
@@ -493,7 +493,7 @@
   }
 
   body.page-home .hero-action-card__subtitle {
-    max-width: 27ch;
+    max-width: 31ch;
     font-size: 0.9rem;
     line-height: 1.36;
   }
@@ -514,12 +514,12 @@
   }
 
   body.page-home .mini-panel {
-    min-height: 104px;
+    min-height: 96px;
     width: 100%;
     display: grid;
     align-content: center;
-    gap: 4px;
-    padding: 13px 15px;
+    gap: 3px;
+    padding: 12px 15px;
     border-radius: 18px;
     border: 1px solid rgba(15, 95, 166, 0.12);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(242, 248, 255, 0.9));
