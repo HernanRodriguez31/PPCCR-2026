@@ -1822,45 +1822,70 @@
 }
 
 @media (min-width: 1025px) {
+  body.page-home .kpiDash__reportHeader {
+    padding: 0.92rem 0.96rem;
+  }
+
+  body.page-home .kpiDash__reportHeadMain h3 {
+    font-size: 1.04rem;
+    letter-spacing: -0.015em;
+  }
+
+  body.page-home .kpiDash__reportHeadMain p {
+    margin-top: 0.18rem;
+    font-size: 0.76rem;
+    line-height: 1.32;
+  }
+
+  body.page-home .kpiDash__execHeader h4 {
+    font-size: 1.02rem;
+    letter-spacing: -0.012em;
+  }
+
+  body.page-home .kpiDash__execHeader p {
+    font-size: 0.76rem;
+    line-height: 1.32;
+  }
+
   body.page-home .kpiDash__charts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.1rem;
+    gap: 0.96rem;
     align-items: stretch;
   }
 
   body.page-home .kpiDash__panel--bars {
     grid-column: auto;
-    padding: 1rem 1.05rem 1.05rem;
+    padding: 0.94rem 0.88rem 0.96rem;
   }
 
   body.page-home .kpiDash__panel--aux {
     grid-column: auto;
-    padding: 1rem 1.05rem 1.05rem;
+    padding: 0.94rem 0.88rem 0.96rem;
   }
 
   body.page-home .kpiDash__panelHeader {
     align-items: flex-start;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.68rem;
   }
 
   body.page-home .kpiDash__panelHeader h4 {
-    font-size: 1.08rem;
-    letter-spacing: -0.02em;
+    font-size: 1.04rem;
+    letter-spacing: -0.018em;
   }
 
   body.page-home .kpiDash__panelHeader p {
-    padding-top: 0.12rem;
-    font-size: 0.76rem;
-    line-height: 1.35;
+    padding-top: 0.08rem;
+    font-size: 0.73rem;
+    line-height: 1.32;
   }
 
   body.page-home .kpiDash__panel--bars .kpiDash__chart,
   body.page-home .kpiDash__panel--bars .kpiDash__chartFallback {
-    min-height: 388px;
+    min-height: 380px;
   }
 
   body.page-home .kpiDash__panel--aux .ppccr-sankey {
-    min-height: 388px;
+    min-height: 380px;
   }
 }
 
@@ -2426,12 +2451,12 @@
 
   .kpiDash__panel--bars {
     grid-column: span 6;
-    padding-inline: 0.82rem;
+    padding-inline: 0.84rem;
   }
 
   .kpiDash__panel--aux {
     grid-column: span 6;
-    padding-inline: 0.96rem;
+    padding-inline: 0.84rem;
   }
 
   .kpiDash__panel--aux .kpiDash__chart,
