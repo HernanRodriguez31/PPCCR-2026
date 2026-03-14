@@ -30,6 +30,9 @@
     --home-accent-soft-gradient:
       linear-gradient(180deg, rgba(241, 247, 255, 0.99) 0%, rgba(220, 235, 255, 0.96) 100%);
     --home-accent-ring: rgba(11, 94, 215, 0.18);
+    --home-accent-active-gradient:
+      linear-gradient(160deg, rgba(16, 104, 223, 0.96) 0%, rgba(8, 66, 152, 0.98) 100%);
+    --home-accent-active-ring: rgba(133, 187, 255, 0.22);
     --desktop-backdrop:
       radial-gradient(circle at top, rgba(209, 228, 246, 0.72), rgba(209, 228, 246, 0) 42%),
       linear-gradient(180deg, #f2f7fc 0%, #edf4fb 52%, #f7fbff 100%);
@@ -323,52 +326,52 @@
   }
 
   body.page-home .hero-left__main {
-    max-width: 52ch;
+    max-width: 54ch;
     min-height: 100%;
     justify-content: center;
-    gap: 5px;
+    gap: 4px;
   }
 
   body.page-home .hero-badge {
-    margin-bottom: 1px;
-    padding: 5px 16px;
+    margin-bottom: 0;
+    padding: 6px 20px;
     justify-content: center;
-    font-size: 0.77rem;
-    letter-spacing: 0.045em;
+    font-size: 0.82rem;
+    letter-spacing: 0.038em;
   }
 
   body.page-home .hero-subtitle {
     max-width: none;
-    font-size: clamp(1.1rem, 1.14vw, 1.34rem);
-    line-height: 0.95;
-    letter-spacing: -0.043em;
+    font-size: clamp(1.02rem, 1.06vw, 1.24rem);
+    line-height: 0.93;
+    letter-spacing: -0.038em;
     text-wrap: balance;
   }
 
   body.page-home .hero-text {
-    max-width: 54ch;
-    font-size: 0.87rem;
-    line-height: 1.34;
+    max-width: 58ch;
+    font-size: 0.85rem;
+    line-height: 1.3;
   }
 
   body.page-home .hero-highlights {
     max-width: 45ch;
-    gap: 5px;
+    gap: 4px;
   }
 
   body.page-home .hero-highlights li {
     padding-left: 17px;
-    font-size: 0.86rem;
-    line-height: 1.28;
+    font-size: 0.845rem;
+    line-height: 1.24;
   }
 
   body.page-home .hero-cta {
-    gap: 5px;
+    gap: 4px;
   }
 
   body.page-home .hero-cta__link {
-    min-height: 42px;
-    padding-inline: 15px;
+    min-height: 40px;
+    padding-inline: 14px;
     font-size: 0.88rem;
   }
 
@@ -644,7 +647,7 @@
     body.page-home .site-nav {
       --left-dock-cube-size: 78px;
       --left-dock-cube-gap: 10px;
-      left: max(0px, calc((100vw - var(--desktop-wide-max)) / 2 - 74px));
+      left: max(-6px, calc((100vw - var(--desktop-wide-max)) / 2 - 82px));
       top: calc(var(--header-fixed-h, 118px) + 18px);
       width: 86px;
     }
@@ -670,12 +673,12 @@
     body.page-home .site-nav .nav-link[aria-current="page"],
     body.page-home .site-nav .nav-link[aria-current="true"],
     body.page-home .site-nav .nav-link.is-active {
-      background: var(--home-accent-soft-gradient);
-      border-color: rgba(11, 94, 215, 0.42);
+      background: var(--home-accent-active-gradient);
+      border-color: rgba(8, 66, 152, 0.34);
       box-shadow:
-        0 14px 26px rgba(7, 31, 67, 0.14),
-        0 0 0 2px var(--home-accent-ring),
-        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+        0 16px 28px rgba(7, 56, 108, 0.2),
+        0 0 0 2px var(--home-accent-active-ring),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
     }
 
     body.page-home .site-nav .nav-link[aria-current="page"] .nav-link__icon,
@@ -684,7 +687,7 @@
     body.page-home .site-nav .nav-link[aria-current="page"] .nav-link__label,
     body.page-home .site-nav .nav-link[aria-current="true"] .nav-link__label,
     body.page-home .site-nav .nav-link.is-active .nav-link__label {
-      color: var(--home-accent-blue-ink);
+      color: rgba(248, 251, 255, 0.98);
     }
 
     body.page-home .site-nav .station-chip.user-dock-tile,
