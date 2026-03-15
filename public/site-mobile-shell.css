@@ -113,6 +113,20 @@
     text-wrap: balance;
   }
 
+  body.layout-mode-tablet.page-home .brand-title,
+  body.layout-mode-tablet.page-internal .brand-title {
+    display: block;
+    max-width: none;
+    white-space: nowrap;
+    text-wrap: nowrap;
+    overflow-wrap: normal;
+    overflow: visible;
+    text-overflow: clip;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    -webkit-box-orient: initial;
+  }
+
   body.page-home .partners-bar .container,
   body.page-internal .partners-bar .container {
     padding-inline: 0;

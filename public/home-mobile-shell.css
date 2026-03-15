@@ -507,7 +507,7 @@ body.page-home .reveal.is-visible {
   }
 }
 
-@media (min-width: 769px) and (max-width: 1024px) {
+@media (min-width: 768px) and (max-width: 1024px) {
   body.page-home.is-home-shell {
     --home-shell-gutter: clamp(18px, 3vw, 30px);
     --home-shell-dock-max: 700px;
@@ -515,6 +515,38 @@ body.page-home .reveal.is-visible {
 
   body.page-home.is-home-shell-tablet #siteTopbar.topbar {
     padding-bottom: 8px;
+  }
+
+  body.page-home.layout-mode-tablet.is-home-shell-tablet #siteTopbar .brand-title {
+    display: block;
+    max-width: none;
+    white-space: nowrap;
+    text-wrap: nowrap;
+    overflow-wrap: normal;
+    overflow: visible;
+    text-overflow: clip;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    -webkit-box-orient: initial;
+  }
+
+  body.page-home.layout-mode-tablet.is-home-shell-tablet
+    header.site-header.site-topbar.is-compact
+    #siteTopbar
+    .brand-title,
+  body.page-home.layout-mode-tablet.is-home-shell-tablet.is-header-compact
+    #siteTopbar
+    .brand-title {
+    display: block;
+    max-width: none;
+    white-space: nowrap;
+    text-wrap: nowrap;
+    overflow-wrap: normal;
+    overflow: visible;
+    text-overflow: clip;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    -webkit-box-orient: initial;
   }
 
   body.page-home.is-home-shell-tablet .hero-card {
@@ -700,4 +732,107 @@ body.page-home .reveal.is-visible {
   body.page-home.is-home-shell.has-user-banner #user-banner.user-banner .user-banner__text {
     font-size: 0.82rem;
   }
+}
+
+body.page-home.is-home-shell-phone #siteTopbar.topbar {
+  gap: 4px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 6px);
+  padding-inline: 8px;
+}
+
+body.page-home.is-home-shell-phone #siteTopbar .brand {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  padding-inline: 0;
+}
+
+body.page-home.is-home-shell-phone #siteTopbar .brand-mark {
+  width: 38px;
+  height: 38px;
+}
+
+body.page-home.is-home-shell-phone #siteTopbar .brand-ribbon {
+  width: 28px;
+  height: 28px !important;
+}
+
+body.page-home.is-home-shell-phone #siteTopbar .brand-copy {
+  display: grid;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+body.page-home.is-home-shell-phone #siteTopbar .brand-title {
+  display: -webkit-box !important;
+  width: 100%;
+  min-width: 0;
+  max-width: none !important;
+  margin-inline: 0;
+  font-size: clamp(0.96rem, 4.1vw, 1.08rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  text-align: center;
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: normal;
+  overflow: hidden;
+  text-overflow: clip;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+body.page-home.is-home-shell-phone
+  header.site-header.site-topbar.is-compact
+  #siteTopbar.topbar {
+  gap: 3px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 5px);
+  padding-bottom: 3px;
+  padding-inline: 7px;
+}
+
+body.page-home.is-home-shell-phone
+  header.site-header.site-topbar.is-compact
+  #siteTopbar
+  .brand-mark {
+  width: 34px;
+  height: 34px;
+}
+
+body.page-home.is-home-shell-phone
+  header.site-header.site-topbar.is-compact
+  #siteTopbar
+  .brand-ribbon {
+  width: 25px;
+  height: 25px !important;
+}
+
+body.page-home.is-home-shell-phone
+  header.site-header.site-topbar.is-compact
+  #siteTopbar
+  .brand {
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-content: center;
+  gap: 7px;
+}
+
+body.page-home.is-home-shell-phone
+  header.site-header.site-topbar.is-compact
+  #siteTopbar
+  .brand-title {
+  display: -webkit-box !important;
+  font-size: clamp(0.9rem, 3.85vw, 1rem);
+  line-height: 1.05;
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: normal;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
