@@ -263,11 +263,29 @@ const PPCCR_EXPORT_ENDPOINTS = Object.freeze({
 const HOME_SHELL_MEDIA_QUERY = "(max-width: 1024px)";
 const deferredEmbedObservers = new WeakMap();
 
+function getLayoutState() {
+  if (window.PPCCR?.layout && typeof window.PPCCR.layout.getState === "function") {
+    return window.PPCCR.layout.getState();
+  }
+
+  const isHome = document.body?.classList.contains("page-home");
+  const isHandheld = isHome && window.matchMedia(HOME_SHELL_MEDIA_QUERY).matches;
+  return {
+    mode: isHandheld ? "tablet" : "desktop",
+    density: isHandheld ? "" : "desktop-wide",
+    isDesktop: !isHandheld,
+    isTablet: isHandheld,
+    isPhone: false,
+    isHandheld,
+  };
+}
+
+function isHandheldLayout() {
+  return getLayoutState().isHandheld;
+}
+
 function isHomeShellViewport() {
-  return (
-    document.body?.classList.contains("page-home") &&
-    window.matchMedia(HOME_SHELL_MEDIA_QUERY).matches
-  );
+  return document.body?.classList.contains("page-home") && isHandheldLayout();
 }
 
 function isHomeAuthLocked() {
@@ -852,13 +870,12 @@ function setHeaderOffset() {
   }
 
   if (document.body.classList.contains("page-home")) {
-    const mobileQuery = window.matchMedia(HOME_SHELL_MEDIA_QUERY);
     const mobileTopbar = $("#siteTopbar") || $(".topbar");
     const topbarHeight = mobileTopbar
       ? Math.max(48, Math.round(mobileTopbar.getBoundingClientRect().height))
       : 64;
 
-    if (mobileQuery.matches) {
+    if (isHomeShellViewport()) {
       const mobileHeaderHeight = Math.max(0, Math.round(headerHeight));
       root.style.setProperty("--topbar-h", `${topbarHeight}px`);
       root.style.setProperty("--mobile-header-h", `${mobileHeaderHeight}px`);
@@ -891,7 +908,7 @@ function updateMobileBars() {
   if (!document.body.classList.contains("page-home")) return;
 
   const root = document.documentElement;
-  const isMobile = window.matchMedia(HOME_SHELL_MEDIA_QUERY).matches;
+  const isMobile = isHomeShellViewport();
   const header = $(".site-header");
   const topbar = $("#siteTopbar") || $(".topbar");
   const headerHeight = header
@@ -5671,7 +5688,7 @@ function getHomeNavScrollOffset() {
   const rootStyles = getComputedStyle(document.documentElement);
   const mobileOffset = Number.parseFloat(rootStyles.getPropertyValue("--h-offset").trim());
   const desktopOffset = getHeaderOffset();
-  const isMobile = window.matchMedia(HOME_SHELL_MEDIA_QUERY).matches;
+  const isMobile = isHomeShellViewport();
 
   if (isMobile && Number.isFinite(mobileOffset) && mobileOffset > 0) {
     return mobileOffset;
@@ -5806,16 +5823,16 @@ function initMobilePremiumHeader() {
     header?.querySelector(".site-topbar__inner");
   if (!header) return;
 
-  const mq = window.matchMedia(HOME_SHELL_MEDIA_QUERY);
   const COMPACT_Y = 24;
   let lastCompact = null;
+  const isHandheldShell = () => isHomeShellViewport();
 
   // Mobile App Shell: medimos alturas reales solo cuando hace falta.
   const measureShell = () => {
     const liveHeaderH = Math.max(0, Math.round(header.getBoundingClientRect().height));
     root.style.setProperty("--header-fixed-h", `${liveHeaderH}px`);
 
-    if (!mq.matches) {
+    if (!isHandheldShell()) {
       root.style.removeProperty("--mobile-header-h");
       root.style.removeProperty("--topbar-h");
       root.style.removeProperty("--mobile-dock-h");
@@ -5841,7 +5858,7 @@ function initMobilePremiumHeader() {
   };
 
   const toggleCompact = (shouldCompact) => {
-    if (!mq.matches || shouldCompact === lastCompact) return;
+    if (!isHandheldShell() || shouldCompact === lastCompact) return;
 
     lastCompact = shouldCompact;
     body.classList.toggle("is-header-compact", shouldCompact);
@@ -5856,7 +5873,7 @@ function initMobilePremiumHeader() {
   };
 
   const syncMobileState = () => {
-    if (!mq.matches) {
+    if (!isHandheldShell()) {
       lastCompact = null;
       body.classList.remove("is-header-compact");
       header.classList.remove("is-compact", "partners-collapsed");
@@ -5873,7 +5890,7 @@ function initMobilePremiumHeader() {
   };
 
   const onScroll = () => {
-    if (!mq.matches) return;
+    if (!isHandheldShell()) return;
     const shouldCompact = window.scrollY > COMPACT_Y;
     if (shouldCompact === lastCompact) return;
     toggleCompact(shouldCompact);
@@ -5890,10 +5907,8 @@ function initMobilePremiumHeader() {
     window.visualViewport.addEventListener("resize", onResize, { passive: true });
   }
 
-  if (typeof mq.addEventListener === "function") {
-    mq.addEventListener("change", syncMobileState);
-  } else if (typeof mq.addListener === "function") {
-    mq.addListener(syncMobileState);
+  if (window.PPCCR?.layout && typeof window.PPCCR.layout.addListener === "function") {
+    window.PPCCR.layout.addListener(syncMobileState);
   }
 
   window.addEventListener("ppccr:home-shell-sync", syncMobileState);
@@ -6036,7 +6051,6 @@ function setupHeaderScrollState() {
   const scrolledClass = CONFIG.ui.headerScrolledClass;
   const enterThreshold = 72;
   const exitThreshold = 28;
-  const mobileSolidQuery = window.matchMedia(HOME_SHELL_MEDIA_QUERY);
   let ticking = false;
   let isScrolled = header.classList.contains(scrolledClass);
 
@@ -6047,7 +6061,7 @@ function setupHeaderScrollState() {
   };
 
   const syncState = ({ forceOffset = false } = {}) => {
-    if (mobileSolidQuery.matches) {
+    if (isHomeShellViewport()) {
       if (isScrolled || header.classList.contains(scrolledClass)) {
         header.classList.remove(scrolledClass);
         isScrolled = false;
@@ -6094,15 +6108,30 @@ function setupHeaderScrollState() {
     { once: true },
   );
 
-  if (typeof mobileSolidQuery.addEventListener === "function") {
-    mobileSolidQuery.addEventListener("change", () => {
+  if (window.PPCCR?.layout && typeof window.PPCCR.layout.addListener === "function") {
+    window.PPCCR.layout.addListener(() => {
       syncState({ forceOffset: true });
     });
-  } else if (typeof mobileSolidQuery.addListener === "function") {
-    mobileSolidQuery.addListener(() => {
-      syncState({ forceOffset: true });
-    });
+  } else {
+    const mobileSolidQuery = window.matchMedia(HOME_SHELL_MEDIA_QUERY);
+    if (typeof mobileSolidQuery.addEventListener === "function") {
+      mobileSolidQuery.addEventListener("change", () => {
+        syncState({ forceOffset: true });
+      });
+    } else if (typeof mobileSolidQuery.addListener === "function") {
+      mobileSolidQuery.addListener(() => {
+        syncState({ forceOffset: true });
+      });
+    }
   }
+
+  window.addEventListener(
+    "ppccr:shell-layout-stable",
+    () => {
+      syncState({ forceOffset: true });
+    },
+    { passive: true },
+  );
 }
 
 function setupRevealAnimations() {

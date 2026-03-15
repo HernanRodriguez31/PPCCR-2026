@@ -8,14 +8,20 @@
   const header = document.querySelector(".site-header.site-topbar");
   const dock = document.getElementById("mobile-fixed-dock");
   const backToTop = document.getElementById("back-to-top");
-  const mq = window.matchMedia("(max-width: 520px)");
   const COMPACT_Y = 28;
 
   let lastCompact = null;
   let scrollRaf = 0;
 
+  const isPhoneLayout = () => {
+    if (window.PPCCR?.layout && typeof window.PPCCR.layout.getState === "function") {
+      return window.PPCCR.layout.getState().mode === "phone";
+    }
+    return window.matchMedia("(max-width: 520px)").matches;
+  };
+
   const measureShell = () => {
-    if (!mq.matches) {
+    if (!isPhoneLayout()) {
       root.style.removeProperty("--mobile-header-h");
       root.style.removeProperty("--mobile-dock-h");
       root.style.removeProperty("--dock-h");
@@ -36,7 +42,7 @@
   };
 
   const toggleCompact = (shouldCompact) => {
-    if (!mq.matches || shouldCompact === lastCompact) return;
+    if (!isPhoneLayout() || shouldCompact === lastCompact) return;
 
     lastCompact = shouldCompact;
     body.classList.toggle("is-header-compact", shouldCompact);
@@ -46,7 +52,7 @@
   };
 
   const syncState = () => {
-    if (!mq.matches) {
+    if (!isPhoneLayout()) {
       lastCompact = null;
       body.classList.remove("is-header-compact");
       if (header) header.classList.remove("is-compact");
@@ -60,7 +66,7 @@
   };
 
   const onScroll = () => {
-    if (!mq.matches) return;
+    if (!isPhoneLayout()) return;
 
     const shouldCompact = window.scrollY > COMPACT_Y;
     if (shouldCompact === lastCompact) return;
@@ -82,10 +88,15 @@
     });
   }
 
-  if (typeof mq.addEventListener === "function") {
-    mq.addEventListener("change", syncState);
-  } else if (typeof mq.addListener === "function") {
-    mq.addListener(syncState);
+  if (window.PPCCR?.layout && typeof window.PPCCR.layout.addListener === "function") {
+    window.PPCCR.layout.addListener(syncState);
+  } else {
+    const mq = window.matchMedia("(max-width: 520px)");
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", syncState);
+    } else if (typeof mq.addListener === "function") {
+      mq.addListener(syncState);
+    }
   }
 
   if ("ResizeObserver" in window) {

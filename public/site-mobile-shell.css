@@ -1,4 +1,9 @@
 @media (max-width: 1024px) {
+  body.layout-mode-desktop.page-home #user-banner.user-banner,
+  body.layout-mode-desktop.page-home .mobile-fixed-dock {
+    display: none !important;
+  }
+
   :root {
     --mobile-shell-gutter: clamp(14px, 4.4vw, 24px);
     --mobile-shell-section-gap: clamp(18px, 4vw, 28px);

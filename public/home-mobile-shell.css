@@ -1,3 +1,18 @@
+body.page-home.layout-mode-desktop {
+  --mobile-header-h: 0px;
+  --mobile-dock-h: 0px;
+  --home-mobile-header-offset: 0px;
+}
+
+body.page-home.layout-mode-desktop #user-banner.user-banner,
+body.page-home.layout-mode-desktop nav#mobile-fixed-dock.mobile-fixed-dock {
+  display: none !important;
+}
+
+body.page-home.layout-mode-desktop .site-nav.is-mobile-source-hidden {
+  display: grid !important;
+}
+
 body.page-home.is-home-shell {
   --home-shell-gutter: clamp(14px, 3.8vw, 26px);
   --home-shell-dock-max: 760px;

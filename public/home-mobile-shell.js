@@ -4,14 +4,34 @@
   const body = document.body;
   if (!body || !body.classList.contains("page-home")) return;
 
-  const mqShell = window.matchMedia("(max-width: 1024px)");
-  const mqTablet = window.matchMedia("(min-width: 769px) and (max-width: 1024px)");
   let resizeRaf = 0;
   let lastState = {
+    mode: "",
     shell: null,
     tablet: null,
+    phone: null,
     authLocked: null,
     banner: null,
+  };
+
+  const fallbackState = () => {
+    const isShell = window.matchMedia("(max-width: 1024px)").matches;
+    const isTablet = window.matchMedia(
+      "(min-width: 769px) and (max-width: 1024px)",
+    ).matches;
+    return {
+      mode: isShell ? (isTablet ? "tablet" : "phone") : "desktop",
+      isHandheld: isShell,
+      isTablet,
+      isPhone: isShell && !isTablet,
+    };
+  };
+
+  const getLayoutState = () => {
+    if (window.PPCCR?.layout && typeof window.PPCCR.layout.getState === "function") {
+      return window.PPCCR.layout.getState();
+    }
+    return fallbackState();
   };
 
   const emitLayoutSync = () => {
@@ -20,27 +40,30 @@
       resizeRaf = 0;
       window.dispatchEvent(new Event("resize"));
       window.dispatchEvent(new CustomEvent("ppccr:home-shell-sync"));
+      window.dispatchEvent(new CustomEvent("ppccr:shell-layout-stable"));
     });
   };
 
   const syncShellState = () => {
+    const layoutState = getLayoutState();
     const nextState = {
-      shell: mqShell.matches,
-      tablet: mqTablet.matches,
+      mode: layoutState.mode,
+      shell: layoutState.isHandheld,
+      tablet: layoutState.mode === "tablet",
+      phone: layoutState.mode === "phone",
       authLocked: body.classList.contains("is-auth-locked"),
       banner: body.classList.contains("has-user-banner"),
     };
 
     body.classList.toggle("is-home-shell", nextState.shell);
     body.classList.toggle("is-home-shell-tablet", nextState.tablet);
-    body.classList.toggle(
-      "is-home-shell-phone",
-      nextState.shell && !nextState.tablet,
-    );
+    body.classList.toggle("is-home-shell-phone", nextState.phone);
 
     if (
+      nextState.mode !== lastState.mode ||
       nextState.shell !== lastState.shell ||
       nextState.tablet !== lastState.tablet ||
+      nextState.phone !== lastState.phone ||
       nextState.authLocked !== lastState.authLocked ||
       nextState.banner !== lastState.banner
     ) {
@@ -49,16 +72,9 @@
     }
   };
 
-  const bindMediaChange = (mq) => {
-    if (typeof mq.addEventListener === "function") {
-      mq.addEventListener("change", syncShellState);
-    } else if (typeof mq.addListener === "function") {
-      mq.addListener(syncShellState);
-    }
-  };
-
-  bindMediaChange(mqShell);
-  bindMediaChange(mqTablet);
+  if (window.PPCCR?.layout && typeof window.PPCCR.layout.addListener === "function") {
+    window.PPCCR.layout.addListener(syncShellState);
+  }
 
   const mutationObserver = new MutationObserver(() => {
     syncShellState();

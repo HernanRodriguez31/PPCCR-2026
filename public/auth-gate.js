@@ -22,7 +22,7 @@
       Object.freeze({ value: AUTH_ADMIN_EXTRA_PASS, exact: true }),
     ]),
   });
-  const AUTH_GATE_BUILD = "2026-03-13-home-phase2-release-blockers1";
+  const AUTH_GATE_BUILD = "2026-03-14-desktop-shell-mode-lock1";
   const AUTH_CLOSE_CLASS = "auth-gate--closing";
   const AUTH_HIDING_CLASS = "is-hiding";
   const DEFAULT_VIEWPORT_MQ = "(max-width: 767.98px)";
@@ -162,6 +162,26 @@
   function getViewportMediaQuery() {
     if (isHomeEntry()) return HOME_VIEWPORT_MQ;
     return DEFAULT_VIEWPORT_MQ;
+  }
+
+  function getLayoutState() {
+    if (window.PPCCR?.layout && typeof window.PPCCR.layout.getState === "function") {
+      return window.PPCCR.layout.getState();
+    }
+
+    const isHandheld = window.matchMedia(getViewportMediaQuery()).matches;
+    const mode = isHandheld ? (isHomeEntry() ? "tablet" : "phone") : "desktop";
+    return {
+      mode,
+      isDesktop: mode === "desktop",
+      isTablet: mode === "tablet",
+      isPhone: mode === "phone",
+      isHandheld,
+    };
+  }
+
+  function isHandheldLayout() {
+    return getLayoutState().isHandheld;
   }
 
   /**
@@ -809,8 +829,15 @@
    * @param {Element} candidate
    * @returns {boolean}
    */
-  function shouldSkipDockCandidate(candidate) {
+  function shouldSkipDockCandidate(candidate, options = {}) {
     if (!candidate) return true;
+    const { allowHiddenHomeRail = false } = options;
+    const isHomeDesktopRailCandidate =
+      allowHiddenHomeRail &&
+      document.body?.classList.contains("page-home") &&
+      getLayoutState().mode === "desktop" &&
+      (candidate.matches(".site-nav, #mobileDockWrap, #nav-list") ||
+        Boolean(candidate.closest(".site-nav, #mobileDockWrap, #nav-list")));
 
     if (
       candidate.matches("#mobile-fixed-dock") ||
@@ -824,10 +851,20 @@
     let current = candidate;
     while (current && current !== document.documentElement) {
       if (current instanceof HTMLElement) {
-        if (current.hidden) return true;
-        if (current.getAttribute("aria-hidden") === "true") return true;
+        if (current.hidden && !isHomeDesktopRailCandidate) return true;
+        if (
+          current.getAttribute("aria-hidden") === "true" &&
+          !isHomeDesktopRailCandidate
+        ) {
+          return true;
+        }
         const style = window.getComputedStyle(current);
-        if (style.display === "none" || style.visibility === "hidden") return true;
+        if (
+          (style.display === "none" || style.visibility === "hidden") &&
+          !isHomeDesktopRailCandidate
+        ) {
+          return true;
+        }
       }
       current = current.parentElement;
     }
@@ -848,7 +885,7 @@
    * Busca contenedor de dock desktop por prioridad.
    * @returns {HTMLElement | null}
    */
-  function findDesktopDockContainer() {
+  function findDesktopDockContainer(options = {}) {
     const selectors = [
       "#sideDock",
       ".side-nav",
@@ -865,7 +902,7 @@
     for (const selector of selectors) {
       const matches = document.querySelectorAll(selector);
       for (const candidate of matches) {
-        if (shouldSkipDockCandidate(candidate)) continue;
+        if (shouldSkipDockCandidate(candidate, options)) continue;
 
         if (candidate.matches("ul, ol")) {
           return /** @type {HTMLElement} */ (candidate);
@@ -873,7 +910,7 @@
 
         if (candidate.matches(".site-nav") || candidate.matches("#mobileDockWrap")) {
           const innerList = candidate.querySelector(".nav-list, ul, ol");
-          if (innerList && !shouldSkipDockCandidate(innerList)) {
+          if (innerList && !shouldSkipDockCandidate(innerList, options)) {
             return /** @type {HTMLElement} */ (innerList);
           }
           return /** @type {HTMLElement} */ (candidate);
@@ -881,7 +918,7 @@
 
         if (candidate.matches("nav")) {
           const navList = candidate.querySelector(".nav-list, ul, ol");
-          if (navList && !shouldSkipDockCandidate(navList)) {
+          if (navList && !shouldSkipDockCandidate(navList, options)) {
             return /** @type {HTMLElement} */ (navList);
           }
           return /** @type {HTMLElement} */ (candidate);
@@ -920,10 +957,11 @@
    * @param {{id: string, name: string}} station
    * @returns {boolean}
    */
-  function insertDesktopIdentityTile(station) {
+  function insertDesktopIdentityTile(station, options = {}) {
+    const { allowHeaderFallback = true, allowHiddenHomeRail = false } = options;
     document.body.classList.remove("has-user-banner");
 
-    const target = findDesktopDockContainer();
+    const target = findDesktopDockContainer({ allowHiddenHomeRail });
     if (target) {
       const button = buildStationChipButton(station);
 
@@ -938,6 +976,8 @@
 
       return true;
     }
+
+    if (!allowHeaderFallback) return false;
 
     const header = findPrimaryHeader();
     if (!header) return false;
@@ -965,12 +1005,18 @@
 
     removeIdentityNodes();
 
-    const isMobile = authMq
-      ? authMq.matches
-      : window.matchMedia(getViewportMediaQuery()).matches;
-    const inserted = isMobile ? insertMobileBanner(station) : insertDesktopIdentityTile(station);
+    const layoutState = getLayoutState();
+    const requiresHomeDesktopRail =
+      document.body.classList.contains("page-home") &&
+      layoutState.mode === "desktop";
+    const inserted = layoutState.isHandheld
+      ? insertMobileBanner(station)
+      : insertDesktopIdentityTile(station, {
+          allowHeaderFallback: !requiresHomeDesktopRail,
+          allowHiddenHomeRail: requiresHomeDesktopRail,
+        });
 
-    if (!inserted && attempt < 2) {
+    if (!inserted && attempt < (requiresHomeDesktopRail ? 5 : 2)) {
       window.setTimeout(() => applyUserIdentityUI(station, attempt + 1), 120);
     }
   }
@@ -1827,15 +1873,22 @@
    * Registra listeners de cambio de viewport/orientación.
    */
   function bindViewportListeners() {
-    if (!authMq || !viewportChangeHandler) return;
+    if (!viewportChangeHandler) return;
 
-    if (typeof authMq.addEventListener === "function") {
-      authMq.addEventListener("change", viewportChangeHandler);
-    } else if (typeof authMq.addListener === "function") {
-      authMq.addListener(viewportChangeHandler);
+    if (window.PPCCR?.layout && typeof window.PPCCR.layout.addListener === "function") {
+      window.PPCCR.layout.addListener(viewportChangeHandler);
+    } else if (authMq) {
+      if (typeof authMq.addEventListener === "function") {
+        authMq.addEventListener("change", viewportChangeHandler);
+      } else if (typeof authMq.addListener === "function") {
+        authMq.addListener(viewportChangeHandler);
+      }
     }
 
     window.addEventListener("orientationchange", viewportChangeHandler, {
+      passive: true,
+    });
+    window.addEventListener("ppccr:shell-layout-stable", viewportChangeHandler, {
       passive: true,
     });
   }
