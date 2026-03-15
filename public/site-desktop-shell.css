@@ -668,6 +668,44 @@
     box-shadow: var(--desktop-panel-shadow);
   }
 
+  body.layout-mode-desktop.page-home #cronograma {
+    --cronograma-panel-radius: 24px;
+    --cronograma-card-radius: 20px;
+    --cronograma-panel-pad: 28px 28px 26px;
+    --cronograma-card-pad: 22px 24px 20px;
+    --cronograma-border: rgba(17, 86, 148, 0.14);
+    --cronograma-border-strong: rgba(17, 86, 148, 0.22);
+    --cronograma-surface:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(245, 250, 255, 0.96));
+    --cronograma-surface-soft:
+      linear-gradient(180deg, rgba(250, 253, 255, 0.96), rgba(242, 248, 255, 0.94));
+    --cronograma-shadow-panel:
+      0 18px 36px rgba(14, 48, 86, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    --cronograma-shadow-card:
+      0 12px 28px rgba(14, 48, 86, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.86);
+    --cronograma-shadow-interactive: 0 8px 18px rgba(20, 92, 154, 0.18);
+    --cronograma-rail-width: 3px;
+    --cronograma-node-size: 12px;
+    --cronograma-node-ring: 0 0 0 5px rgba(26, 113, 199, 0.14);
+    --cronograma-chip-height: 42px;
+    --cronograma-phase-label-size: 0.82rem;
+    --cronograma-phase-label-weight: 820;
+    --cronograma-phase-label-color: rgba(18, 79, 135, 0.9);
+    --cronograma-period-chip-bg:
+      linear-gradient(135deg, #8fc2f2 0%, #5aa2e3 52%, #3b86cf 100%);
+    --cronograma-period-chip-border: rgba(47, 121, 192, 0.24);
+    --cronograma-period-chip-shadow:
+      0 8px 18px rgba(47, 121, 192, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.38);
+    --cronograma-period-chip-color: #ffffff;
+    --cronograma-phase-title-size: clamp(1.16rem, 1.15vw, 1.28rem);
+    --cronograma-phase-copy-size: 0.98rem;
+    --cronograma-bullet-size: 0.94rem;
+    --cronograma-detail-size: 0.9rem;
+  }
+
   body.page-home #kpis .embed-card,
   body.page-home #cronograma .embed-card {
     padding: 16px;
@@ -690,6 +728,282 @@
   body.page-home #kpis .section-header,
   body.page-home #cronograma .section-header {
     max-width: none;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .section-header {
+    padding-bottom: 20px;
+    margin-bottom: 22px;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .section-header::before {
+    width: 124px;
+    height: 5px;
+    bottom: 6px;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .section-subtitle {
+    max-width: 46ch;
+    font-size: 1.02rem;
+    line-height: 1.5;
+    color: rgba(56, 72, 95, 0.9);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .timeline-placeholder {
+    padding: var(--cronograma-panel-pad);
+    border-radius: var(--cronograma-panel-radius);
+    border: 1px solid var(--cronograma-border);
+    background: var(--cronograma-surface);
+    box-shadow: var(--cronograma-shadow-panel);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .timeline-placeholder__header {
+    margin-bottom: 20px;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .timeline-placeholder__title {
+    font-size: clamp(1.32rem, 1.7vw, 1.56rem);
+    font-weight: 780;
+    color: var(--blue-900);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .timeline-placeholder__subtitle {
+    max-width: 64ch;
+    font-size: 0.99rem;
+    line-height: 1.55;
+    color: rgba(62, 80, 104, 0.92);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .timeline {
+    padding: 8px 0 6px 38px;
+    gap: 18px;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .timeline::before {
+    left: 14px;
+    top: 22px;
+    bottom: 24px;
+    width: var(--cronograma-rail-width);
+    background: linear-gradient(
+      180deg,
+      rgba(17, 101, 179, 0.92),
+      rgba(74, 155, 225, 0.78)
+    );
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-card {
+    padding: var(--cronograma-card-pad);
+    border-radius: var(--cronograma-card-radius);
+    border-color: var(--cronograma-border);
+    background: var(--cronograma-surface-soft);
+    box-shadow: var(--cronograma-shadow-card);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-card:hover {
+    transform: none;
+    border-color: var(--cronograma-border-strong);
+    box-shadow:
+      0 14px 30px rgba(14, 48, 86, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-card.is-expanded {
+    border-color: rgba(18, 94, 161, 0.24);
+    box-shadow:
+      0 16px 34px rgba(14, 48, 86, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-card::before {
+    left: -28px;
+    top: 30px;
+    width: var(--cronograma-node-size);
+    height: var(--cronograma-node-size);
+    border: 2px solid rgba(255, 255, 255, 0.92);
+    box-shadow: var(--cronograma-node-ring);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-top {
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-top__meta {
+    gap: 7px;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-heading {
+    max-width: 52ch;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-stage {
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    font-size: var(--cronograma-phase-label-size);
+    font-weight: var(--cronograma-phase-label-weight);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--cronograma-phase-label-color);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-period time {
+    min-height: var(--cronograma-chip-height);
+    padding: 10px 16px;
+    border-color: var(--cronograma-period-chip-border);
+    background: var(--cronograma-period-chip-bg);
+    box-shadow:
+      var(--cronograma-period-chip-shadow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    color: var(--cronograma-period-chip-color);
+    font-size: 0.98rem;
+    font-weight: 840;
+    letter-spacing: 0.01em;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-title {
+    margin: 0 0 8px;
+    font-size: var(--cronograma-phase-title-size);
+    font-weight: 840;
+    line-height: 1.24;
+    color: var(--blue-900);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-objective {
+    margin: 0 0 16px;
+    font-size: var(--cronograma-phase-copy-size);
+    font-weight: 520;
+    line-height: 1.55;
+    color: rgba(63, 82, 108, 0.95);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-highlights-label {
+    margin: 0 0 8px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: rgba(23, 83, 139, 0.86);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-highlights {
+    gap: 8px;
+    padding-left: 20px;
+    font-size: var(--cronograma-bullet-size);
+    line-height: 1.6;
+    color: rgba(50, 67, 89, 0.96);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-details {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(24, 93, 156, 0.14);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-details__summary {
+    padding: 7px 12px;
+    border-color: rgba(25, 98, 168, 0.18);
+    background: rgba(242, 248, 255, 0.92);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.92),
+      0 2px 6px rgba(14, 48, 86, 0.05);
+    font-size: 0.83rem;
+    font-weight: 760;
+    color: rgba(24, 78, 128, 0.96);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-details__summary:hover,
+  body.layout-mode-desktop.page-home #cronograma .phase-details[open] .phase-details__summary {
+    border-color: rgba(25, 98, 168, 0.24);
+    background: rgba(235, 245, 255, 0.96);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.94),
+      0 4px 10px rgba(14, 48, 86, 0.06);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-details__summary:focus-visible {
+    outline-offset: 3px;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .phase-details__list {
+    margin-top: 12px;
+    padding: 14px 16px 14px 20px;
+    gap: 8px;
+    border-color: rgba(25, 98, 168, 0.16);
+    border-left: 3px solid rgba(27, 111, 189, 0.28);
+    background: linear-gradient(
+      180deg,
+      rgba(247, 251, 255, 0.96),
+      rgba(240, 247, 255, 0.94)
+    );
+    font-size: var(--cronograma-detail-size);
+    line-height: 1.62;
+    color: rgba(66, 86, 111, 0.96);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .calendar-panel {
+    margin-top: 26px;
+    gap: 14px;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .calendar-panel__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 18px;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .calendar-panel__copy {
+    gap: 6px;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .calendar-panel__eyebrow {
+    font-size: 0.72rem;
+    font-weight: 780;
+    letter-spacing: 0.08em;
+    color: rgba(24, 83, 139, 0.82);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .embed-hint {
+    max-width: 48ch;
+    font-size: 0.96rem;
+    line-height: 1.5;
+    color: rgba(71, 88, 112, 0.9);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .calendar-panel__cta.btn-primary {
+    padding: 12px 20px;
+    border-color: rgba(255, 255, 255, 0.14);
+    background: linear-gradient(145deg, #0f67bb 0%, #0c549a 72%, #0b4a89 100%);
+    box-shadow:
+      0 10px 22px rgba(13, 63, 113, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    font-size: 0.9rem;
+    font-weight: 780;
+    letter-spacing: 0.015em;
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .calendar-panel__cta.btn-primary:hover {
+    box-shadow:
+      0 12px 24px rgba(13, 63, 113, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .embed-card {
+    padding: 14px;
+    border-radius: var(--cronograma-panel-radius);
+    border-color: var(--cronograma-border);
+    background: var(--cronograma-surface);
+    box-shadow: var(--cronograma-shadow-panel);
+  }
+
+  body.layout-mode-desktop.page-home #cronograma .embed-shell--calendar {
+    min-height: 690px;
+    border-radius: 22px;
+    border-color: rgba(18, 86, 148, 0.12);
+    background: linear-gradient(180deg, rgba(252, 254, 255, 0.98), rgba(244, 249, 255, 0.96));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.84),
+      0 14px 30px rgba(14, 48, 86, 0.08);
   }
 
   body.page-home .brand-seal {

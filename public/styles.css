@@ -2597,12 +2597,21 @@ body.page-home #guias.section {
 }
 
 .phase-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 12px;
+  display: grid;
+  gap: 10px;
   margin-bottom: 12px;
+}
+
+.phase-top__meta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.phase-heading {
+  display: grid;
+  gap: 0;
+  min-width: 0;
 }
 
 .phase-stage {
@@ -2687,6 +2696,38 @@ body.page-home #guias.section {
 
 .phase-highlights li::marker {
   color: #1f7ed9;
+}
+
+.calendar-panel {
+  margin-top: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.calendar-panel__header {
+  display: grid;
+  gap: 10px;
+  align-items: start;
+}
+
+.calendar-panel__copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.calendar-panel__eyebrow {
+  margin: 0;
+  color: var(--blue-800);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.calendar-panel__cta {
+  justify-self: start;
+  white-space: nowrap;
 }
 
 .phase-details {

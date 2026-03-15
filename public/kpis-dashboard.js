@@ -856,6 +856,23 @@
       })
       .join("");
 
+    const barsLegend = [
+      '<ul class="kpiDash__panelLegend kpiDash__panelLegend--bars" role="list" aria-label="Referencias del gráfico comparativo">',
+      '<li class="kpiDash__panelLegendItem" role="listitem">',
+      '<span class="kpiDash__panelLegendSwatch kpiDash__panelLegendSwatch--participants" aria-hidden="true"></span>',
+      '<span class="kpiDash__panelLegendText">Participantes</span>',
+      "</li>",
+      '<li class="kpiDash__panelLegendItem" role="listitem">',
+      '<span class="kpiDash__panelLegendSwatch kpiDash__panelLegendSwatch--fit" aria-hidden="true"></span>',
+      '<span class="kpiDash__panelLegendText">Criterio FIT</span>',
+      "</li>",
+      '<li class="kpiDash__panelLegendItem" role="listitem">',
+      '<span class="kpiDash__panelLegendSwatch kpiDash__panelLegendSwatch--outside" aria-hidden="true"></span>',
+      '<span class="kpiDash__panelLegendText">Fuera de screening</span>',
+      "</li>",
+      "</ul>",
+    ].join("");
+
     root.innerHTML = [
       '<div class="kpiDash__reportRoot" data-kpi-report-root>',
       '<div class="kpiDash__shell">',
@@ -865,6 +882,7 @@
       '<article class="kpiDash__panel kpiDash__panel--bars">',
       '<header class="kpiDash__panelHeader">',
       "<h4>Comparativo por estación</h4>",
+      barsLegend,
       "</header>",
       '<div class="kpiDash__chart" data-kpi-chart-bars></div>',
       "</article>",
@@ -2354,6 +2372,10 @@
         const isTablet = viewMode === "tablet";
         const isDesktop = viewMode === "desktop";
         const isHorizontal = isMobile || isDesktop;
+        const desktopGridLeft = Math.max(
+          98,
+          Math.min(102, Math.round((barsEl.clientWidth || 0) * 0.176)),
+        );
         const axisLabels = fullStationNames.map((name) =>
           formatStationAxisLabel(name, isMobile ? "mobile" : "desktop"),
         );
@@ -2362,7 +2384,7 @@
           position: isHorizontal ? "right" : "top",
           distance: isHorizontal ? 8 : 6,
           color: chartPalette.axisText,
-          fontSize: isMobile ? 10 : 10.5,
+          fontSize: isDesktop ? 11 : isMobile ? 10 : 10.5,
           fontWeight: 600,
           fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
           formatter: function (params) {
@@ -2381,7 +2403,7 @@
           {
             name: "Participantes",
             type: "bar",
-            barMaxWidth: isMobile ? 14 : isTablet ? 26 : 30,
+            barMaxWidth: isMobile ? 14 : isTablet ? 26 : 31,
             data: participants,
             itemStyle: {
               borderRadius: isHorizontal ? [0, 6, 6, 0] : [5, 5, 0, 0],
@@ -2390,9 +2412,9 @@
             emphasis: { focus: "series" },
           },
           {
-            name: "Criterio FIT (kits)",
+            name: "Criterio FIT",
             type: "bar",
-            barMaxWidth: isMobile ? 13 : isTablet ? 24 : 28,
+            barMaxWidth: isMobile ? 13 : isTablet ? 24 : 29,
             data: fit,
             itemStyle: {
               borderRadius: isHorizontal ? [0, 6, 6, 0] : [5, 5, 0, 0],
@@ -2403,7 +2425,7 @@
           {
             name: "Fuera de screening",
             type: "bar",
-            barMaxWidth: isMobile ? 12 : isTablet ? 22 : 26,
+            barMaxWidth: isMobile ? 12 : isTablet ? 22 : 27,
             data: outside,
             itemStyle: {
               borderRadius: isHorizontal ? [0, 6, 6, 0] : [5, 5, 0, 0],
@@ -2451,11 +2473,12 @@
             },
           },
           legend: {
+            show: !isDesktop,
             top: 0,
             left: "center",
             textStyle: {
               color: chartPalette.axisText,
-              fontSize: isMobile ? 9.5 : 10.5,
+              fontSize: isMobile ? 9.5 : 10.8,
               fontWeight: 500,
             },
             itemWidth: 10,
@@ -2466,7 +2489,7 @@
           grid: isHorizontal
             ? isMobile
               ? { left: 92, right: 14, top: 48, bottom: 14 }
-              : { left: 140, right: 24, top: 54, bottom: 18 }
+              : { left: desktopGridLeft, right: 18, top: 4, bottom: 34 }
             : { left: 44, right: 16, top: 54, bottom: 34 },
           xAxis: isHorizontal
             ? {
@@ -2474,7 +2497,8 @@
                 splitNumber: isDesktop ? 5 : 4,
                 axisLabel: {
                   color: chartPalette.axisText,
-                  fontSize: isDesktop ? 10.5 : 10,
+                  fontSize: isDesktop ? 10.6 : 10,
+                  fontWeight: isDesktop ? 550 : 500,
                 },
                 axisLine: { show: false },
                 axisTick: { show: false },
@@ -2505,12 +2529,24 @@
                 data: axisLabels,
                 axisLabel: {
                   color: chartPalette.axisText,
-                  fontSize: isDesktop ? 10.2 : 9.6,
-                  lineHeight: isDesktop ? 13.5 : 13,
-                  margin: isDesktop ? 10 : 12,
+                  fontSize: isDesktop ? 11.45 : 9.6,
+                  fontWeight: isDesktop ? 610 : 500,
+                  lineHeight: isDesktop ? 14.8 : 13,
+                  margin: isDesktop ? 6 : 12,
                 },
                 axisTick: { show: false },
                 axisLine: { show: false },
+                splitArea: isDesktop
+                  ? {
+                      show: true,
+                      areaStyle: {
+                        color: [
+                          "rgba(15, 95, 166, 0.014)",
+                          "rgba(124, 184, 255, 0.006)",
+                        ],
+                      },
+                    }
+                  : { show: false },
               }
             : {
                 type: "value",
@@ -2531,8 +2567,8 @@
           series: series.map((serie) =>
             isHorizontal
               ? Object.assign({}, serie, {
-                  barGap: "18%",
-                  barCategoryGap: isMobile ? "34%" : "30%",
+                  barGap: isDesktop ? "16%" : "18%",
+                  barCategoryGap: isMobile ? "34%" : isDesktop ? "24%" : "30%",
                 })
               : serie,
           ),
@@ -2854,6 +2890,10 @@
       if (window.ResizeObserver) {
         const observer = new ResizeObserver(resize);
         observer.observe(root);
+        observer.observe(barsEl);
+        if (sankeyEl) {
+          observer.observe(sankeyEl);
+        }
       } else {
         window.addEventListener("resize", resize, { passive: true });
       }

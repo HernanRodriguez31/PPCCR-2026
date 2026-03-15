@@ -181,7 +181,7 @@ const CONFIG = {
     phases: [
       {
         id: "etapa-1",
-        stageLabel: "Etapa 1",
+        stageLabel: "Fase 1",
         periodLabel: "Semana 1 · 01–07 Mar",
         startDate: "2026-03-01",
         endDate: "2026-03-07",
@@ -201,7 +201,7 @@ const CONFIG = {
       },
       {
         id: "etapa-2",
-        stageLabel: "Etapa 2",
+        stageLabel: "Fase 2",
         periodLabel: "09–24 Mar",
         startDate: "2026-03-09",
         endDate: "2026-03-24",
@@ -221,7 +221,7 @@ const CONFIG = {
       },
       {
         id: "etapa-3",
-        stageLabel: "Etapa 3",
+        stageLabel: "Fase 3",
         periodLabel: "25 Mar–03 Abr",
         startDate: "2026-03-25",
         endDate: "2026-04-03",
@@ -236,7 +236,7 @@ const CONFIG = {
         details: [
           "Stock operativo: 300 qFIT para estaciones priorizadas.",
           "Estaciones priorizadas: Parque Saavedra, Aristóbulo del Valle, Parque Rivadavia y Parque Chacabuco.",
-          "Entrega de kits: 26 al 28 de marzo.",
+          "Entrega de kits: 25 al 28 de marzo.",
           "Recepción y devolución de muestras: 26 de marzo al 3 de abril.",
           "Desde el 26 de marzo: recepción de muestras FIT en las estaciones.",
           "31 de marzo: activación territorial por Día Mundial del Cáncer de Colon.",
@@ -1425,7 +1425,7 @@ function renderTimelinePlaceholder() {
     : Array.isArray(CONFIG.timeline?.milestones)
       ? CONFIG.timeline.milestones.map((milestone, index) => ({
           id: `etapa-${index + 1}`,
-          stageLabel: milestone.phase || `Etapa ${index + 1}`,
+          stageLabel: milestone.phase || `Fase ${index + 1}`,
           periodLabel: milestone.phase || "",
           title: milestone.title || "",
           objective: milestone.description || "",
@@ -1479,12 +1479,15 @@ function renderTimelinePlaceholder() {
     item.className = "phase-card";
     item.id = phaseCfg.id || `etapa-${index + 1}`;
 
-    const top = document.createElement("div");
+    const top = document.createElement("header");
     top.className = "phase-top";
+
+    const topMeta = document.createElement("div");
+    topMeta.className = "phase-top__meta";
 
     const stage = document.createElement("span");
     stage.className = "phase-stage";
-    stage.textContent = phaseCfg.stageLabel || `Etapa ${index + 1}`;
+    stage.textContent = phaseCfg.stageLabel || `Fase ${index + 1}`;
 
     const period = document.createElement("p");
     period.className = "phase-period";
@@ -1498,8 +1501,11 @@ function renderTimelinePlaceholder() {
       periodTime.dateTime = phaseCfg.startDate;
     }
     period.appendChild(periodTime);
-    top.appendChild(period);
-    top.appendChild(stage);
+    topMeta.appendChild(stage);
+    topMeta.appendChild(period);
+
+    const heading = document.createElement("div");
+    heading.className = "phase-heading";
 
     const titleEl = document.createElement("h3");
     titleEl.className = "phase-title";
@@ -1508,6 +1514,11 @@ function renderTimelinePlaceholder() {
     const objective = document.createElement("p");
     objective.className = "phase-objective";
     objective.textContent = phaseCfg.objective || "";
+    heading.appendChild(titleEl);
+    heading.appendChild(objective);
+
+    top.appendChild(topMeta);
+    top.appendChild(heading);
 
     const highlightsLabel = document.createElement("p");
     highlightsLabel.className = "phase-highlights-label";
@@ -1526,8 +1537,6 @@ function renderTimelinePlaceholder() {
       });
 
     item.appendChild(top);
-    item.appendChild(titleEl);
-    item.appendChild(objective);
     if (highlightsList.children.length > 0) {
       item.appendChild(highlightsLabel);
       item.appendChild(highlightsList);

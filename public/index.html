@@ -26,11 +26,11 @@
 
     <script src="host-guard.js"></script>
     <link rel="icon" href="assets/favicon.png" />
-    <link rel="stylesheet" href="styles.css?v=20260311-home-sponsors-spacing1" />
-    <link rel="stylesheet" href="kpis-dashboard.css?v=20260313-home-final-polish1" />
+    <link rel="stylesheet" href="styles.css?v=20260315-cronograma-desktop-refine1" />
+    <link rel="stylesheet" href="kpis-dashboard.css?v=20260315-sankey-distribution-center3" />
     <link
       rel="stylesheet"
-      href="ppccr-sankey-participantes.css?v=20260313-home-phase2-release-blockers1"
+      href="ppccr-sankey-participantes.css?v=20260315-sankey-distribution-center3"
     />
     <link
       rel="stylesheet"
@@ -42,7 +42,7 @@
     />
     <link
       rel="stylesheet"
-      href="site-desktop-shell.css?v=20260315-header-h1-singleline1"
+      href="site-desktop-shell.css?v=20260315-cronograma-phase-chip-refine1"
     />
     <script src="page-transitions.js" defer></script>
     <script src="domain/home-algorithm-domain.js" defer></script>
@@ -51,8 +51,8 @@
       src="ui/layout-mode-controller.js?v=20260314-desktop-shell-mode-lock1"
       defer
     ></script>
-    <script src="app.js?v=20260314-desktop-shell-mode-lock1" defer></script>
-    <script src="kpis-dashboard.js?v=20260314-home-final-touch1" defer></script>
+    <script src="app.js?v=20260315-cronograma-phase-chip-refine1" defer></script>
+    <script src="kpis-dashboard.js?v=20260315-kpi-chart-desktop-spacing-balance1" defer></script>
     <script src="auth-gate.js?v=20260314-desktop-shell-mode-lock1" defer></script>
     <script
       src="home-mobile-shell.js?v=20260314-desktop-shell-mode-lock1"
@@ -1636,50 +1636,57 @@
             </ol>
           </section>
 
-          <div class="embed-actions">
-            <a
-              class="btn btn-primary"
-              id="calendar-open"
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Abrir calendario
-            </a>
-            <span
-              class="embed-hint"
-              id="calendar-hint"
-              aria-live="polite"
-            ></span>
-          </div>
-
-          <div class="embed-card" aria-label="Calendario embebido">
-            <div
-              class="embed-shell embed-shell--calendar"
-              id="calendar-embed-wrap"
-              data-embed
-            >
-              <div class="embed-skeleton" aria-hidden="true"></div>
-              <div class="embed-fallback embed-fallback--overlay" role="note">
-                No se pudo cargar el calendario embebido. Usá “Abrir
-                calendario”.
+          <section class="calendar-panel" aria-labelledby="calendar-panel-eyebrow">
+            <div class="calendar-panel__header">
+              <div class="calendar-panel__copy">
+                <p class="calendar-panel__eyebrow" id="calendar-panel-eyebrow">
+                  Calendario mensual
+                </p>
+                <span
+                  class="embed-hint"
+                  id="calendar-hint"
+                  aria-live="polite"
+                ></span>
               </div>
-              <iframe
-                class="embed-iframe"
-                id="calendar-iframe"
-                title="Calendario del Programa PPCCR"
-                loading="lazy"
-                referrerpolicy="strict-origin-when-cross-origin"
-              ></iframe>
+              <a
+                class="calendar-panel__cta btn btn-primary"
+                id="calendar-open"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Abrir calendario
+              </a>
             </div>
 
-            <div class="embed-fallback" id="calendar-fallback" hidden>
-              <p>
-                El calendario en línea no está disponible en este momento.
-                Usá “Abrir calendario” para verlo en una nueva pestaña.
-              </p>
+            <div class="embed-card" aria-label="Calendario embebido">
+              <div
+                class="embed-shell embed-shell--calendar"
+                id="calendar-embed-wrap"
+                data-embed
+              >
+                <div class="embed-skeleton" aria-hidden="true"></div>
+                <div class="embed-fallback embed-fallback--overlay" role="note">
+                  No se pudo cargar el calendario embebido. Usá “Abrir
+                  calendario”.
+                </div>
+                <iframe
+                  class="embed-iframe"
+                  id="calendar-iframe"
+                  title="Calendario del Programa PPCCR"
+                  loading="lazy"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                ></iframe>
+              </div>
+
+              <div class="embed-fallback" id="calendar-fallback" hidden>
+                <p>
+                  El calendario en línea no está disponible en este momento.
+                  Usá “Abrir calendario” para verlo en una nueva pestaña.
+                </p>
+              </div>
             </div>
-          </div>
+          </section>
         </div>
       </section>
 
@@ -1897,7 +1904,7 @@
       </div>
     </noscript>
     <script
-      src="ppccr-sankey-participantes.js?v=20260313-home-phase2-release-blockers1"
+      src="ppccr-sankey-participantes.js?v=20260315-sankey-distribution-center3"
       defer
     ></script>
     <script src="pwa-register.js?v=20260313-home-phase2-release-blockers1" defer></script>

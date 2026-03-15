@@ -1821,6 +1821,42 @@
   padding: 0.85rem;
 }
 
+.kpiDash__panelLegend {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.kpiDash__panelLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kpiDash__panelLegendSwatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+
+.kpiDash__panelLegendText {
+  color: var(--kpi-gray-600);
+}
+
+.kpiDash__panelLegendSwatch--participants {
+  background: #0c4e8d;
+}
+
+.kpiDash__panelLegendSwatch--fit {
+  background: #3c7fc3;
+}
+
+.kpiDash__panelLegendSwatch--outside {
+  background: #88bdf2;
+}
+
 @media (min-width: 1025px) {
   body.page-home .kpiDash__reportHeader {
     padding: 0.92rem 0.96rem;
@@ -1855,7 +1891,10 @@
 
   body.page-home .kpiDash__panel--bars {
     grid-column: auto;
-    padding: 0.94rem 0.88rem 0.96rem;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding: 0.88rem 0.66rem 0.68rem;
   }
 
   body.page-home .kpiDash__panel--aux {
@@ -1866,6 +1905,47 @@
   body.page-home .kpiDash__panelHeader {
     align-items: flex-start;
     margin-bottom: 0.68rem;
+  }
+
+  body.page-home .kpiDash__panel--bars .kpiDash__panelHeader {
+    display: block;
+    padding-right: 8.2rem;
+    margin-bottom: 0.18rem;
+  }
+
+  body.page-home .kpiDash__panel--bars .kpiDash__panelHeader h4 {
+    min-width: 0;
+    padding-left: 14px;
+  }
+
+  body.page-home .kpiDash__panelLegend--bars {
+    display: flex;
+    position: absolute;
+    top: 1.08rem;
+    right: 1.34rem;
+    width: 126px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0.34rem;
+    padding-top: 0;
+  }
+
+  body.page-home .kpiDash__panelLegend--bars .kpiDash__panelLegendItem {
+    gap: 0.42rem;
+  }
+
+  body.page-home .kpiDash__panelLegend--bars .kpiDash__panelLegendSwatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  body.page-home .kpiDash__panelLegend--bars .kpiDash__panelLegendText {
+    font-size: 10.6px;
+    line-height: 1.12;
+    font-weight: 580;
+    letter-spacing: -0.01em;
   }
 
   body.page-home .kpiDash__panelHeader h4 {
@@ -1881,11 +1961,13 @@
 
   body.page-home .kpiDash__panel--bars .kpiDash__chart,
   body.page-home .kpiDash__panel--bars .kpiDash__chartFallback {
-    min-height: 380px;
+    flex: 1 1 auto;
+    min-height: 352px;
+    height: auto;
   }
 
   body.page-home .kpiDash__panel--aux .ppccr-sankey {
-    min-height: 380px;
+    min-height: var(--ppccr-sankey-min-height-desktop, 344px);
   }
 }
 
