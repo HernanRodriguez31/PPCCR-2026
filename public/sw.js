@@ -1,26 +1,29 @@
 "use strict";
 
-const SHELL_CACHE = "ppccr-shell-v20260313-release-blockers-1";
-const STATIC_CACHE = "ppccr-static-v20260313-release-blockers-1";
+const SHELL_CACHE = "ppccr-shell-v20260321-interview-modal-release1";
+const STATIC_CACHE = "ppccr-static-v20260321-interview-modal-release1";
 const ACTIVE_CACHES = [SHELL_CACHE, STATIC_CACHE];
 const PRECACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest?v=20260313-home-phase2-release-blockers1",
-  "/styles.css?v=20260311-home-sponsors-spacing1",
-  "/kpis-dashboard.css?v=20260313-home-phase2-release-blockers1",
-  "/ppccr-sankey-participantes.css?v=20260313-home-phase2-release-blockers1",
-  "/home-mobile-shell.css?v=20260313-home-phase2-release-blockers1",
+  "/styles.css?v=20260321-interview-modal-release1",
+  "/kpis-dashboard.css?v=20260315-sankey-distribution-center3",
+  "/ppccr-sankey-participantes.css?v=20260315-sankey-distribution-center3",
+  "/home-mobile-shell.css?v=20260315-header-h1-phone-twoline1",
+  "/site-mobile-shell.css?v=20260315-header-h1-singleline1",
+  "/site-desktop-shell.css?v=20260315-cronograma-phase-chip-refine1",
   "/host-guard.js",
   "/page-transitions.js",
   "/domain/home-algorithm-domain.js",
   "/app/home-algorithm-service.js",
-  "/app.js?v=20260313-home-phase2-release-blockers1",
-  "/kpis-dashboard.js?v=20260313-home-phase2-release-blockers1",
-  "/ppccr-sankey-participantes.js?v=20260313-home-phase2-release-blockers1",
-  "/auth-gate.js?v=20260313-home-phase2-release-blockers1",
-  "/home-mobile-shell.js?v=20260313-home-phase2-release-blockers1",
-  "/pwa-register.js?v=20260313-home-phase2-release-blockers1",
+  "/ui/layout-mode-controller.js?v=20260314-desktop-shell-mode-lock1",
+  "/app.js?v=20260321-interview-modal-release1",
+  "/kpis-dashboard.js?v=20260315-kpi-chart-desktop-spacing-balance1",
+  "/ppccr-sankey-participantes.js?v=20260315-sankey-distribution-center3",
+  "/auth-gate.js?v=20260314-desktop-shell-mode-lock1",
+  "/home-mobile-shell.js?v=20260314-desktop-shell-mode-lock1",
+  "/pwa-register.js?v=20260321-interview-modal-release1",
   "/assets/favicon.png",
   "/assets/logo-ppccr.png",
   "/assets/logo%20cinta%20azul.png",

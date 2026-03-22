@@ -4394,12 +4394,7 @@ function getHomeAlgorithmCompletionFocusableElements() {
   const candidates = Array.from(
     homeAlgorithmFlowModalState.completionDialog.querySelectorAll(selectors),
   );
-  return candidates.filter((element) => {
-    if (!(element instanceof HTMLElement)) return false;
-    if (element.hidden) return false;
-    const styles = window.getComputedStyle(element);
-    return styles.display !== "none" && styles.visibility !== "hidden";
-  });
+  return candidates.filter((element) => isHomeAlgoInteractiveElementVisible(element));
 }
 
 function isHomeAlgorithmAdminMode() {
@@ -4428,8 +4423,11 @@ function isHomeAlgoInteractiveElementVisible(element) {
   if (!(element instanceof HTMLElement)) return false;
   if (element.hidden) return false;
   if (element.getAttribute("aria-hidden") === "true") return false;
+  const hiddenAncestor = element.closest("[hidden], [aria-hidden='true']");
+  if (hiddenAncestor && hiddenAncestor !== element) return false;
   const styles = window.getComputedStyle(element);
-  return styles.display !== "none" && styles.visibility !== "hidden";
+  if (styles.display === "none" || styles.visibility === "hidden") return false;
+  return element.getClientRects().length > 0;
 }
 
 function isHomeAlgoEditableTarget(target, { forArrowNav = false } = {}) {
@@ -4657,13 +4655,7 @@ function getAlgoFlowFocusableElements() {
   const selectors =
     'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
   const candidates = Array.from(homeAlgorithmFlowModalState.modal.querySelectorAll(selectors));
-  return candidates.filter((element) => {
-    if (!(element instanceof HTMLElement)) return false;
-    if (element.hidden) return false;
-    if (element.getAttribute("aria-hidden") === "true") return false;
-    const style = window.getComputedStyle(element);
-    return style.visibility !== "hidden" && style.display !== "none";
-  });
+  return candidates.filter((element) => isHomeAlgoInteractiveElementVisible(element));
 }
 
 function trapAlgoFlowModalFocus(event) {
