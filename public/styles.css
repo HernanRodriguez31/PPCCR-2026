@@ -9224,21 +9224,170 @@ body.page-home .ppccr-modal.modal--interview.is-open .ppccr-modal__card {
 }
 
 #ppccr-algo-modal.ppccr-modal.modal--interview {
+  --algo-modal-viewport-gap: 12px;
+  --algo-modal-card-max-height: 760px;
+  --algo-modal-header-gap: 10px;
+  --algo-modal-header-pad: 16px 20px 12px;
+  --algo-modal-title-size: clamp(1.08rem, 1.55vw, 1.3rem);
+  --algo-modal-title-line-height: 1.2;
+  --algo-modal-subtitle-margin-top: 4px;
+  --algo-modal-subtitle-size: 0.8rem;
+  --algo-modal-subtitle-line-height: 1.25;
+  --algo-modal-content-font-size: 15px;
+  --algo-modal-content-line-height: 1.5;
+  --algo-modal-top-pad: 10px 16px;
+  --algo-modal-topbar-gap: 10px;
+  --algo-modal-status-chip-pad: 3px 9px;
+  --algo-modal-status-chip-font-size: 0.72rem;
+  --algo-modal-stepper-margin-top: 8px;
+  --algo-modal-stepper-gap: 8px;
+  --algo-modal-stepper-button-min-height: 40px;
+  --algo-modal-stepper-button-pad: 8px 10px;
+  --algo-modal-stepper-label-size: 0.8rem;
+  --algo-modal-stepper-label-line-height: 1.22;
+  --algo-modal-stepper-index-size: 26px;
+  --algo-modal-stepper-index-font-size: 0.78rem;
+  --algo-modal-body-pad: 14px 16px 18px;
+  --algo-modal-panel-pad: 16px 16px 10px;
+  --algo-modal-panel-radius: 16px;
+  --algo-modal-panel-title-size: clamp(1.08rem, 1.95vw, 1.24rem);
+  --algo-modal-panel-title-line-height: 1.2;
+  --algo-modal-panel-title-margin-bottom: 4px;
+  --algo-modal-panel-copy-size: 0.93rem;
+  --algo-modal-panel-copy-line-height: 1.4;
+  --algo-modal-panel-copy-margin-bottom: 10px;
+  --algo-modal-flow-margin-bottom: 10px;
+  --algo-modal-flow-pad: 10px 12px;
+  --algo-modal-flow-font-size: 0.9rem;
+  --algo-modal-flow-line-height: 1.28;
+  --algo-modal-grid-gap: 12px;
+  --algo-modal-field-gap: 6px;
+  --algo-modal-label-size: 0.9rem;
+  --algo-modal-control-min-height: 46px;
+  --algo-modal-input-pad: 10px 12px;
+  --algo-modal-input-radius: 12px;
+  --algo-modal-sex-gap: 8px;
+  --algo-modal-sex-label-min-height: 38px;
+  --algo-modal-sex-label-pad: 4px 10px;
+  --algo-modal-sex-other-margin-top: 10px;
+  --algo-modal-required-note-margin-top: 10px;
+  --algo-modal-required-note-size: 0.86rem;
+  --algo-modal-required-note-line-height: 1.34;
+  --algo-modal-group-pad: 12px;
+  --algo-modal-group-radius: 14px;
+  --algo-modal-group-gap: 10px;
+  --algo-modal-group-title-size: 0.95rem;
+  --algo-modal-checklist-gap: 8px;
+  --algo-modal-checklist-margin-top: 8px;
+  --algo-modal-check-columns: 18px 1fr;
+  --algo-modal-check-gap: 10px;
+  --algo-modal-check-pad: 9px 10px;
+  --algo-modal-check-radius: 10px;
+  --algo-modal-check-input-size: 16px;
+  --algo-modal-check-text-size: 0.9rem;
+  --algo-modal-check-text-line-height: 1.3;
+  --algo-modal-footer-pad: 12px 16px;
+  --algo-modal-footer-gap: 12px;
+  --algo-modal-action-min-height: 42px;
+  --algo-modal-action-pad: 0 14px;
+  --algo-modal-action-font-size: 0.875rem;
   position: fixed;
   inset: 0;
   z-index: 9800;
   display: grid;
   place-items: center;
+  padding: var(--algo-modal-viewport-gap);
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: auto;
+}
+
+@media (min-width: 981px) {
+  #ppccr-algo-modal.ppccr-modal.modal--interview {
+    --algo-modal-viewport-gap: clamp(10px, 1.5vh, 18px);
+    --algo-modal-header-gap: 8px;
+    --algo-modal-header-pad: 12px 16px 10px;
+    --algo-modal-title-size: clamp(1.08rem, 1.03rem + 0.2vw, 1.16rem);
+    --algo-modal-title-line-height: 1.15;
+    --algo-modal-subtitle-margin-top: 2px;
+    --algo-modal-subtitle-size: 0.75rem;
+    --algo-modal-subtitle-line-height: 1.18;
+    --algo-modal-content-font-size: 14px;
+    --algo-modal-content-line-height: 1.38;
+    --algo-modal-top-pad: 8px 14px 9px;
+    --algo-modal-topbar-gap: 8px;
+    --algo-modal-status-chip-pad: 2px 8px;
+    --algo-modal-status-chip-font-size: 0.68rem;
+    --algo-modal-stepper-margin-top: 5px;
+    --algo-modal-stepper-gap: 6px;
+    --algo-modal-stepper-button-min-height: 38px;
+    --algo-modal-stepper-button-pad: 6px 8px;
+    --algo-modal-stepper-label-size: 0.75rem;
+    --algo-modal-stepper-label-line-height: 1.16;
+    --algo-modal-stepper-index-size: 23px;
+    --algo-modal-stepper-index-font-size: 0.71rem;
+    --algo-modal-body-pad: 9px 12px 10px;
+    --algo-modal-panel-pad: 10px 12px 6px;
+    --algo-modal-panel-radius: 14px;
+    --algo-modal-panel-title-size: clamp(0.98rem, 0.94rem + 0.2vw, 1.08rem);
+    --algo-modal-panel-title-line-height: 1.18;
+    --algo-modal-panel-title-margin-bottom: 3px;
+    --algo-modal-panel-copy-size: 0.86rem;
+    --algo-modal-panel-copy-line-height: 1.3;
+    --algo-modal-panel-copy-margin-bottom: 7px;
+    --algo-modal-flow-margin-bottom: 7px;
+    --algo-modal-flow-pad: 7px 10px;
+    --algo-modal-flow-font-size: 0.83rem;
+    --algo-modal-flow-line-height: 1.22;
+    --algo-modal-grid-gap: 9px;
+    --algo-modal-field-gap: 4px;
+    --algo-modal-label-size: 0.83rem;
+    --algo-modal-control-min-height: 42px;
+    --algo-modal-input-pad: 8px 10px;
+    --algo-modal-input-radius: 10px;
+    --algo-modal-sex-gap: 6px;
+    --algo-modal-sex-label-min-height: 34px;
+    --algo-modal-sex-label-pad: 3px 8px;
+    --algo-modal-sex-other-margin-top: 7px;
+    --algo-modal-required-note-margin-top: 7px;
+    --algo-modal-required-note-size: 0.79rem;
+    --algo-modal-required-note-line-height: 1.24;
+    --algo-modal-group-pad: 9px;
+    --algo-modal-group-radius: 12px;
+    --algo-modal-group-gap: 7px;
+    --algo-modal-group-title-size: 0.86rem;
+    --algo-modal-checklist-gap: 5px;
+    --algo-modal-checklist-margin-top: 5px;
+    --algo-modal-check-columns: 16px 1fr;
+    --algo-modal-check-gap: 8px;
+    --algo-modal-check-pad: 7px 8px;
+    --algo-modal-check-radius: 9px;
+    --algo-modal-check-input-size: 15px;
+    --algo-modal-check-text-size: 0.83rem;
+    --algo-modal-check-text-line-height: 1.22;
+    --algo-modal-footer-pad: 9px 12px;
+    --algo-modal-footer-gap: 8px;
+    --algo-modal-action-min-height: 40px;
+    --algo-modal-action-pad: 0 12px;
+    --algo-modal-action-font-size: 0.86rem;
+  }
 }
 
 #ppccr-algo-modal.ppccr-modal.modal--interview.is-open,
-#ppccr-algo-modal.ppccr-modal.modal--interview[aria-hidden="false"] {
+#ppccr-algo-modal.ppccr-modal.modal--interview[aria-hidden="false"],
+#ppccr-algo-modal.ppccr-modal.modal--interview.is-force-open {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
 }
 
 #ppccr-algo-modal.ppccr-modal.modal--interview .ppccr-modal__backdrop {
+  position: absolute;
+  inset: 0;
   z-index: 0;
 }
 
@@ -9246,7 +9395,9 @@ body.page-home .ppccr-modal.modal--interview.is-open .ppccr-modal__card {
   z-index: 2;
 }
 
-#ppccr-algo-modal.ppccr-modal.modal--interview[aria-hidden="false"] .ppccr-modal__card {
+#ppccr-algo-modal.ppccr-modal.modal--interview.is-open .ppccr-modal__card,
+#ppccr-algo-modal.ppccr-modal.modal--interview[aria-hidden="false"] .ppccr-modal__card,
+#ppccr-algo-modal.ppccr-modal.modal--interview.is-force-open .ppccr-modal__card {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
@@ -9830,18 +9981,38 @@ body.page-home .home-algo-complete__actions {
    -------------------------------------------------------------------------- */
 body.page-home .ppccr-modal.modal--interview .ppccr-modal__card {
   width: min(980px, calc(100vw - 48px));
-  height: min(82vh, 760px);
-  height: min(82dvh, 760px);
-  max-height: min(82vh, 760px);
-  max-height: min(82dvh, 760px);
+  height: min(
+    calc(100vh - (var(--algo-modal-viewport-gap, 24px) * 2)),
+    var(--algo-modal-card-max-height, 760px)
+  );
+  height: min(
+    calc(100dvh - (var(--algo-modal-viewport-gap, 24px) * 2)),
+    var(--algo-modal-card-max-height, 760px)
+  );
+  max-height: min(
+    calc(100vh - (var(--algo-modal-viewport-gap, 24px) * 2)),
+    var(--algo-modal-card-max-height, 760px)
+  );
+  max-height: min(
+    calc(100dvh - (var(--algo-modal-viewport-gap, 24px) * 2)),
+    var(--algo-modal-card-max-height, 760px)
+  );
 }
 
 body.page-home .ppccr-modal.modal--interview .ppccr-modal__header {
-  padding: 16px 20px 12px;
+  gap: var(--algo-modal-header-gap);
+  padding: var(--algo-modal-header-pad);
+}
+
+body.page-home .ppccr-modal.modal--interview .ppccr-modal__header h2 {
+  font-size: var(--algo-modal-title-size);
+  line-height: var(--algo-modal-title-line-height);
 }
 
 body.page-home .ppccr-modal.modal--interview .ppccr-modal__subtitle {
-  margin-top: 4px;
+  margin-top: var(--algo-modal-subtitle-margin-top);
+  font-size: var(--algo-modal-subtitle-size);
+  line-height: var(--algo-modal-subtitle-line-height);
 }
 
 body.page-home .ppccr-modal.modal--interview .ppccr-modal__body {
@@ -9855,11 +10026,12 @@ body.page-home .ppccr-modal.modal--interview .ppccr-modal__body > .home-algo {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 0;
-  font-size: 15px;
-  line-height: 1.5;
+  overflow: hidden;
+  font-size: var(--algo-modal-content-font-size);
+  line-height: var(--algo-modal-content-line-height);
 }
 
 body.page-home
@@ -9871,48 +10043,66 @@ body.page-home
 }
 
 body.page-home .ppccr-modal.modal--interview .home-algo__panel-title {
-  font-size: 1.08rem;
+  margin-bottom: var(--algo-modal-panel-title-margin-bottom);
+  font-size: var(--algo-modal-panel-title-size);
+  line-height: var(--algo-modal-panel-title-line-height);
   font-weight: 700;
 }
 
 body.page-home .ppccr-modal.modal--interview .home-algo__label {
   font-weight: 560;
+  font-size: var(--algo-modal-label-size);
 }
 
 body.page-home .ppccr-modal.modal--interview .interview-top {
   flex: 0 0 auto;
-  padding: 10px 16px;
+  min-height: 0;
+  padding: var(--algo-modal-top-pad);
   background: rgba(255, 255, 255, 0.9);
   border-bottom: 1px solid rgba(12, 42, 79, 0.1);
 }
 
 body.page-home .ppccr-modal.modal--interview .interview-top .home-algo__topbar {
   margin: 0;
+  gap: var(--algo-modal-topbar-gap);
 }
 
 body.page-home
   .ppccr-modal.modal--interview
   .interview-top
   .home-algo__stepper {
-  margin-top: 8px;
-  gap: 8px;
+  margin-top: var(--algo-modal-stepper-margin-top);
+  gap: var(--algo-modal-stepper-gap);
 }
 
 body.page-home
   .ppccr-modal.modal--interview
   .interview-top
   .home-algo__stepper-button {
-  min-height: 40px;
-  padding: 8px 10px;
+  min-height: var(--algo-modal-stepper-button-min-height);
+  padding: var(--algo-modal-stepper-button-pad);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__status-chip {
+  padding: var(--algo-modal-status-chip-pad);
+  font-size: var(--algo-modal-status-chip-font-size);
+}
+
+body.page-home
+  .ppccr-modal.modal--interview
+  .interview-top
+  .home-algo__stepper-label {
+  font-size: var(--algo-modal-stepper-label-size);
+  line-height: var(--algo-modal-stepper-label-line-height);
 }
 
 body.page-home
   .ppccr-modal.modal--interview
   .interview-top
   .home-algo__stepper-index {
-  width: 26px;
-  height: 26px;
-  font-size: 0.78rem;
+  width: var(--algo-modal-stepper-index-size);
+  height: var(--algo-modal-stepper-index-size);
+  font-size: var(--algo-modal-stepper-index-font-size);
 }
 
 body.page-home .ppccr-modal.modal--interview .interview-body {
@@ -9921,7 +10111,7 @@ body.page-home .ppccr-modal.modal--interview .interview-body {
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
-  padding: 14px 16px 18px;
+  padding: var(--algo-modal-body-pad);
   overscroll-behavior: contain;
 }
 
@@ -9974,8 +10164,8 @@ body.page-home .ppccr-modal.modal--interview .interview-body .home-algo__panel {
   height: auto;
   min-height: 0;
   overflow: visible;
-  padding: 16px 16px 10px;
-  border-radius: 16px;
+  padding: var(--algo-modal-panel-pad);
+  border-radius: var(--algo-modal-panel-radius);
 }
 
 body.page-home
@@ -9989,16 +10179,17 @@ body.page-home
   .ppccr-modal.modal--interview
   .interview-body
   .home-algo__flow-status {
-  margin: 0 0 10px;
+  margin: 0 0 var(--algo-modal-flow-margin-bottom);
   width: 100%;
-  padding: 10px 12px;
+  padding: var(--algo-modal-flow-pad);
   border-radius: 12px;
-  font-size: 0.9rem;
+  font-size: var(--algo-modal-flow-font-size);
+  line-height: var(--algo-modal-flow-line-height);
 }
 
 body.page-home .ppccr-modal.modal--interview .interview-footer {
   flex: 0 0 auto;
-  padding: 12px 16px;
+  padding: var(--algo-modal-footer-pad);
   background: rgba(255, 255, 255, 0.96);
   border-top: 1px solid rgba(12, 42, 79, 0.12);
   box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.1);
@@ -10008,9 +10199,9 @@ body.page-home .ppccr-modal.modal--interview #home-algo-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--algo-modal-footer-gap);
   flex-wrap: wrap;
-  min-height: 42px;
+  min-height: var(--algo-modal-action-min-height);
 }
 
 body.page-home
@@ -10021,7 +10212,7 @@ body.page-home
   align-items: center;
   justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--algo-modal-footer-gap);
   margin: 0;
   padding: 0;
   position: static;
@@ -10037,12 +10228,87 @@ body.page-home .ppccr-modal.modal--interview .home-algo__actions-anchor {
 
 body.page-home .ppccr-modal.modal--interview #home-algo-actions .btn,
 body.page-home .ppccr-modal.modal--interview #home-algo-restart {
-  min-height: 42px;
-  padding: 0 14px;
+  min-height: var(--algo-modal-action-min-height);
+  padding: var(--algo-modal-action-pad);
+  font-size: var(--algo-modal-action-font-size);
 }
 
 body.page-home .ppccr-modal.modal--interview #home-algo-restart {
   margin-left: auto;
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__grid {
+  gap: var(--algo-modal-grid-gap);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__field {
+  gap: var(--algo-modal-field-gap);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__input {
+  min-height: var(--algo-modal-control-min-height);
+  padding: var(--algo-modal-input-pad);
+  border-radius: var(--algo-modal-input-radius);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__sex-switch {
+  gap: var(--algo-modal-sex-gap);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__sex-label {
+  min-height: var(--algo-modal-sex-label-min-height);
+  padding: var(--algo-modal-sex-label-pad);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__sex-other {
+  margin-top: var(--algo-modal-sex-other-margin-top);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__panel-copy {
+  margin-bottom: var(--algo-modal-panel-copy-margin-bottom);
+  font-size: var(--algo-modal-panel-copy-size);
+  line-height: var(--algo-modal-panel-copy-line-height);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__required-note {
+  margin-top: var(--algo-modal-required-note-margin-top);
+  font-size: var(--algo-modal-required-note-size);
+  line-height: var(--algo-modal-required-note-line-height);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__group {
+  padding: var(--algo-modal-group-pad);
+  border-radius: var(--algo-modal-group-radius);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__group + .home-algo__group {
+  margin-top: var(--algo-modal-group-gap);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__group-title {
+  font-size: var(--algo-modal-group-title-size);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__checklist {
+  gap: var(--algo-modal-checklist-gap);
+  margin-top: var(--algo-modal-checklist-margin-top);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__check {
+  grid-template-columns: var(--algo-modal-check-columns);
+  gap: var(--algo-modal-check-gap);
+  padding: var(--algo-modal-check-pad);
+  border-radius: var(--algo-modal-check-radius);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__check input {
+  width: var(--algo-modal-check-input-size);
+  height: var(--algo-modal-check-input-size);
+}
+
+body.page-home .ppccr-modal.modal--interview .home-algo__check span {
+  font-size: var(--algo-modal-check-text-size);
+  line-height: var(--algo-modal-check-text-line-height);
 }
 
 body.ppccr-modal-open,
@@ -10146,19 +10412,6 @@ body.page-home .ppccr-modal.modal--interview .modal-status-hud {
 
   body.page-home .home-algo-complete__actions .btn {
     width: 100%;
-  }
-}
-
-@media (max-height: 760px) {
-  body.page-home .ppccr-modal.modal--interview {
-    padding: 12px;
-  }
-
-  body.page-home .ppccr-modal.modal--interview .ppccr-modal__card {
-    height: min(92vh, 720px);
-    height: min(92dvh, 720px);
-    max-height: min(92vh, 720px);
-    max-height: min(92dvh, 720px);
   }
 }
 
@@ -11351,49 +11604,6 @@ body.is-auth-locked {
     width: min(100vw - 12px, 520px);
     max-height: calc(100dvh - 20px);
   }
-}
-
-/* Algorithm Modal Hardening: visible + centered + above backdrop */
-#ppccr-algo-modal.ppccr-modal.modal--interview {
-  position: fixed;
-  inset: 0;
-  z-index: 9800;
-  display: grid !important;
-  place-items: center !important;
-  padding: clamp(12px, 2.2vw, 24px);
-  height: 100vh;
-  height: 100dvh;
-  min-height: 100vh;
-  min-height: 100dvh;
-  max-height: 100vh;
-  max-height: 100dvh;
-  overflow: auto;
-}
-
-#ppccr-algo-modal.ppccr-modal.modal--interview.is-open,
-#ppccr-algo-modal.ppccr-modal.modal--interview[aria-hidden="false"] {
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-}
-
-#ppccr-algo-modal.ppccr-modal.modal--interview .ppccr-modal__backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-#ppccr-algo-modal.ppccr-modal.modal--interview .ppccr-modal__card {
-  position: relative;
-  z-index: 1;
-}
-
-#ppccr-algo-modal.ppccr-modal.modal--interview.is-open .ppccr-modal__card,
-#ppccr-algo-modal.ppccr-modal.modal--interview[aria-hidden="false"] .ppccr-modal__card,
-#ppccr-algo-modal.ppccr-modal.modal--interview.is-force-open .ppccr-modal__card {
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: translateY(0) scale(1) !important;
 }
 
 /* Auth Gate: authenticated user switching refinements */

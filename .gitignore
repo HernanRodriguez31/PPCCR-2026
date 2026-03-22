@@ -74,6 +74,7 @@ secrets-jaas/
 
 # dataconnect generated files
 .dataconnect
+.codex-artifacts/
 .DS_Store
 **/.DS_Store
 
