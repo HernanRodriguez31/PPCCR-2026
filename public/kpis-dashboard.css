@@ -1767,11 +1767,15 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--kpi-space-4);
+  min-width: 0;
+  min-height: 0;
+  --kpi-chart-row-height: 286px;
 }
 
 .kpiDash__panel--bars,
 .kpiDash__panel--aux {
   min-width: 0;
+  min-height: 0;
 }
 
 .kpiDash__panel {
@@ -1780,6 +1784,8 @@
   background: var(--kpi-card);
   padding: var(--kpi-space-4);
   box-shadow: var(--kpi-shadow-card);
+  min-width: 0;
+  min-height: 0;
 }
 
 .kpiDash__panelHeader {
@@ -1806,6 +1812,28 @@
 .kpiDash__chart {
   width: 100%;
   min-height: 286px;
+  min-width: 0;
+}
+
+.kpiDash__panel--aux {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpiDash__chart--sankey {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 286px;
+  overflow: hidden;
+}
+
+.kpiDash__panel--bars .kpiDash__chart,
+.kpiDash__panel--bars .kpiDash__chartFallback,
+.kpiDash__panel--aux .kpiDash__chart--sankey {
+  min-height: 0;
+  block-size: var(--kpi-chart-row-height);
 }
 
 .kpiDash__chartFallback {
@@ -1822,6 +1850,10 @@
 }
 
 @media (min-width: 1025px) {
+  body.page-home .kpiDash__charts {
+    --kpi-chart-row-height: clamp(304px, 23vw, 324px);
+  }
+
   body.page-home .kpiDash__reportHeader {
     padding: 0.92rem 0.96rem;
   }
@@ -1879,14 +1911,6 @@
     line-height: 1.32;
   }
 
-  body.page-home .kpiDash__panel--bars .kpiDash__chart,
-  body.page-home .kpiDash__panel--bars .kpiDash__chartFallback {
-    min-height: 380px;
-  }
-
-  body.page-home .kpiDash__panel--aux .ppccr-sankey {
-    min-height: 380px;
-  }
 }
 
 .kpiDash__funnel,
@@ -2459,10 +2483,6 @@
     padding-inline: 0.84rem;
   }
 
-  .kpiDash__panel--aux .kpiDash__chart,
-  .kpiDash__panel--aux .kpiDash__chartFallback {
-    min-height: 304px;
-  }
 }
 
 @media (max-width: 1120px) {
@@ -2567,6 +2587,10 @@
 }
 
 @media (min-width: 621px) and (max-width: 1024px) {
+  .kpiDash__charts {
+    --kpi-chart-row-height: clamp(250px, 33vw, 292px);
+  }
+
   .kpiDash__panel,
   .kpiDash__execPanel,
   .kpiDash__fitFlow,
@@ -2576,17 +2600,13 @@
     padding: 0.96rem;
   }
 
-  .kpiDash__panel--bars .kpiDash__chart,
-  .kpiDash__panel--bars .kpiDash__chartFallback {
-    min-height: clamp(290px, 36vw, 360px);
-  }
-
-  .kpiDash__panel--aux .ppccr-sankey {
-    min-height: clamp(260px, 34vw, 330px);
-  }
 }
 
 @media (max-width: 620px) {
+  .kpiDash__charts {
+    --kpi-chart-row-height: clamp(240px, 44vh, 300px);
+  }
+
   .kpiDash__cards {
     grid-template-columns: 1fr;
   }
@@ -2670,15 +2690,6 @@
 
   .kpiDash__reportBtn {
     flex: 1;
-  }
-
-  .kpiDash__chart,
-  .kpiDash__chartFallback {
-    min-height: clamp(260px, 52vh, 340px);
-  }
-
-  .ppccr-sankey {
-    min-height: clamp(245px, 50vh, 330px);
   }
 
   .kpiDash__stockGrid {
