@@ -1,0 +1,369 @@
+{
+  "generatedAt": "2026-03-21",
+  "origin": "http://127.0.0.1:8091/index.html?qa=release-gate-final",
+  "directValidationEnvironment": "Chromium local sobre macOS",
+  "windowsApproximation": "Override temporal scoped del modal con Segoe UI en runtime, no persistente",
+  "releaseVerdict": "CONDITIONAL GO",
+  "releaseVerdictReason": [
+    "El modal cumple los requisitos funcionales y visuales del gate en un origen limpio y sin caché.",
+    "No hubo validación en una PC Windows física.",
+    "Sigue existiendo una higiene pendiente de cache busting entre public/index.html y public/sw.js."
+  ],
+  "consoleErrors": 0,
+  "matrix": [
+    {
+      "viewport": "1280x720",
+      "step": 1,
+      "clientHeight": 496,
+      "scrollHeight": 496,
+      "delta": 0,
+      "result": "PASS",
+      "note": "Sin scroll vertical indebido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 698.3984375
+    },
+    {
+      "viewport": "1280x720",
+      "step": 2,
+      "clientHeight": 496,
+      "scrollHeight": 496,
+      "delta": 0,
+      "result": "PASS",
+      "note": "Sin scroll vertical indebido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 698.3984375
+    },
+    {
+      "viewport": "1280x720",
+      "step": 3,
+      "clientHeight": 496,
+      "scrollHeight": 764,
+      "delta": 268,
+      "result": "PASS",
+      "note": "Scroll vertical esperado por contenido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 698.3984375
+    },
+    {
+      "viewport": "1280x720",
+      "step": 4,
+      "clientHeight": 496,
+      "scrollHeight": 496,
+      "delta": 0,
+      "result": "PASS",
+      "note": "Sin scroll vertical indebido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 698.3984375
+    },
+    {
+      "viewport": "1366x768",
+      "step": 1,
+      "clientHeight": 543,
+      "scrollHeight": 543,
+      "delta": 0,
+      "result": "PASS",
+      "note": "Sin scroll vertical indebido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 744.953125
+    },
+    {
+      "viewport": "1366x768",
+      "step": 2,
+      "clientHeight": 543,
+      "scrollHeight": 543,
+      "delta": 0,
+      "result": "PASS",
+      "note": "Sin scroll vertical indebido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 744.953125
+    },
+    {
+      "viewport": "1366x768",
+      "step": 3,
+      "clientHeight": 543,
+      "scrollHeight": 764,
+      "delta": 221,
+      "result": "PASS",
+      "note": "Scroll vertical esperado por contenido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 744.953125
+    },
+    {
+      "viewport": "1366x768",
+      "step": 4,
+      "clientHeight": 543,
+      "scrollHeight": 543,
+      "delta": 0,
+      "result": "PASS",
+      "note": "Sin scroll vertical indebido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 744.953125
+    },
+    {
+      "viewport": "1440x900",
+      "step": 1,
+      "clientHeight": 558,
+      "scrollHeight": 558,
+      "delta": 0,
+      "result": "PASS",
+      "note": "Sin scroll vertical indebido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 760
+    },
+    {
+      "viewport": "1440x900",
+      "step": 2,
+      "clientHeight": 558,
+      "scrollHeight": 558,
+      "delta": 0,
+      "result": "PASS",
+      "note": "Sin scroll vertical indebido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 760
+    },
+    {
+      "viewport": "1440x900",
+      "step": 3,
+      "clientHeight": 558,
+      "scrollHeight": 764,
+      "delta": 206,
+      "result": "PASS",
+      "note": "Scroll vertical esperado por contenido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 760
+    },
+    {
+      "viewport": "1440x900",
+      "step": 4,
+      "clientHeight": 558,
+      "scrollHeight": 558,
+      "delta": 0,
+      "result": "PASS",
+      "note": "Sin scroll vertical indebido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 760
+    },
+    {
+      "viewport": "1536x864",
+      "step": 1,
+      "clientHeight": 558,
+      "scrollHeight": 558,
+      "delta": 0,
+      "result": "PASS",
+      "note": "Sin scroll vertical indebido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 760
+    },
+    {
+      "viewport": "1536x864",
+      "step": 2,
+      "clientHeight": 558,
+      "scrollHeight": 558,
+      "delta": 0,
+      "result": "PASS",
+      "note": "Sin scroll vertical indebido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 760
+    },
+    {
+      "viewport": "1536x864",
+      "step": 3,
+      "clientHeight": 558,
+      "scrollHeight": 764,
+      "delta": 206,
+      "result": "PASS",
+      "note": "Scroll vertical esperado por contenido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 760
+    },
+    {
+      "viewport": "1536x864",
+      "step": 4,
+      "clientHeight": 558,
+      "scrollHeight": 558,
+      "delta": 0,
+      "result": "PASS",
+      "note": "Sin scroll vertical indebido",
+      "horizontalOverflow": {
+        "modal": 0,
+        "card": 0,
+        "body": 0,
+        "footer": 0
+      },
+      "footerHeight": 59,
+      "cardHeight": 760
+    }
+  ],
+  "monotonicity": [
+    { "viewport": "1366x720", "cardHeight": 698.3984375, "bodyClientHeight": 496 },
+    { "viewport": "1366x736", "cardHeight": 713.9140625, "bodyClientHeight": 512 },
+    { "viewport": "1366x760", "cardHeight": 737.1953125, "bodyClientHeight": 535 },
+    { "viewport": "1366x768", "cardHeight": 744.953125, "bodyClientHeight": 543 },
+    { "viewport": "1366x800", "cardHeight": 760, "bodyClientHeight": 558 },
+    { "viewport": "1366x864", "cardHeight": 760, "bodyClientHeight": 558 },
+    { "viewport": "1366x900", "cardHeight": 760, "bodyClientHeight": 558 }
+  ],
+  "smoke": {
+    "keyboardTrapForwardInsideModal": true,
+    "keyboardTrapReverseInsideModal": true,
+    "closeButtonRestoresFocusToOpener": true,
+    "escapeRestoresFocusToOpener": true,
+    "restartResetsToStep1": true,
+    "scrollResetAfterStepChange": true,
+    "resizeStable": true,
+    "overflowHintsStep3": {
+      "top": {
+        "scrollTop": 0,
+        "overflowTop": false,
+        "overflowBottom": true,
+        "scrollable": true
+      },
+      "bottom": {
+        "scrollTop": 178.5,
+        "overflowTop": true,
+        "overflowBottom": false,
+        "scrollable": true
+      }
+    },
+    "closeButton": {
+      "hidden": true,
+      "ariaHidden": "true",
+      "activeId": "startInterviewBtn"
+    },
+    "escape": {
+      "hidden": true,
+      "ariaHidden": "true",
+      "activeId": "startInterviewBtn"
+    }
+  },
+  "windowsSimulation": [
+    {
+      "viewport": "1280x720",
+      "step2": { "clientHeight": 496, "scrollHeight": 496, "delta": 0, "result": "PASS" },
+      "step4": { "clientHeight": 496, "scrollHeight": 496, "delta": 0, "result": "PASS" }
+    },
+    {
+      "viewport": "1366x768",
+      "step2": { "clientHeight": 543, "scrollHeight": 543, "delta": 0, "result": "PASS" },
+      "step4": { "clientHeight": 543, "scrollHeight": 543, "delta": 0, "result": "PASS" }
+    }
+  ],
+  "mobileSmoke": {
+    "viewport": "390x844",
+    "horizontalOverflow": {
+      "modal": 0,
+      "card": 0,
+      "body": 0,
+      "footer": 0
+    },
+    "clientHeight": 237,
+    "scrollHeight": 812,
+    "delta": 575,
+    "result": "PASS",
+    "note": "Sin overflow horizontal. Scroll vertical esperable en mobile."
+  },
+  "artifacts": {
+    "screenshots": [
+      ".codex-artifacts/modal-release/2026-03-21/direct-1366x768-step1.png",
+      ".codex-artifacts/modal-release/2026-03-21/direct-1366x768-step2.png",
+      ".codex-artifacts/modal-release/2026-03-21/direct-1366x768-step3.png",
+      ".codex-artifacts/modal-release/2026-03-21/direct-1366x768-step4.png",
+      ".codex-artifacts/modal-release/2026-03-21/direct-1440x900-step1.png",
+      ".codex-artifacts/modal-release/2026-03-21/direct-1440x900-step2.png",
+      ".codex-artifacts/modal-release/2026-03-21/direct-1440x900-step3.png",
+      ".codex-artifacts/modal-release/2026-03-21/direct-1440x900-step4.png",
+      ".codex-artifacts/modal-release/2026-03-21/simulated-segoe-1366x768-step2.png"
+    ],
+    "report": ".codex-artifacts/modal-release/2026-03-21/modal-release-review.md"
+  }
+}
