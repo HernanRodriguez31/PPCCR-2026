@@ -2,7 +2,7 @@
 
 (() => {
   if (!("serviceWorker" in navigator)) return;
-  const swUrl = "/sw.js?v=20260313-home-phase2-release-blockers1";
+  const swUrl = "/sw.js?v=20260323-dashboard-charts-release1";
 
   window.addEventListener(
     "load",

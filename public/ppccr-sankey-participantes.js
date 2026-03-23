@@ -207,6 +207,14 @@
     return lines.length ? lines : [label];
   }
 
+  function clamp(value, min, max) {
+    if (!Number.isFinite(value)) return min;
+    if (!Number.isFinite(min)) min = value;
+    if (!Number.isFinite(max)) max = value;
+    if (max < min) return min;
+    return Math.min(max, Math.max(min, value));
+  }
+
   function render(container, inputData, options = {}) {
     const data = normalizeInputData(inputData);
     const showHeader = options.showHeader !== false;
@@ -217,24 +225,40 @@
       0,
       Math.round(container?.clientWidth || 0),
     );
-    const isMobile = containerWidth > 0 && containerWidth <= 620;
-    const isTablet = !isMobile && containerWidth > 0 && containerWidth <= 1024;
+    const isNarrow = containerWidth > 0 && containerWidth <= 440;
+    const isCompact =
+      !isNarrow && containerWidth > 0 && containerWidth <= 620;
+    const isWide = !isNarrow && !isCompact;
+    const useCompactCopy = !isWide;
+    const orderedMotivos = data.motivos;
+    const motivoCount = Math.max(1, orderedMotivos.length);
+    const motivoTotal = orderedMotivos.reduce((acc, motivo) => acc + motivo.n, 0);
 
-    const W = isMobile ? 360 : isTablet ? 460 : 520;
-    const H = isMobile ? 288 : isTablet ? 256 : 236;
-    const x0 = isMobile ? 72 : isTablet ? 104 : 130;
-    const x1 = isMobile ? 170 : isTablet ? 226 : 254;
-    const x2 = isMobile ? 284 : isTablet ? 362 : 402;
-    const y0 = isMobile ? 30 : 28;
-    const nodeW = isMobile ? 12 : 10;
-    const splitGap = isMobile ? 7 : 5;
-    const motivoGap = isMobile ? 10 : isTablet ? 8 : 6;
-    const availableHeight = isMobile ? 186 : isTablet ? 168 : 150;
-
-    const k = Math.max(
-      isMobile ? 4.1 : 3.5,
-      Math.min(isMobile ? 5.4 : 4.7, availableHeight / Math.max(1, data.total)),
-    );
+    const W = isNarrow ? 360 : isCompact ? 440 : 500;
+    const H = isNarrow ? 264 : isCompact ? 228 : 214;
+    const nodeW = isNarrow ? 11 : 10;
+    const splitGap = isNarrow ? 6 : isCompact ? 5 : 4;
+    const motivoGap = isNarrow ? 8 : isCompact ? 6 : 5;
+    const drawableTop = isNarrow ? 22 : isCompact ? 20 : 18;
+    const drawableBottom = isNarrow ? 14 : isCompact ? 15 : 16;
+    const drawableHeight = Math.max(1, H - drawableTop - drawableBottom);
+    const leftLabelGutter = isNarrow ? 82 : isCompact ? 106 : 116;
+    const rightLabelGutter = isNarrow ? 62 : isCompact ? 84 : 88;
+    const x0 = leftLabelGutter;
+    const x2 = W - rightLabelGutter - nodeW;
+    const x1 = Math.round(x0 + (x2 - x0) * (isNarrow ? 0.45 : 0.44));
+    const y0 = drawableTop;
+    const maxK = isNarrow ? 5.0 : isCompact ? 4.5 : 4.15;
+    const effectiveSplitGap = data.fit > 0 && data.fuera > 0 ? splitGap : 0;
+    const kForTotal =
+      data.total > 0 ? (drawableHeight - effectiveSplitGap) / data.total : maxK;
+    const kForMotivos =
+      motivoTotal > 0
+        ? (drawableHeight - effectiveSplitGap - motivoGap * (motivoCount - 1)) /
+          motivoTotal
+        : maxK;
+    const rawK = Math.min(maxK, kForTotal, kForMotivos);
+    const k = Number.isFinite(rawK) && rawK > 0 ? rawK : 0;
 
     const nodes = {
       total: {
@@ -260,7 +284,7 @@
       fuera: {
         key: "fuera",
         x: x1,
-        y: y0 + data.fit * k + splitGap,
+        y: y0 + data.fit * k + effectiveSplitGap,
         h: data.fuera * k,
         c: COLORS.nodeFuera,
         label: "Fuera de screening",
@@ -269,9 +293,7 @@
       }
     };
 
-    const orderedMotivos = data.motivos;
-
-    let yMotivo = nodes.fuera.y + 2;
+    let yMotivo = nodes.fuera.y;
     const motivoNodes = orderedMotivos.map((motivo) => {
       const displayValue = motivo.n;
       const h = displayValue * k;
@@ -313,6 +335,7 @@
 
     const svg = svgEl("svg", {
       viewBox: `0 0 ${W} ${H}`,
+      preserveAspectRatio: "xMidYMid meet",
       role: "img",
       "aria-label": "Flujo de participantes y segmentación de screening"
     });
@@ -544,13 +567,13 @@
     addCallout({
       node: nodes.total,
       side: "left",
-      textX: x0 - (isMobile ? 10 : 18),
-      y: nodes.total.y + (isMobile ? 24 : 28),
-      maxChars: isMobile ? 12 : 16,
+      textX: x0 - (isNarrow ? 10 : isCompact ? 14 : 18),
+      y: nodes.total.y + (isNarrow ? 24 : isCompact ? 26 : 28),
+      maxChars: isNarrow ? 12 : isCompact ? 14 : 16,
       fromX: nodes.total.x,
       fromY: nodes.total.y + nodes.total.h * 0.36,
-      toX: x0 - (isMobile ? 14 : 22),
-      toY: nodes.total.y + (isMobile ? 26 : 30),
+      toX: x0 - (isNarrow ? 14 : isCompact ? 18 : 22),
+      toY: nodes.total.y + (isNarrow ? 26 : isCompact ? 28 : 30),
     });
 
     const leftFlowStartX = nodes.total.x + nodeW;
@@ -558,21 +581,21 @@
     const leftFlowLabelX =
       leftFlowStartX + (leftFlowEndX - leftFlowStartX) * 0.54;
 
-    addNodeCenterLabel(nodes.fit, "N " + data.fit, isMobile ? "FIT kits" : "Criterio FIT", {
+    addNodeCenterLabel(nodes.fit, "N " + data.fit, useCompactCopy ? "FIT kits" : "Criterio FIT", {
       x: leftFlowLabelX,
       y: nodes.fit.y + nodes.fit.h * 0.5,
     });
     addNodeCenterLabel(
       nodes.fuera,
       "N " + data.fuera,
-      isMobile ? "Fuera scr." : "Fuera de screening",
+      useCompactCopy ? "Fuera scr." : "Fuera de screening",
       {
       x: leftFlowLabelX,
       y: nodes.fuera.y + nodes.fuera.h * 0.5,
       },
     );
 
-    const motivoInlineLabels = isMobile
+    const motivoInlineLabels = useCompactCopy
       ? {
           edad: "Edad <45",
           seguimiento: "Seguim.",
@@ -583,7 +606,7 @@
           seguimiento: "Seg. Vigente",
           riesgo: "Mayor riesgo",
         };
-    const motivoInlineLabelX = isMobile ? x2 - 8 : x2 - 12;
+    const motivoInlineLabelX = isNarrow ? x2 - 8 : isCompact ? x2 - 10 : x2 - 12;
 
     motivoNodes.forEach((motivo) => {
       const inlineLabel = motivoInlineLabels[motivo.key] || motivo.label;
@@ -597,26 +620,30 @@
       svg.appendChild(inlineText);
     });
 
-    let minCalloutY = nodes.fuera.y + (isMobile ? 10 : 6);
-    motivoNodes.forEach((motivo) => {
+    let minCalloutY = nodes.fuera.y + (isNarrow ? 10 : 6);
+    const rightCalloutGap = isNarrow ? 18 : 16;
+    const rightCalloutBottom = H - drawableBottom - (isNarrow ? 10 : 8);
+    motivoNodes.forEach((motivo, index) => {
       // Evita solapado cuando los nodos son pequeños o hay más de 3 motivos.
       const centeredY = Math.round(
-        motivo.y + Math.max(isMobile ? 11 : 9, motivo.h * 0.52),
+        motivo.y + Math.max(isNarrow ? 11 : 9, motivo.h * 0.52),
       );
-      const calloutY = Math.max(minCalloutY, centeredY);
-      minCalloutY = calloutY + (isMobile ? 20 : 18);
+      const remaining = motivoNodes.length - 1 - index;
+      const maxYForThis = rightCalloutBottom - remaining * rightCalloutGap;
+      const calloutY = clamp(Math.max(minCalloutY, centeredY), minCalloutY, maxYForThis);
+      minCalloutY = calloutY + rightCalloutGap;
 
       addCallout({
         node: motivo,
         side: "right",
-        textX: x2 + nodeW + (isMobile ? 16 : 20),
+        textX: x2 + nodeW + (isNarrow ? 16 : isCompact ? 18 : 20),
         y: calloutY,
         label: "",
-        maxChars: isMobile ? 12 : 17,
+        maxChars: isNarrow ? 12 : isCompact ? 14 : 17,
         meta: "",
         fromX: motivo.x + nodeW,
         fromY: motivo.y + motivo.h * 0.52,
-        toX: x2 + nodeW + (isMobile ? 12 : 16),
+        toX: x2 + nodeW + (isNarrow ? 12 : 14),
         toY: calloutY - 2,
       });
     });

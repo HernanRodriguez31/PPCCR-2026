@@ -183,6 +183,41 @@
     return String(name || "").replace(/\s+/g, "\n");
   }
 
+  const KPI_CHART_FONT_FAMILY =
+    "system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+
+  let stationAxisMeasureContext = null;
+
+  function clampNumber(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function measureMultilineAxisLabelWidth(labels, fontSize, fontWeight) {
+    if (!stationAxisMeasureContext) {
+      const canvas = document.createElement("canvas");
+      stationAxisMeasureContext = canvas.getContext("2d");
+    }
+
+    const ctx = stationAxisMeasureContext;
+    if (!ctx) return 0;
+
+    ctx.font =
+      String(fontWeight || 500) +
+      " " +
+      String(fontSize || 10) +
+      "px " +
+      KPI_CHART_FONT_FAMILY;
+
+    return labels.reduce((maxWidth, label) => {
+      const width = String(label || "")
+        .split("\n")
+        .reduce((lineMax, line) => {
+          return Math.max(lineMax, Math.ceil(ctx.measureText(line).width));
+        }, 0);
+      return Math.max(maxWidth, width);
+    }, 0);
+  }
+
   function buildLoadingShellMarkup() {
     return [
       '<div class="kpiDash__loadingShell" role="status" aria-live="polite">',
@@ -873,7 +908,9 @@
       "<h4>Distribución de Participantes</h4>",
       "<p>Participantes y segmentación de screening</p>",
       "</header>",
+      '<div class="kpiDash__chart kpiDash__chart--sankey">',
       '<div id="ppccrSankeyParticipantes" class="ppccr-sankey"></div>',
+      "</div>",
       "</article>",
       "</section>",
       '<section class="kpiDash__funnel" aria-label="Flujo FIT por estación">',
@@ -2357,6 +2394,27 @@
         const axisLabels = fullStationNames.map((name) =>
           formatStationAxisLabel(name, isMobile ? "mobile" : "desktop"),
         );
+        const horizontalAxisLabelFontSize = isDesktop ? 10.2 : 9.6;
+        const horizontalAxisLabelMargin = isDesktop ? 8 : 10;
+        const horizontalAxisLabelInset = isDesktop ? 14 : 12;
+        const horizontalLabelWidth = isHorizontal
+          ? measureMultilineAxisLabelWidth(
+              axisLabels,
+              horizontalAxisLabelFontSize,
+              500,
+            )
+          : 0;
+        const horizontalGridLeft = isHorizontal
+          ? clampNumber(
+              Math.ceil(
+                horizontalLabelWidth +
+                  horizontalAxisLabelMargin +
+                  horizontalAxisLabelInset,
+              ),
+              isMobile ? 74 : 96,
+              isMobile ? 90 : 112,
+            )
+          : 0;
         const barValueLabel = {
           show: true,
           position: isHorizontal ? "right" : "top",
@@ -2364,7 +2422,7 @@
           color: chartPalette.axisText,
           fontSize: isMobile ? 10 : 10.5,
           fontWeight: 600,
-          fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+          fontFamily: KPI_CHART_FONT_FAMILY,
           formatter: function (params) {
             if (
               params.value === null ||
@@ -2465,8 +2523,8 @@
           },
           grid: isHorizontal
             ? isMobile
-              ? { left: 92, right: 14, top: 48, bottom: 14 }
-              : { left: 140, right: 24, top: 54, bottom: 18 }
+              ? { left: horizontalGridLeft, right: 14, top: 48, bottom: 14 }
+              : { left: horizontalGridLeft, right: 24, top: 54, bottom: 18 }
             : { left: 44, right: 16, top: 54, bottom: 34 },
           xAxis: isHorizontal
             ? {
@@ -2502,16 +2560,19 @@
           yAxis: isHorizontal
             ? {
                 type: "category",
-                data: axisLabels,
-                axisLabel: {
-                  color: chartPalette.axisText,
-                  fontSize: isDesktop ? 10.2 : 9.6,
-                  lineHeight: isDesktop ? 13.5 : 13,
-                  margin: isDesktop ? 10 : 12,
-                },
-                axisTick: { show: false },
-                axisLine: { show: false },
-              }
+              data: axisLabels,
+              axisLabel: {
+                color: chartPalette.axisText,
+                fontSize: horizontalAxisLabelFontSize,
+                fontFamily: KPI_CHART_FONT_FAMILY,
+                lineHeight: isDesktop ? 13.5 : 13,
+                margin: horizontalAxisLabelMargin,
+                align: "right",
+                verticalAlign: "middle",
+              },
+              axisTick: { show: false },
+              axisLine: { show: false },
+            }
             : {
                 type: "value",
                 splitNumber: 4,
