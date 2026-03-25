@@ -51,6 +51,139 @@
     sankey: "[data-kpi-chart-flow]",
     posneg: "[data-kpi-chart-posneg]",
   };
+  const KPI_LOG_PREFIX = "[KPI Dashboard]";
+  const KPI_DEBUG_KEY = "__PPCCR_KPI_DEBUG__";
+  const KPI_SLOW_LOAD_MESSAGE =
+    "Dashboard cargando más de lo esperado. Revisar consola.";
+
+  function ensureKpiDebugState() {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    const existing = window[KPI_DEBUG_KEY];
+    if (existing && typeof existing === "object") {
+      if (!existing.urls || typeof existing.urls !== "object") {
+        existing.urls = {};
+      }
+      if (!existing.sourceStatus || typeof existing.sourceStatus !== "object") {
+        existing.sourceStatus = {};
+      }
+      if (!("stage" in existing)) {
+        existing.stage = null;
+      }
+      if (!("payload" in existing)) {
+        existing.payload = null;
+      }
+      if (!("model" in existing)) {
+        existing.model = null;
+      }
+      if (!("lastError" in existing)) {
+        existing.lastError = null;
+      }
+      return existing;
+    }
+
+    const debugState = {
+      stage: null,
+      urls: {},
+      payload: null,
+      model: null,
+      lastError: null,
+      sourceStatus: {},
+    };
+
+    window[KPI_DEBUG_KEY] = debugState;
+    return debugState;
+  }
+
+  function resetKpiDebugState() {
+    const debugState = ensureKpiDebugState();
+    if (!debugState) {
+      return null;
+    }
+
+    debugState.stage = null;
+    debugState.urls = {};
+    debugState.payload = null;
+    debugState.model = null;
+    debugState.lastError = null;
+    debugState.sourceStatus = {};
+
+    return debugState;
+  }
+
+  function updateKpiDebugState(patch) {
+    const debugState = ensureKpiDebugState();
+    if (!debugState || !patch || typeof patch !== "object") {
+      return debugState;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, "stage")) {
+      debugState.stage = patch.stage;
+    }
+    if (patch.urls && typeof patch.urls === "object") {
+      debugState.urls = Object.assign({}, debugState.urls, patch.urls);
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "payload")) {
+      debugState.payload = patch.payload;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "model")) {
+      debugState.model = patch.model;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "lastError")) {
+      debugState.lastError = patch.lastError;
+    }
+    if (patch.sourceStatus && typeof patch.sourceStatus === "object") {
+      debugState.sourceStatus = Object.assign(
+        {},
+        debugState.sourceStatus,
+        patch.sourceStatus,
+      );
+    }
+
+    return debugState;
+  }
+
+  function serializeKpiError(error, extra) {
+    const serialized = {
+      name:
+        error && typeof error === "object" && error.name
+          ? String(error.name)
+          : "Error",
+      message:
+        error && typeof error === "object" && error.message
+          ? String(error.message)
+          : String(error || "Error desconocido"),
+      stack:
+        error && typeof error === "object" && error.stack
+          ? String(error.stack)
+          : "",
+    };
+
+    return Object.assign(serialized, extra || {});
+  }
+
+  function showSlowLoadFallback(root) {
+    if (!root || !root.querySelector(".kpiDash__loadingShell")) {
+      return false;
+    }
+    if (root.querySelector("[data-kpi-diagnostic-slow]")) {
+      return false;
+    }
+
+    const diagnostic = document.createElement("div");
+    diagnostic.className = "kpiDash__empty";
+    diagnostic.setAttribute("role", "status");
+    diagnostic.setAttribute("data-kpi-diagnostic-slow", "");
+
+    const copy = document.createElement("p");
+    copy.textContent = KPI_SLOW_LOAD_MESSAGE;
+    diagnostic.appendChild(copy);
+
+    root.appendChild(diagnostic);
+    return true;
+  }
 
   function initKpiDashboard() {
     const root = document.querySelector(SELECTORS.root);
@@ -58,51 +191,130 @@
       return;
     }
 
+    resetKpiDebugState();
+    updateKpiDebugState({ stage: "init" });
+    console.info(KPI_LOG_PREFIX + " init start.", {
+      rootSelector: SELECTORS.root,
+    });
+
     renderLoading(root);
+    updateKpiDebugState({ stage: "loading" });
+
+    const slowLoadTimer = window.setTimeout(() => {
+      if (showSlowLoadFallback(root)) {
+        updateKpiDebugState({ stage: "slow-load" });
+        console.warn(KPI_LOG_PREFIX + " " + KPI_SLOW_LOAD_MESSAGE);
+      }
+    }, 8000);
 
     loadAllDataSources()
       .then((payload) => {
+        updateKpiDebugState({
+          stage: "payload-ready",
+          payload,
+          lastError: null,
+          sourceStatus: payload.status || {},
+        });
         const model = buildModel(payload);
+        updateKpiDebugState({
+          stage: "model-ready",
+          model,
+          sourceStatus: model.sourceStatus || payload.status || {},
+        });
         renderDashboard(root, model);
-        return renderCharts(root, model);
+        return renderCharts(root, model).then(() => {
+          updateKpiDebugState({ stage: "rendered" });
+        });
       })
       .catch((error) => {
+        const serializedError = serializeKpiError(error);
+        updateKpiDebugState({
+          stage: "error",
+          lastError: serializedError,
+        });
         console.error(
-          "[KPI Dashboard] No se pudo construir el dashboard con datos agregados.",
-          error,
+          KPI_LOG_PREFIX + " No se pudo construir el dashboard con datos agregados.",
+          serializedError,
         );
         renderEmptyState(root);
+      })
+      .finally(() => {
+        window.clearTimeout(slowLoadTimer);
       });
   }
 
   async function loadAllDataSources() {
     const entries = Object.entries(GVIZ_SOURCES);
     const loadedAt = new Date().toISOString();
+    const requests = entries.map(([sourceKey, source]) => {
+      const url = gvizUrl(source);
+      updateKpiDebugState({
+        urls: {
+          [sourceKey]: url,
+        },
+      });
+      console.info(KPI_LOG_PREFIX + " GViz URL construida.", {
+        sourceKey,
+        url,
+      });
+
+      return {
+        sourceKey,
+        source,
+        url,
+        request: fetchCsv(url),
+      };
+    });
     const settled = await Promise.allSettled(
-      entries.map(([, source]) => fetchCsv(gvizUrl(source))),
+      requests.map((requestEntry) => requestEntry.request),
     );
 
     const matrices = {};
     const status = {};
 
     settled.forEach((result, index) => {
-      const sourceKey = entries[index][0];
+      const requestEntry = requests[index];
+      const sourceKey = requestEntry.sourceKey;
+      const source = requestEntry.source;
       if (result.status === "fulfilled") {
-        matrices[sourceKey] = parseCsv(result.value);
+        const matrix = parseCsv(result.value);
+        const headers = Array.isArray(matrix[0]) ? matrix[0] : [];
+        const rowsRead = Math.max(0, matrix.length - 1);
+
+        matrices[sourceKey] = matrix;
         status[sourceKey] = "ok";
+        console.info(KPI_LOG_PREFIX + " Resultado de fuente.", {
+          sourceKey,
+          label: source.label || sourceKey,
+          status: "ok",
+          rowsRead,
+          headers,
+        });
         return;
       }
 
+      const serializedError = serializeKpiError(result.reason, {
+        sourceKey,
+      });
       matrices[sourceKey] = null;
       status[sourceKey] = "error";
+      updateKpiDebugState({
+        lastError: serializedError,
+      });
       console.warn(
-        "[KPI Dashboard] Fuente no disponible:",
-        sourceKey,
-        result.reason,
+        KPI_LOG_PREFIX + " Fuente no disponible.",
+        serializedError,
       );
+      console.info(KPI_LOG_PREFIX + " Resultado de fuente.", {
+        sourceKey,
+        label: source.label || sourceKey,
+        status: "error",
+        rowsRead: null,
+        headers: [],
+      });
     });
 
-    const sources = entries.map(([sourceKey, source]) => {
+    const sources = requests.map(({ sourceKey, source }) => {
       const matrix = matrices[sourceKey];
       const rowsRead =
         status[sourceKey] === "ok" && Array.isArray(matrix)
@@ -117,7 +329,7 @@
       };
     });
 
-    return {
+    const payload = {
       matrices,
       status,
       audit: {
@@ -128,6 +340,13 @@
         hasErrors: sources.some((source) => source.status !== "ok"),
       },
     };
+
+    updateKpiDebugState({
+      payload,
+      sourceStatus: status,
+    });
+
+    return payload;
   }
 
   function gvizUrl({ sheet, gid, tq }) {
@@ -563,7 +782,7 @@
       negativos: totals.resultadosFitNegativos,
     };
 
-    return {
+    const model = {
       stations,
       totals,
       fitFlowTotals,
@@ -571,6 +790,19 @@
       audit: normalizedAudit,
       integrity: validateDataIntegrity(stations, totals),
     };
+
+    updateKpiDebugState({
+      model,
+      sourceStatus: effectiveStatus,
+    });
+    console.info(KPI_LOG_PREFIX + " Resumen final del model.", {
+      stations: model.stations,
+      totals: model.totals,
+      integrity: model.integrity,
+      sourceStatus: model.sourceStatus,
+    });
+
+    return model;
   }
 
   function ensureStation(stationsMap, stationKey, rawLabel) {
@@ -637,17 +869,35 @@
     const step2Index = findHeaderIndex(headers, ["excluido", "paso", "2"]);
     const step3Index = findHeaderIndex(headers, ["excluido", "paso", "3"]);
     const ageIndex = findHeaderIndex(headers, ["excluido", "edad"]);
-    const hasRequiredColumns =
-      fitIndex >= 0 && step2Index >= 0 && step3Index >= 0 && ageIndex >= 0;
+    const pivotColumns = [
+      { label: "Candidato a Test FIT", index: fitIndex },
+      { label: "Excluido Paso 2", index: step2Index },
+      { label: "Excluido Paso 3", index: step3Index },
+      { label: "Excluido por edad", index: ageIndex },
+    ];
+    const recognizedColumns = pivotColumns.filter((column) => column.index >= 0);
+    const missingColumns = pivotColumns
+      .filter((column) => column.index < 0)
+      .map((column) => column.label);
 
-    if (!hasRequiredColumns) {
+    if (recognizedColumns.length === 0) {
       stationsMap.forEach((station) => {
         setEntrevistasMetrics(station, null);
       });
       console.warn(
-        "[KPI Dashboard] entrevistasPivot con columnas incompletas. Se mostrará estado de Error al cargar.",
+        "[KPI Dashboard] entrevistasPivot sin columnas reconocibles del pivot. Se mostrará estado de Error al cargar.",
       );
       return;
+    }
+
+    if (missingColumns.length > 0) {
+      console.info(
+        "[KPI Dashboard] entrevistasPivot con columnas faltantes. Se asumen en 0.",
+        {
+          missingColumns,
+          availableHeaders: matrix[0],
+        },
+      );
     }
 
     stationsMap.forEach((station) => {
@@ -2919,9 +3169,13 @@
         window.addEventListener("resize", resize, { passive: true });
       }
     } catch (error) {
+      const serializedError = serializeKpiError(error);
+      updateKpiDebugState({
+        lastError: serializedError,
+      });
       console.error(
-        "[KPI Dashboard] ECharts no disponible para renderizar gráficos.",
-        error,
+        KPI_LOG_PREFIX + " ECharts no disponible para renderizar gráficos.",
+        serializedError,
       );
       barsEl.innerHTML =
         '<div class="kpiDash__chartFallback">No se pudo inicializar el gráfico comparativo.</div>';
