@@ -10,6 +10,13 @@ const PAGE_A4_MM = {
   height: 297,
 };
 
+const DEFAULT_SCALE_PRESETS = [
+  { name: "preset-1", scale: 2.4, jpegQuality: 0.92 },
+  { name: "preset-2", scale: 2.2, jpegQuality: 0.88 },
+  { name: "preset-3", scale: 2.0, jpegQuality: 0.85 },
+  { name: "preset-4", scale: 1.8, jpegQuality: 0.82 },
+];
+
 const DEFAULT_OPTIONS = {
   headerSelector: "#top",
   dashboardSelector: "#kpi-dashboard-ppccr",
@@ -24,12 +31,16 @@ const DEFAULT_OPTIONS = {
   headerHeightMultiplier: 1,
   fitSinglePage: true,
   minSinglePageScale: 0.9,
+  maxPdfBytes: 25 * 1024 * 1024,
+  preferredScalePresets: DEFAULT_SCALE_PRESETS,
+  preferLegibilityOverSinglePage: true,
   repeatHeaderOnEachPage: true,
   enableSnapshotSwap: true,
-  snapshotSelectors: [],
+  snapshotSelectors: [".kpiDash__trkGaugeWrap", ".ppccr-sankey svg"],
   ignoreSelectors: [],
   extraCloneCss: "",
   debug: false,
+  debugPdf: false,
 };
 
 const DEFAULT_CLONE_HIDE_SELECTORS = [
@@ -55,226 +66,35 @@ const DEFAULT_CLONE_HIDE_SELECTORS = [
 let createPatternGuardState = null;
 
 const PDF_HEADER_VISUAL_ENHANCE_CSS = [
-  "#top .site-topbar__inner,",
-  "#top .topbar {",
-  "  padding-top: 14px !important;",
-  "  padding-bottom: 12px !important;",
-  "}",
-  "#top .brand-mark,",
-  "#top .brand-mark--left {",
-  "  width: clamp(78px, 8.8vw, 110px) !important;",
-  "  height: clamp(78px, 8.8vw, 110px) !important;",
-  "  min-width: 78px !important;",
-  "  display: flex !important;",
-  "  align-items: center !important;",
-  "  justify-content: center !important;",
-  "  aspect-ratio: 1 / 1 !important;",
-  "}",
-  "#top .brand-ribbon {",
-  "  width: clamp(64px, 7vw, 90px) !important;",
-  "  max-width: none !important;",
-  "  height: auto !important;",
-  "  object-fit: contain !important;",
-  "  transform: none !important;",
-  "}",
-  "#top .partners-bar,",
-  "#top .logo-strip.partners-bar {",
-  "  padding-top: 10px !important;",
-  "  padding-bottom: 10px !important;",
-  "}",
-  "#top #partner-logos.partners-strip > *,",
-  "#top #partner-logos.partners-strip > a,",
-  "#top #partner-logos.partners-strip > .partner-logo,",
-  "#top #partner-logos.partners-strip > .partner-pill {",
-  "  min-height: 44px !important;",
+  "#top, #top * {",
+  "  -webkit-print-color-adjust: exact !important;",
+  "  print-color-adjust: exact !important;",
   "}",
 ].join("\n");
 
 const PDF_DASHBOARD_VISUAL_ENHANCE_CSS = [
-  "#kpi-dashboard-ppccr .kpiDash__reportUpdated {",
-  "  display: block !important;",
-  "  visibility: visible !important;",
-  "  opacity: 1 !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__reportStatus {",
-  "  display: inline-flex !important;",
-  "  visibility: visible !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__reportExportedAt {",
-  "  display: none !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__summaryBar {",
-  "  overflow: hidden !important;",
-  "  border-radius: 999px !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment {",
-  "  overflow: hidden !important;",
-  "  border-radius: inherit !important;",
-  "  clip-path: inset(0 0 0 0 round 999px) !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment + .kpiDash__summaryBarSegment {",
-  "  box-shadow: inset 2px 0 0 rgba(255, 255, 255, 0.95) !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment::before,",
-  "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment::after {",
-  "  content: none !important;",
-  "  display: none !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment--fit {",
-  "  background: #0f5fa6 !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__summaryBarSegment--outside {",
-  "  background: #79b3ea !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__summaryBadgeLabel {",
-  "  width: 100% !important;",
-  "  text-align: center !important;",
-  "  justify-self: center !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__summaryBadge {",
-  "  align-content: center !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__table--flow tbody td:nth-child(3),",
-  "#kpi-dashboard-ppccr .kpiDash__table--flow tbody td:nth-child(6) {",
-  "  vertical-align: middle !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__flowCell {",
-  "  grid-template-columns: 3ch minmax(4.35rem, 4.75rem) !important;",
-  "  align-items: center !important;",
-  "  column-gap: 0.22rem !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__flowPrimary {",
-  "  width: 3ch !important;",
-  "  min-width: 3ch !important;",
-  "  padding: 0 !important;",
-  "  border-radius: 0 !important;",
-  "  border: 0 !important;",
-  "  background: transparent !important;",
-  "  text-align: right !important;",
-  "  font-weight: 600 !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__flowProgress {",
-  "  min-width: 4.35rem !important;",
-  "  width: 4.35rem !important;",
-  "  height: 0.88rem !important;",
-  "  background: linear-gradient(180deg, #dce9f7, #c7dcf2) !important;",
-  "  border: 1px solid rgba(107, 153, 205, 0.58) !important;",
-  "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.78) !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__flowProgress::after {",
-  "  display: none !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__flowProgressFill {",
-  "  background: linear-gradient(90deg, #155a9c, #4a96da) !important;",
-  "  box-shadow: none !important;",
-  "  filter: none !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__flowProgressLabel {",
-  "  color: #18456f !important;",
-  "  font-size: 0.59rem !important;",
-  "  letter-spacing: 0.02em !important;",
-  "  text-shadow: none !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__informCell {",
-  "  grid-template-columns: minmax(1.92rem, auto) minmax(4.85rem, auto) !important;",
-  "  align-items: center !important;",
-  "  justify-content: center !important;",
-  "  gap: 0.22rem !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__informTotal {",
-  "  min-width: 1.92rem !important;",
-  "  height: 1.14rem !important;",
-  "  padding: 0 0.42rem !important;",
-  "  border-radius: 7px !important;",
-  "  font-size: 0.79rem !important;",
-  "  font-weight: 760 !important;",
-  "  color: #0f3f72 !important;",
-  "  border-color: rgba(76, 134, 197, 0.66) !important;",
-  "  background: linear-gradient(160deg, rgba(230, 242, 255, 0.98), rgba(190, 217, 246, 0.95)) !important;",
-  "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.92) !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__informDetail {",
-  "  min-width: 4.85rem !important;",
-  "  width: auto !important;",
-  "  justify-content: flex-start !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__informSplit {",
-  "  width: 4.85rem !important;",
-  "  padding: 0.07rem 0.1rem !important;",
-  "  gap: 0.1rem !important;",
-  "  background: #f3f8fe !important;",
-  "  border: 1px solid rgba(181, 204, 232, 0.58) !important;",
-  "  box-shadow: none !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__informSplitSep {",
-  "  height: 0.56rem !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__informChip {",
-  "  min-width: 1.56rem !important;",
-  "  width: auto !important;",
-  "  height: 0.92rem !important;",
-  "  padding: 0 0.24rem !important;",
-  "  box-shadow: none !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__informChipSign {",
-  "  width: 0.66rem !important;",
-  "  height: 0.66rem !important;",
-  "  margin-right: 0.1rem !important;",
-  "  border-radius: 999px !important;",
-  "  background: rgba(255,255,255,0.18) !important;",
-  "  font-size: 0.54rem !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__informChip--pos .kpiDash__informChipSign {",
-  "  background: rgba(255,255,255,0.56) !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__informChipValue {",
-  "  font-size: 0.64rem !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__informChip--neg {",
-  "  color: #f3f8ff !important;",
-  "  background: linear-gradient(145deg, #1f66ad, #2b79c1) !important;",
-  "  border-color: rgba(24, 90, 158, 0.72) !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__informChip--pos {",
-  "  color: #24568d !important;",
-  "  background: linear-gradient(145deg, rgba(224, 237, 252, 0.96), rgba(196, 218, 244, 0.94)) !important;",
-  "  border-color: rgba(130, 171, 216, 0.72) !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__trkGaugeOverlay {",
-  "  z-index: 7 !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__fitFlowPanel--trk .kpiDash__trkGauge {",
-  "  width: 68px !important;",
-  "  height: 68px !important;",
-  "  background: #d9e5f1 !important;",
-  "  background-image: none !important;",
-  "  box-shadow: inset 0 0 0 1px rgba(14,72,127,0.2), 0 5px 12px rgba(14,55,98,0.14) !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__trkGauge::before,",
-  "#kpi-dashboard-ppccr .kpiDash__trkGauge::after {",
-  "  display: none !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__fitFlowPanel--trk .kpiDash__trkGaugeWrap {",
-  "  align-items: end !important;",
-  "  justify-items: end !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__trkGaugeHit {",
-  "  fill: none !important;",
-  "  stroke-linecap: round !important;",
-  "  pointer-events: none !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__trkGaugeHit--delivered {",
-  "  stroke: #1d69b3 !important;",
-  "  stroke-width: 14 !important;",
-  "}",
-  "#kpi-dashboard-ppccr .kpiDash__trkGaugeHit--pending {",
-  "  stroke: #d7e6f4 !important;",
-  "  stroke-width: 14 !important;",
+  "#kpi-dashboard-ppccr .kpiDash__reportRoot,",
+  "#kpi-dashboard-ppccr .kpiDash__reportRoot * {",
+  "  -webkit-print-color-adjust: exact !important;",
+  "  print-color-adjust: exact !important;",
   "}",
 ].join("\n");
 
 export async function exportPPCCRToPdf(options = {}) {
   const cfg = normalizeOptions(options);
+  initPdfDebugState();
+  updatePdfDebugState({
+    chosenPreset: null,
+    pages: 0,
+    blobSizeBytes: 0,
+    captureMode: null,
+    usedTiles: false,
+    renderWidthMm: null,
+    warnings: [],
+    timings: {},
+  });
+  const totalStart = nowMs();
+  const timings = {};
   const libs = await ensureExportLibs();
   const headerEl = resolveElement(cfg.headerSelector, "Header");
   const dashEl = resolveElement(cfg.dashboardSelector, "Dashboard");
@@ -287,12 +107,18 @@ export async function exportPPCCRToPdf(options = {}) {
     tilesCount: 0,
     dashboardCapture: null,
     canvasReport: [],
+    headerCaptureScale: null,
+    dashboardCaptureScale: null,
+    warnings: [],
   };
 
   try {
+    const assetsStart = nowMs();
     await waitForAssets(headerEl);
     await waitForAssets(dashEl);
+    timings.assetsReadyMs = round2(nowMs() - assetsStart);
 
+    const canvasStableStart = nowMs();
     try {
       resultMeta.canvasReport = await waitForCanvasStable(dashEl, {
         timeoutMs: cfg.canvasStableTimeoutMs,
@@ -304,12 +130,21 @@ export async function exportPPCCRToPdf(options = {}) {
         "[PPCCR PDF] Canvas no estable al iniciar captura. Se continúa con exportación resiliente.",
         canvasError,
       );
+      pushPdfWarning(
+        resultMeta,
+        "Canvas no estable al iniciar captura. Se continúa con exportación resiliente.",
+      );
     }
+    timings.canvasStableMs = round2(nowMs() - canvasStableStart);
 
-    const scaleHeader = computeSafeScale(headerEl, cfg.desiredScale, cfg.maxDimPx);
-    const scaleDash = computeSafeScale(dashEl, cfg.desiredScale, cfg.maxDimPx);
+    const baseCaptureScale = resolveBaseCaptureScale(cfg);
+    const scaleHeader = computeSafeScale(headerEl, baseCaptureScale, cfg.maxDimPx);
+    const scaleDash = computeSafeScale(dashEl, baseCaptureScale, cfg.maxDimPx);
+    resultMeta.headerCaptureScale = scaleHeader;
+    resultMeta.dashboardCaptureScale = scaleDash;
     const headerCloneCss = mergeCloneCss(cfg.extraCloneCss, PDF_HEADER_VISUAL_ENHANCE_CSS);
     const dashboardCloneCss = mergeCloneCss(cfg.extraCloneCss, PDF_DASHBOARD_VISUAL_ENHANCE_CSS);
+    const snapshotStart = nowMs();
     const snapshotReplacements = cfg.enableSnapshotSwap
       ? await captureSnapshotReplacements({
           root: dashEl,
@@ -319,8 +154,10 @@ export async function exportPPCCRToPdf(options = {}) {
           debug: cfg.debug,
         })
       : [];
+    timings.snapshotPrepMs = round2(nowMs() - snapshotStart);
 
     let headerCanvas = null;
+    const headerCaptureStart = nowMs();
     try {
       headerCanvas = await captureElement(headerEl, {
         html2canvas: libs.html2canvas,
@@ -338,12 +175,17 @@ export async function exportPPCCRToPdf(options = {}) {
         "[PPCCR PDF] Falló captura del encabezado. Se usa placeholder para continuar.",
         headerError,
       );
+      pushPdfWarning(
+        resultMeta,
+        "Falló captura del encabezado. Se usa placeholder para continuar.",
+      );
       headerCanvas = createPlaceholderCanvasFromElement(
         headerEl,
         scaleHeader,
         "Encabezado",
       );
     }
+    timings.headerCaptureMs = round2(nowMs() - headerCaptureStart);
 
     const pageMetrics = createPageMetrics(cfg);
     const headerHeightMm =
@@ -362,6 +204,7 @@ export async function exportPPCCRToPdf(options = {}) {
     let primaryDashboardCaptureError = null;
     let dashboardRenderWidthMm = pageMetrics.contentWidthMm;
 
+    const dashboardCaptureStart = nowMs();
     try {
       dashboardCanvas = await captureElement(dashEl, {
         html2canvas: libs.html2canvas,
@@ -385,12 +228,14 @@ export async function exportPPCCRToPdf(options = {}) {
         );
       }
     }
+    timings.dashboardCaptureMs = round2(nowMs() - dashboardCaptureStart);
 
     let dashboardSlices = null;
     const shouldUseTiles =
       !dashboardCanvas || isCanvasOverLimits(dashboardCanvas, cfg.maxDimPx, cfg.maxAreaPx);
 
     if (shouldUseTiles) {
+      const tileCaptureStart = nowMs();
       try {
         dashboardSlices = await captureDashboardTiles({
           element: dashEl,
@@ -414,48 +259,29 @@ export async function exportPPCCRToPdf(options = {}) {
           "[PPCCR PDF] Falló captura por tiles. Se usa placeholder para completar exportación.",
           tileError,
         );
+        pushPdfWarning(
+          resultMeta,
+          "Falló captura por tiles. Se usa placeholder para completar exportación.",
+        );
         dashboardSlices = [
           createPlaceholderCanvasFromElement(dashEl, scaleDash, "Dashboard"),
         ];
       }
+      timings.dashboardTilesMs = round2(nowMs() - tileCaptureStart);
 
       resultMeta.fallbackTilesUsed = true;
       resultMeta.tilesCount = dashboardSlices.length;
       dashboardCanvas = null;
+      pushPdfWarning(
+        resultMeta,
+        "Se utilizó fallback por tiles para exportar el dashboard.",
+      );
 
       if (cfg.debug && primaryDashboardCaptureError) {
         console.log("[PPCCR PDF] Motivo fallback tiles:", primaryDashboardCaptureError.message);
       }
     }
-
-    const doc = new libs.jsPDF({
-      orientation: "p",
-      unit: "mm",
-      format: "a4",
-    });
-
-    const renderState = { pageIndex: 0 };
-
     if (dashboardCanvas) {
-      dashboardRenderWidthMm = resolveDashboardRenderWidthMm({
-        canvas: dashboardCanvas,
-        pageMetrics,
-        cfg,
-        headerHeightMm,
-        dashboardAvailMm,
-      });
-
-      appendCanvasWithPaging({
-        doc,
-        canvas: dashboardCanvas,
-        headerCanvas,
-        headerHeightMm,
-        renderWidthMm: dashboardRenderWidthMm,
-        cfg,
-        pageMetrics,
-        renderState,
-      });
-
       resultMeta.dashboardCapture = {
         mode: "single",
         width: dashboardCanvas.width,
@@ -463,19 +289,6 @@ export async function exportPPCCRToPdf(options = {}) {
         area: dashboardCanvas.width * dashboardCanvas.height,
       };
     } else {
-      for (let i = 0; i < dashboardSlices.length; i += 1) {
-        appendCanvasWithPaging({
-          doc,
-          canvas: dashboardSlices[i],
-          headerCanvas,
-          headerHeightMm,
-          renderWidthMm: dashboardRenderWidthMm,
-          cfg,
-          pageMetrics,
-          renderState,
-        });
-      }
-
       resultMeta.dashboardCapture = {
         mode: "tiles",
         width: null,
@@ -484,12 +297,39 @@ export async function exportPPCCRToPdf(options = {}) {
       };
     }
 
-    applyFooterPageNumbers(doc, pageMetrics, cfg.footerMm);
-
+    const variantStart = nowMs();
+    const chosenVariant = await buildAdaptivePdfVariant({
+      libs,
+      headerCanvas,
+      headerHeightMm,
+      dashboardCanvas,
+      dashboardSlices,
+      pageMetrics,
+      dashboardAvailMm,
+      cfg,
+      resultMeta,
+    });
+    timings.variantSelectionMs = round2(nowMs() - variantStart);
+    dashboardRenderWidthMm = chosenVariant.renderWidthMm;
     const filename = buildFilename(cfg.filenamePrefix, new Date());
-    doc.save(filename);
+    saveBlobAsFile(chosenVariant.blob, filename);
+    timings.totalMs = round2(nowMs() - totalStart);
+    updatePdfDebugState({
+      chosenPreset: chosenVariant.chosenPreset,
+      pages: chosenVariant.pages,
+      blobSizeBytes: chosenVariant.blobSizeBytes,
+      captureMode: chosenVariant.captureMode,
+      usedTiles: chosenVariant.usedTiles,
+      renderWidthMm: chosenVariant.renderWidthMm,
+      warnings: resultMeta.warnings.slice(),
+      timings: {
+        ...timings,
+        presetAttempts: chosenVariant.variantAttempts,
+      },
+      layoutMode: chosenVariant.layoutMode,
+    });
 
-    if (cfg.debug) {
+    if (cfg.debugPdf || cfg.debug) {
       console.groupCollapsed("[PPCCR PDF] Export debug");
       console.log("canvasReport:", resultMeta.canvasReport);
       console.log("headerCanvas:", {
@@ -500,17 +340,30 @@ export async function exportPPCCRToPdf(options = {}) {
       console.log("fallbackTilesUsed:", resultMeta.fallbackTilesUsed);
       console.log("tilesCount:", resultMeta.tilesCount);
       console.log("snapshotReplacements:", snapshotReplacements.length);
+      console.log("chosenPreset:", chosenVariant.chosenPreset);
+      console.log("blobSizeBytes:", chosenVariant.blobSizeBytes);
+      console.log("layoutMode:", chosenVariant.layoutMode);
       console.groupEnd();
     }
 
     return {
       filename,
-      pages: doc.getNumberOfPages(),
+      pages: chosenVariant.pages,
+      blobSizeBytes: chosenVariant.blobSizeBytes,
+      chosenPreset: chosenVariant.chosenPreset,
+      captureMode: chosenVariant.captureMode,
+      usedTiles: chosenVariant.usedTiles,
       fallbackTilesUsed: resultMeta.fallbackTilesUsed,
       tilesCount: resultMeta.tilesCount,
       canvasReport: resultMeta.canvasReport,
+      layoutMode: chosenVariant.layoutMode,
     };
   } catch (error) {
+    timings.totalMs = round2(nowMs() - totalStart);
+    updatePdfDebugState({
+      warnings: resultMeta.warnings.slice(),
+      timings,
+    });
     console.error("[PPCCR PDF] ERROR", error);
     console.groupCollapsed("[PPCCR PDF] Diagnóstico");
     console.log("canvasReport:", resultMeta.canvasReport);
@@ -1298,15 +1151,265 @@ async function captureDashboardTiles({
   return slices;
 }
 
+async function buildAdaptivePdfVariant({
+  libs,
+  headerCanvas,
+  headerHeightMm,
+  dashboardCanvas,
+  dashboardSlices,
+  pageMetrics,
+  dashboardAvailMm,
+  cfg,
+  resultMeta,
+}) {
+  const attempts = [];
+  let bestUnderBudget = null;
+  let smallestVariant = null;
+
+  for (let i = 0; i < cfg.preferredScalePresets.length; i += 1) {
+    const preset = cfg.preferredScalePresets[i];
+    const variant = await buildPdfVariant({
+      libs,
+      headerCanvas,
+      headerHeightMm,
+      dashboardCanvas,
+      dashboardSlices,
+      pageMetrics,
+      dashboardAvailMm,
+      cfg,
+      resultMeta,
+      preset,
+    });
+
+    attempts.push({
+      name: preset.name,
+      scale: preset.scale,
+      jpegQuality: preset.jpegQuality,
+      pages: variant.pages,
+      blobSizeBytes: variant.blobSizeBytes,
+      captureMode: variant.captureMode,
+      usedTiles: variant.usedTiles,
+      renderWidthMm: variant.renderWidthMm,
+      layoutMode: variant.layoutMode,
+    });
+
+    if (!smallestVariant || variant.blobSizeBytes < smallestVariant.blobSizeBytes) {
+      smallestVariant = variant;
+    }
+
+    if (variant.blobSizeBytes <= cfg.maxPdfBytes) {
+      bestUnderBudget = variant;
+      break;
+    }
+  }
+
+  const chosenVariant = bestUnderBudget || smallestVariant;
+  if (!chosenVariant) {
+    throw new Error("No se pudo generar ninguna variante válida del PDF.");
+  }
+
+  if (!bestUnderBudget) {
+    pushPdfWarning(
+      resultMeta,
+      "Ningún preset entró en el presupuesto. Se usa la variante más liviana generada.",
+    );
+  }
+
+  chosenVariant.variantAttempts = attempts;
+  return chosenVariant;
+}
+
+async function buildPdfVariant({
+  libs,
+  headerCanvas,
+  headerHeightMm,
+  dashboardCanvas,
+  dashboardSlices,
+  pageMetrics,
+  dashboardAvailMm,
+  cfg,
+  resultMeta,
+  preset,
+}) {
+  const doc = new libs.jsPDF({
+    orientation: "p",
+    unit: "mm",
+    format: "a4",
+  });
+  const renderState = { pageIndex: 0 };
+  const captureMode = dashboardCanvas ? "single" : "tiles";
+  const headerAsset = createPdfImageAsset(headerCanvas, {
+    sourceCaptureScale: resultMeta.headerCaptureScale,
+    targetScale: preset.scale,
+    jpegQuality: preset.jpegQuality,
+  });
+  const renderWidthMm = dashboardCanvas
+    ? resolveDashboardRenderWidthMm({
+        canvas: dashboardCanvas,
+        pageMetrics,
+        cfg,
+        dashboardAvailMm,
+      })
+    : pageMetrics.contentWidthMm;
+
+  if (dashboardCanvas) {
+    appendCanvasWithPaging({
+      doc,
+      canvas: dashboardCanvas,
+      headerAsset,
+      headerHeightMm,
+      renderWidthMm,
+      cfg,
+      pageMetrics,
+      renderState,
+      preset,
+      sourceCaptureScale: resultMeta.dashboardCaptureScale,
+    });
+  } else {
+    const slices = Array.isArray(dashboardSlices) ? dashboardSlices : [];
+    for (let i = 0; i < slices.length; i += 1) {
+      appendCanvasWithPaging({
+        doc,
+        canvas: slices[i],
+        headerAsset,
+        headerHeightMm,
+        renderWidthMm,
+        cfg,
+        pageMetrics,
+        renderState,
+        preset,
+        sourceCaptureScale: resultMeta.dashboardCaptureScale,
+      });
+    }
+  }
+
+  applyFooterPageNumbers(doc, pageMetrics, cfg.footerMm);
+  const blob = await measurePdfVariant(doc);
+  const pages = doc.getNumberOfPages();
+
+  return {
+    blob,
+    blobSizeBytes: blob.size,
+    pages,
+    chosenPreset: {
+      name: preset.name,
+      scale: preset.scale,
+      jpegQuality: preset.jpegQuality,
+    },
+    captureMode,
+    usedTiles: Boolean(resultMeta.fallbackTilesUsed),
+    renderWidthMm: round2(renderWidthMm),
+    layoutMode: pages > 1 ? "multi-page" : "single-page",
+  };
+}
+
+async function measurePdfVariant(doc) {
+  if (!doc || typeof doc.output !== "function") {
+    throw new Error("jsPDF no disponible para medir el tamaño final del PDF.");
+  }
+
+  const blob = doc.output("blob");
+  if (blob && typeof blob.size === "number") {
+    return blob;
+  }
+
+  const arrayBuffer = doc.output("arraybuffer");
+  return new Blob([arrayBuffer], { type: "application/pdf" });
+}
+
+function createPdfImageAsset(
+  sourceCanvas,
+  { sourceCaptureScale, targetScale, jpegQuality },
+) {
+  const factor = resolvePresetDownsampleFactor(sourceCaptureScale, targetScale);
+  const preparedCanvas = resizeCanvasForFactor(sourceCanvas, factor);
+
+  return {
+    dataUrl: preparedCanvas.toDataURL("image/jpeg", clampJpegQuality(jpegQuality)),
+    format: "JPEG",
+    widthPx: preparedCanvas.width,
+    heightPx: preparedCanvas.height,
+  };
+}
+
+function resolvePresetDownsampleFactor(sourceCaptureScale, targetScale) {
+  const source = Math.max(1, Number(sourceCaptureScale) || 1);
+  const target = Math.max(1, Number(targetScale) || 1);
+  return Math.max(0.3, Math.min(1, target / source));
+}
+
+function resizeCanvasForFactor(sourceCanvas, factor) {
+  if (!sourceCanvas) {
+    throw new Error("Canvas inválido para preparar asset PDF.");
+  }
+
+  const safeFactor = Math.max(0.3, Math.min(1, Number(factor) || 1));
+  if (safeFactor >= 0.999) {
+    return sourceCanvas;
+  }
+
+  const targetCanvas = document.createElement("canvas");
+  targetCanvas.width = Math.max(1, Math.round(sourceCanvas.width * safeFactor));
+  targetCanvas.height = Math.max(1, Math.round(sourceCanvas.height * safeFactor));
+
+  const ctx = targetCanvas.getContext("2d");
+  if (!ctx) {
+    return sourceCanvas;
+  }
+
+  ctx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in ctx) {
+    ctx.imageSmoothingQuality = "high";
+  }
+  ctx.drawImage(
+    sourceCanvas,
+    0,
+    0,
+    sourceCanvas.width,
+    sourceCanvas.height,
+    0,
+    0,
+    targetCanvas.width,
+    targetCanvas.height,
+  );
+
+  return targetCanvas;
+}
+
+function clampJpegQuality(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0.88;
+  }
+  return Math.max(0.55, Math.min(0.98, numeric));
+}
+
+function saveBlobAsFile(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+    link.remove();
+  }, 1500);
+}
+
 function appendCanvasWithPaging({
   doc,
   canvas,
-  headerCanvas,
+  headerAsset,
   headerHeightMm,
   renderWidthMm,
   cfg,
   pageMetrics,
   renderState,
+  preset,
+  sourceCaptureScale,
 }) {
   const sourceWidthPx = Math.max(1, canvas.width);
   const sourceHeightPx = Math.max(1, canvas.height);
@@ -1327,10 +1430,10 @@ function appendCanvasWithPaging({
 
     const shouldRenderHeader = renderState.pageIndex === 0 || cfg.repeatHeaderOnEachPage;
 
-    if (shouldRenderHeader) {
+    if (shouldRenderHeader && headerAsset) {
       doc.addImage(
-        headerCanvas,
-        "PNG",
+        headerAsset.dataUrl,
+        headerAsset.format,
         pageMetrics.margins.left,
         pageMetrics.margins.top,
         pageMetrics.contentWidthMm,
@@ -1357,9 +1460,14 @@ function appendCanvasWithPaging({
     const fullCanvasFitsSinglePage = sourceY === 0 && sliceHeightPx === sourceHeightPx;
 
     if (fullCanvasFitsSinglePage) {
+      const canvasAsset = createPdfImageAsset(canvas, {
+        sourceCaptureScale,
+        targetScale: preset.scale,
+        jpegQuality: preset.jpegQuality,
+      });
       doc.addImage(
-        canvas,
-        "PNG",
+        canvasAsset.dataUrl,
+        canvasAsset.format,
         contentX,
         contentStartY,
         targetWidthMm,
@@ -1392,9 +1500,14 @@ function appendCanvasWithPaging({
         sliceHeightPx,
       );
 
+      const sliceAsset = createPdfImageAsset(sliceCanvas, {
+        sourceCaptureScale,
+        targetScale: preset.scale,
+        jpegQuality: preset.jpegQuality,
+      });
       doc.addImage(
-        sliceCanvas,
-        "PNG",
+        sliceAsset.dataUrl,
+        sliceAsset.format,
         contentX,
         contentStartY,
         targetWidthMm,
@@ -1455,7 +1568,6 @@ function resolveDashboardRenderWidthMm({
   canvas,
   pageMetrics,
   cfg,
-  headerHeightMm,
   dashboardAvailMm,
 }) {
   const baseWidthMm = pageMetrics.contentWidthMm;
@@ -1469,7 +1581,9 @@ function resolveDashboardRenderWidthMm({
   }
 
   const requiredScale = dashboardAvailMm / Math.max(1, currentHeightMm);
-  const minAllowed = Math.max(0.7, Math.min(1, Number(cfg.minSinglePageScale) || 0.9));
+  const minAllowed = cfg.preferLegibilityOverSinglePage
+    ? 0.98
+    : Math.max(0.7, Math.min(1, Number(cfg.minSinglePageScale) || 0.9));
 
   if (requiredScale < minAllowed) {
     return baseWidthMm;
@@ -1482,7 +1596,6 @@ function resolveDashboardRenderWidthMm({
       nextWidthMm,
       currentHeightMm,
       dashboardAvailMm,
-      headerHeightMm,
     });
   }
 
@@ -1517,7 +1630,13 @@ function normalizeOptions(options) {
     0.9,
     Number(options.headerHeightMultiplier) || DEFAULT_OPTIONS.headerHeightMultiplier,
   );
+  merged.maxPdfBytes = Math.max(
+    1024 * 1024,
+    Number(options.maxPdfBytes) || DEFAULT_OPTIONS.maxPdfBytes,
+  );
   merged.fitSinglePage = options.fitSinglePage !== false;
+  merged.preferLegibilityOverSinglePage =
+    options.preferLegibilityOverSinglePage !== false;
   merged.minSinglePageScale = Math.max(
     0.7,
     Math.min(1, Number(options.minSinglePageScale) || DEFAULT_OPTIONS.minSinglePageScale),
@@ -1530,8 +1649,92 @@ function normalizeOptions(options) {
   merged.snapshotSelectors = Array.isArray(options.snapshotSelectors)
     ? options.snapshotSelectors.filter(Boolean)
     : DEFAULT_OPTIONS.snapshotSelectors.slice();
+  merged.preferredScalePresets = normalizeScalePresets(options.preferredScalePresets);
+  merged.debugPdf = options.debugPdf === true || options.debug === true;
 
   return merged;
+}
+
+function normalizeScalePresets(rawPresets) {
+  const source = Array.isArray(rawPresets) && rawPresets.length > 0
+    ? rawPresets
+    : DEFAULT_SCALE_PRESETS;
+
+  const normalized = source
+    .map((preset, index) => {
+      const scale = Math.max(1, Number(preset && preset.scale) || 0);
+      const jpegQuality = clampJpegQuality(preset && preset.jpegQuality);
+      return {
+        name:
+          preset && typeof preset.name === "string" && preset.name.trim()
+            ? preset.name.trim()
+            : "preset-" + (index + 1),
+        scale,
+        jpegQuality,
+      };
+    })
+    .filter((preset) => Number.isFinite(preset.scale) && preset.scale > 0)
+    .sort((a, b) => b.scale - a.scale);
+
+  return normalized.length > 0 ? normalized : DEFAULT_SCALE_PRESETS.slice();
+}
+
+function resolveBaseCaptureScale(cfg) {
+  if (Array.isArray(cfg.preferredScalePresets) && cfg.preferredScalePresets.length > 0) {
+    return Math.max.apply(
+      null,
+      cfg.preferredScalePresets.map((preset) => Math.max(1, Number(preset.scale) || 1)),
+    );
+  }
+
+  return Math.max(1, Number(cfg.desiredScale) || 1);
+}
+
+function initPdfDebugState() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  window.__PPCCR_PDF_DEBUG__ = {
+    chosenPreset: null,
+    pages: 0,
+    blobSizeBytes: 0,
+    captureMode: null,
+    usedTiles: false,
+    renderWidthMm: null,
+    warnings: [],
+    timings: {},
+  };
+
+  return window.__PPCCR_PDF_DEBUG__;
+}
+
+function updatePdfDebugState(patch) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const target = window.__PPCCR_PDF_DEBUG__ || initPdfDebugState();
+  Object.assign(target, patch || {});
+  return target;
+}
+
+function pushPdfWarning(resultMeta, message) {
+  const warning = String(message || "Advertencia de exportación PDF");
+  if (resultMeta && Array.isArray(resultMeta.warnings)) {
+    resultMeta.warnings.push(warning);
+  }
+
+  const target = updatePdfDebugState({});
+  if (target && Array.isArray(target.warnings)) {
+    target.warnings.push(warning);
+  }
+}
+
+function nowMs() {
+  return typeof performance !== "undefined" && typeof performance.now === "function"
+    ? performance.now()
+    : Date.now();
 }
 
 function mergeCloneCss(...chunks) {
@@ -1565,9 +1768,6 @@ function injectCloneStyles(clonedDoc, { hiddenSelectors, extraCloneCss }) {
     "*, *::before, *::after {",
     "  animation: none !important;",
     "  transition: none !important;",
-    "}",
-    "#top, #kpis, #kpi-dashboard-ppccr, .kpiDash, .kpiDash__reportRoot {",
-    "  background: #fff !important;",
     "}",
     hideRule,
     extraCloneCss || "",
@@ -1865,8 +2065,7 @@ function normalizeHeaderForPdfClone(clonedDoc, headerSelector) {
   if (partnersStrip) {
     partnersStrip.style.setProperty("display", "flex", "important");
     partnersStrip.style.setProperty("align-items", "center", "important");
-    partnersStrip.style.setProperty("flex-wrap", "nowrap", "important");
-    partnersStrip.style.setProperty("gap", "12px", "important");
+    partnersStrip.style.setProperty("justify-content", "center", "important");
   }
 
   headerRoot
@@ -1874,32 +2073,6 @@ function normalizeHeaderForPdfClone(clonedDoc, headerSelector) {
     .forEach((node) => {
       node.style.setProperty("transform", "none", "important");
     });
-
-  const ribbonWrap = headerRoot.querySelector(".brand-mark--left");
-  if (ribbonWrap) {
-    ribbonWrap.style.setProperty("width", "clamp(78px, 8.8vw, 110px)", "important");
-    ribbonWrap.style.setProperty("height", "clamp(78px, 8.8vw, 110px)", "important");
-    ribbonWrap.style.setProperty("min-width", "78px", "important");
-    ribbonWrap.style.setProperty("display", "flex", "important");
-    ribbonWrap.style.setProperty("align-items", "center", "important");
-    ribbonWrap.style.setProperty("justify-content", "center", "important");
-    ribbonWrap.style.setProperty("aspect-ratio", "1 / 1", "important");
-  }
-
-  const brandMark = headerRoot.querySelector(".brand-mark");
-  if (brandMark) {
-    brandMark.style.setProperty("width", "clamp(78px, 8.8vw, 110px)", "important");
-    brandMark.style.setProperty("height", "clamp(78px, 8.8vw, 110px)", "important");
-  }
-
-  const ribbon = headerRoot.querySelector(".brand-ribbon");
-  if (ribbon) {
-    ribbon.style.setProperty("width", "clamp(64px, 7vw, 90px)", "important");
-    ribbon.style.setProperty("max-width", "none", "important");
-    ribbon.style.setProperty("height", "auto", "important");
-    ribbon.style.setProperty("object-fit", "contain", "important");
-    ribbon.style.setProperty("transform", "none", "important");
-  }
 }
 
 function isLikelyBlankCanvas(canvas) {
@@ -1944,10 +2117,10 @@ function isLikelyBlankCanvas(canvas) {
 function stabilizeTrkGaugeInClone(clonedDoc, dashboardSelector) {
   const scope = clonedDoc.querySelector(dashboardSelector) || clonedDoc;
   if (scope.classList && scope.classList.contains("kpiDash__reportRoot")) {
-    scope.classList.add("kpiDash--exporting");
+    scope.classList.add("kpiDash--pdfV2");
   }
   scope.querySelectorAll(".kpiDash__reportRoot").forEach((node) => {
-    node.classList.add("kpiDash--exporting");
+    node.classList.add("kpiDash--pdfV2");
   });
 
   const gauges = Array.from(scope.querySelectorAll(".kpiDash__trkGauge"));

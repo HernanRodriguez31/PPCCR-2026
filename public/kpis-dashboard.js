@@ -1749,7 +1749,17 @@
         headerSelector: "#top",
         dashboardSelector: "#kpi-dashboard-ppccr",
         filenamePrefix: "PPCCR_Reporte",
+        maxPdfBytes: 25 * 1024 * 1024,
+        preferredScalePresets: [
+          { name: "preset-1", scale: 2.4, jpegQuality: 0.92 },
+          { name: "preset-2", scale: 2.2, jpegQuality: 0.88 },
+          { name: "preset-3", scale: 2.0, jpegQuality: 0.85 },
+          { name: "preset-4", scale: 1.8, jpegQuality: 0.82 },
+        ],
+        preferLegibilityOverSinglePage: true,
+        snapshotSelectors: [".kpiDash__trkGaugeWrap", ".ppccr-sankey svg"],
         debug: false,
+        debugPdf: Boolean(window.__PPCCR_ENABLE_PDF_DEBUG__),
       });
     } catch (err) {
       console.error("[KPI Dashboard] Falló exportPPCCRToPdf.", err);
@@ -1780,7 +1790,7 @@
     ];
     const moduleVersion = isLocalDevHost
       ? String(Date.now())
-      : "20260217-ppccr-pdf-v3";
+      : "20260325-pdf-export-v2";
     const candidates = baseCandidates
       .map((path) => path + "?v=" + encodeURIComponent(moduleVersion))
       .concat(baseCandidates);
