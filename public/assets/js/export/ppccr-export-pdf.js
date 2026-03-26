@@ -18,6 +18,12 @@ const DEFAULT_SCALE_PRESETS = [
   { name: "preset-5", scale: 2.0, jpegQuality: 0.88 },
 ];
 
+const POSTER_DEFAULT_WEBP_QUALITY = 0.96;
+const POSTER_DEFAULT_JPEG_QUALITY = 0.92;
+const POSTER_HOST_ID = "ppccr-pdf-poster-host";
+const POSTER_HOST_DASHBOARD_ID = "ppccr-pdf-poster-dashboard";
+const POSTER_HOST_SCOPE_ID = "ppccr-pdf-poster-scope";
+
 const DEFAULT_OPTIONS = {
   headerSelector: "#top",
   exportScopeSelector: "#kpis .container",
@@ -37,11 +43,17 @@ const DEFAULT_OPTIONS = {
   hardMaxPdfBytes: 25 * 1024 * 1024,
   maxPdfBytes: 25 * 1024 * 1024,
   preferredScalePresets: DEFAULT_SCALE_PRESETS,
-  preferLegibilityOverSinglePage: true,
+  preferLegibilityOverSinglePage: false,
   repeatHeaderOnEachPage: true,
   enableSnapshotSwap: true,
   snapshotSelectors: [".kpiDash__trkGaugeWrap", ".ppccr-sankey svg"],
   includeSectionHeader: true,
+  pageStrategy: "single-page-poster",
+  pdfPageSizeMode: "custom",
+  posterLayoutBasis: "desktop-fixed",
+  posterViewportWidthPx: 1460,
+  posterMarginMm: 2,
+  targetReportWidthMm: 190,
   pageOrientation: "portrait",
   blockLayoutMode: "wysiwyg-v3",
   ignoreSelectors: [],
@@ -68,6 +80,9 @@ const DEFAULT_CLONE_HIDE_SELECTORS = [
   ".tooltip",
   ".tippy-box",
   ".loading-overlay",
+  ".auth-gate",
+  "#auth-gate",
+  ".auth-gate-backdrop",
 ];
 
 let createPatternGuardState = null;
@@ -91,10 +106,13 @@ export async function exportPPCCRToPdf(options = {}) {
   const cfg = normalizeOptions(options);
   initPdfDebugState();
   updatePdfDebugState({
+    mode: cfg.pageStrategy,
     chosenPreset: null,
+    pageCount: 0,
     pages: 0,
     blobSizeBytes: 0,
-    captureMode: "block-layout",
+    finalBlobBytes: 0,
+    captureMode: cfg.pageStrategy === "single-page-poster" ? "single-page-poster" : "block-layout",
     usedTiles: false,
     renderWidthMm: null,
     exportedScope: null,
@@ -104,6 +122,14 @@ export async function exportPPCCRToPdf(options = {}) {
     includedSectionHeader: false,
     layoutMode: null,
     blockFormats: {},
+    selectedCodecPerBlock: {},
+    finalPosterCodec: null,
+    finalPosterBytesEstimate: 0,
+    posterCanvasPx: null,
+    pdfPageMm: null,
+    usedCustomPageSize: false,
+    singlePageSatisfied: false,
+    visualBlocksIncluded: [],
     warnings: [],
     timings: {},
   });
@@ -134,6 +160,7 @@ export async function exportPPCCRToPdf(options = {}) {
   }
 
   const resultMeta = {
+    mode: cfg.pageStrategy,
     fallbackTilesUsed: false,
     tilesCount: 0,
     dashboardCapture: null,
@@ -144,6 +171,7 @@ export async function exportPPCCRToPdf(options = {}) {
     pageBreaks: [],
     warnings: [],
   };
+  let posterHostContext = null;
 
   try {
     const assetsStart = nowMs();
@@ -188,10 +216,35 @@ export async function exportPPCCRToPdf(options = {}) {
 
     const pageMetrics = createPageMetrics(cfg);
     const blockCaptureStart = nowMs();
+    if (cfg.pageStrategy === "single-page-poster") {
+      posterHostContext = await createPosterSnapshotHost({
+        cfg,
+        libs,
+        headerEl,
+        exportScopeEl,
+        dashEl,
+        reportRootEl,
+        sectionHeaderEl,
+        snapshotReplacements,
+      });
+      await waitForAssets(posterHostContext.host);
+    }
+    const activeHeaderEl = posterHostContext ? posterHostContext.headerEl : headerEl;
+    const activeSectionHeaderEl = posterHostContext
+      ? posterHostContext.sectionHeaderEl
+      : sectionHeaderEl;
+    const activeReportRootEl = posterHostContext
+      ? posterHostContext.reportRootEl
+      : reportRootEl;
+    const activeDashboardSelector = posterHostContext
+      ? posterHostContext.dashboardSelector
+      : cfg.dashboardSelector;
     const blockManifest = buildExportBlockManifest({
-      headerEl,
-      sectionHeaderEl,
-      reportRootEl,
+      cfg,
+      headerEl: activeHeaderEl,
+      sectionHeaderEl: activeSectionHeaderEl,
+      reportRootEl: activeReportRootEl,
+      dashboardSelector: activeDashboardSelector,
     });
     const capturedBlocks = await captureExportBlocks({
       manifest: blockManifest,
@@ -200,14 +253,15 @@ export async function exportPPCCRToPdf(options = {}) {
       pageMetrics,
       headerCloneCss,
       dashboardCloneCss,
-      snapshotReplacements,
-      dashboardSelector: cfg.dashboardSelector,
+      snapshotReplacements:
+        cfg.pageStrategy === "single-page-poster" ? [] : snapshotReplacements,
+      dashboardSelector: activeDashboardSelector,
       baseCaptureScale,
       resultMeta,
     });
     timings.blockCaptureMs = round2(nowMs() - blockCaptureStart);
     resultMeta.dashboardCapture = {
-      mode: "block-layout",
+      mode: cfg.pageStrategy === "single-page-poster" ? "single-page-poster" : "block-layout",
       width: null,
       height: null,
       area: capturedBlocks.reduce((sum, block) => {
@@ -216,21 +270,32 @@ export async function exportPPCCRToPdf(options = {}) {
     };
 
     const variantStart = nowMs();
-    const chosenVariant = await buildAdaptiveBlockPdfVariant({
-      libs,
-      blocks: capturedBlocks,
-      pageMetrics,
-      cfg,
-      resultMeta,
-    });
+    const chosenVariant =
+      cfg.pageStrategy === "single-page-poster"
+        ? await buildAdaptiveSinglePagePosterPdfVariant({
+            libs,
+            blocks: capturedBlocks,
+            cfg,
+            resultMeta,
+          })
+        : await buildAdaptiveBlockPdfVariant({
+            libs,
+            blocks: capturedBlocks,
+            pageMetrics,
+            cfg,
+            resultMeta,
+          });
     timings.variantSelectionMs = round2(nowMs() - variantStart);
     const filename = buildFilename(cfg.filenamePrefix, new Date());
     saveBlobAsFile(chosenVariant.blob, filename);
     timings.totalMs = round2(nowMs() - totalStart);
     updatePdfDebugState({
+      mode: cfg.pageStrategy,
       chosenPreset: chosenVariant.chosenPreset,
+      pageCount: chosenVariant.pages,
       pages: chosenVariant.pages,
       blobSizeBytes: chosenVariant.blobSizeBytes,
+      finalBlobBytes: chosenVariant.blobSizeBytes,
       captureMode: chosenVariant.captureMode,
       usedTiles: chosenVariant.usedTiles,
       renderWidthMm: chosenVariant.renderWidthMm,
@@ -245,6 +310,14 @@ export async function exportPPCCRToPdf(options = {}) {
       includedSectionHeader: Boolean(sectionHeaderEl),
       layoutMode: chosenVariant.layoutMode,
       blockFormats: chosenVariant.blockFormats,
+      selectedCodecPerBlock: chosenVariant.selectedCodecPerBlock || {},
+      finalPosterCodec: chosenVariant.finalPosterCodec || null,
+      finalPosterBytesEstimate: chosenVariant.finalPosterBytesEstimate || 0,
+      posterCanvasPx: chosenVariant.posterCanvasPx || null,
+      pdfPageMm: chosenVariant.pdfPageMm || null,
+      usedCustomPageSize: Boolean(chosenVariant.usedCustomPageSize),
+      singlePageSatisfied: Boolean(chosenVariant.singlePageSatisfied),
+      visualBlocksIncluded: chosenVariant.visualBlocksIncluded || [],
       warnings: resultMeta.warnings.slice(),
       timings: {
         ...timings,
@@ -264,6 +337,10 @@ export async function exportPPCCRToPdf(options = {}) {
       console.log("blobSizeBytes:", chosenVariant.blobSizeBytes);
       console.log("layoutMode:", chosenVariant.layoutMode);
       console.log("pageBreaks:", chosenVariant.pageBreaks);
+      console.log("posterCanvasPx:", chosenVariant.posterCanvasPx);
+      console.log("pdfPageMm:", chosenVariant.pdfPageMm);
+      console.log("selectedCodecPerBlock:", chosenVariant.selectedCodecPerBlock);
+      console.log("finalPosterCodec:", chosenVariant.finalPosterCodec);
       console.groupEnd();
     }
 
@@ -281,6 +358,16 @@ export async function exportPPCCRToPdf(options = {}) {
       includedSectionHeader: Boolean(sectionHeaderEl),
       pageBreaks: chosenVariant.pageBreaks,
       blockFormats: chosenVariant.blockFormats,
+      pageCount: chosenVariant.pages,
+      selectedCodecPerBlock: chosenVariant.selectedCodecPerBlock || {},
+      finalPosterCodec: chosenVariant.finalPosterCodec || null,
+      finalPosterBytesEstimate: chosenVariant.finalPosterBytesEstimate || 0,
+      finalBlobBytes: chosenVariant.blobSizeBytes,
+      posterCanvasPx: chosenVariant.posterCanvasPx || null,
+      pdfPageMm: chosenVariant.pdfPageMm || null,
+      usedCustomPageSize: Boolean(chosenVariant.usedCustomPageSize),
+      singlePageSatisfied: Boolean(chosenVariant.singlePageSatisfied),
+      visualBlocksIncluded: chosenVariant.visualBlocksIncluded || [],
       softBudgetHit: chosenVariant.softBudgetHit,
       hardBudgetHit: chosenVariant.hardBudgetHit,
     };
@@ -299,6 +386,8 @@ export async function exportPPCCRToPdf(options = {}) {
     console.groupEnd();
     window.alert("No se pudo exportar. Ver consola.");
     throw error;
+  } finally {
+    cleanupPosterSnapshotHost(posterHostContext);
   }
 }
 
@@ -968,7 +1057,7 @@ function createPlaceholderCanvas(widthPx, heightPx, label) {
   canvas.width = w;
   canvas.height = h;
 
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) {
     return canvas;
   }
@@ -1090,7 +1179,16 @@ function resolveElementWithin(root, selector, label) {
   return el;
 }
 
-function buildExportBlockManifest({ headerEl, sectionHeaderEl, reportRootEl }) {
+function buildExportBlockManifest({
+  cfg,
+  headerEl,
+  sectionHeaderEl,
+  reportRootEl,
+  dashboardSelector,
+}) {
+  const isPosterMode = cfg && cfg.pageStrategy === "single-page-poster";
+  const blockFormat = isPosterMode ? "PNG" : null;
+
   return [
     {
       id: "branding-top",
@@ -1121,30 +1219,34 @@ function buildExportBlockManifest({ headerEl, sectionHeaderEl, reportRootEl }) {
       format: "PNG",
       cloneArea: "dashboard",
       pageBreakBefore: false,
+      captureTargetSelector: dashboardSelector || "",
     },
     {
       id: "executive",
       label: "Resumen ejecutivo KPI",
       element: resolveElementWithin(reportRootEl, ".kpiDash__exec", "Resumen ejecutivo KPI"),
-      format: "JPEG",
+      format: blockFormat || "JPEG",
       cloneArea: "dashboard",
       pageBreakBefore: false,
+      captureTargetSelector: dashboardSelector || "",
     },
     {
       id: "charts-row",
       label: "Fila de charts KPI",
       element: resolveElementWithin(reportRootEl, ".kpiDash__charts", "Fila de charts KPI"),
-      format: "JPEG",
+      format: blockFormat || "JPEG",
       cloneArea: "dashboard",
       pageBreakBefore: false,
+      captureTargetSelector: dashboardSelector || "",
     },
     {
       id: "funnel",
       label: "Flujo FIT por estación",
       element: resolveElementWithin(reportRootEl, ".kpiDash__funnel", "Flujo FIT por estación"),
-      format: "JPEG",
+      format: blockFormat || "JPEG",
       cloneArea: "dashboard",
-      pageBreakBefore: true,
+      pageBreakBefore: isPosterMode ? false : true,
+      captureTargetSelector: dashboardSelector || "",
     },
     {
       id: "stock",
@@ -1153,6 +1255,7 @@ function buildExportBlockManifest({ headerEl, sectionHeaderEl, reportRootEl }) {
       format: "PNG",
       cloneArea: "dashboard",
       pageBreakBefore: false,
+      captureTargetSelector: dashboardSelector || "",
     },
   ].filter(Boolean);
 }
@@ -1234,7 +1337,12 @@ async function captureExportBlock({
   const isHeaderBlock = block.cloneArea === "header";
   const isDashboardBlock = block.cloneArea === "dashboard";
   const extraCloneCss = isHeaderBlock ? headerCloneCss : dashboardCloneCss;
-  const captureTargetSelector = isDashboardBlock ? dashboardSelector : "";
+  const captureTargetSelector =
+    typeof block.captureTargetSelector === "string"
+      ? block.captureTargetSelector
+      : isDashboardBlock
+        ? dashboardSelector
+        : "";
   const cloneMutator = isHeaderBlock
     ? (clonedDoc) => {
         normalizeHeaderForPdfClone(clonedDoc, cfg.headerSelector);
@@ -1366,6 +1474,1029 @@ function stitchCanvasesVertically(slices) {
   });
 
   return canvas;
+}
+
+async function createPosterSnapshotHost({
+  cfg,
+  libs,
+  headerEl,
+  exportScopeEl,
+  dashEl,
+  reportRootEl,
+  sectionHeaderEl,
+  snapshotReplacements,
+}) {
+  cleanupPosterSnapshotHost({ host: document.getElementById(POSTER_HOST_ID) });
+
+  const host = document.createElement("div");
+  host.id = POSTER_HOST_ID;
+  host.className = "kpiDash__posterSnapshot";
+  host.setAttribute("aria-hidden", "true");
+
+  const style = document.createElement("style");
+  style.setAttribute("data-ppccr-pdf-poster-style", "true");
+  style.textContent = buildPosterSnapshotStyles(cfg);
+  host.appendChild(style);
+
+  const headerClone = headerEl.cloneNode(true);
+  headerClone.removeAttribute("id");
+  headerClone.setAttribute("data-ppccr-pdf-block", "branding-top");
+  normalizeHeaderCloneForPoster(headerClone);
+  host.appendChild(headerClone);
+
+  const scopeClone = exportScopeEl.cloneNode(false);
+  scopeClone.id = POSTER_HOST_SCOPE_ID;
+  scopeClone.classList.add("kpiDash__posterScope");
+
+  let sectionHeaderClone = null;
+  if (sectionHeaderEl) {
+    sectionHeaderClone = sectionHeaderEl.cloneNode(true);
+    sectionHeaderClone.setAttribute("data-ppccr-pdf-block", "section-header");
+    scopeClone.appendChild(sectionHeaderClone);
+  }
+
+  const dashboardClone = dashEl.cloneNode(false);
+  dashboardClone.id = POSTER_HOST_DASHBOARD_ID;
+  dashboardClone.classList.add("kpiDash__posterDashboard");
+  dashboardClone.removeAttribute("data-kpi-dashboard");
+
+  const reportRootClone = reportRootEl.cloneNode(true);
+  reportRootClone.setAttribute("data-ppccr-poster-report-root", "true");
+  reportRootClone.classList.add("kpiDash--pdfV4Poster");
+  dashboardClone.appendChild(reportRootClone);
+  scopeClone.appendChild(dashboardClone);
+  host.appendChild(scopeClone);
+
+  document.body.appendChild(host);
+
+  snapshotCanvasNodesToImages({
+    sourceRoot: dashEl,
+    targetRoot: dashboardClone,
+  });
+  applySnapshotReplacementsToRoot({
+    targetRoot: dashboardClone,
+    replacements: snapshotReplacements,
+  });
+  await replaceSvgNodesWithSnapshots({
+    sourceRoot: dashEl,
+    targetRoot: dashboardClone,
+    html2canvas: libs.html2canvas,
+    selectors: cfg.snapshotSelectors,
+    scale: cfg.snapshotScale,
+    debug: cfg.debug,
+  });
+
+  return {
+    host,
+    headerEl: headerClone,
+    sectionHeaderEl: sectionHeaderClone,
+    reportRootEl: reportRootClone,
+    dashboardSelector: "#" + POSTER_HOST_DASHBOARD_ID,
+  };
+}
+
+function cleanupPosterSnapshotHost(context) {
+  const host = context && context.host ? context.host : null;
+  if (host && host.parentNode) {
+    host.parentNode.removeChild(host);
+  }
+}
+
+function buildPosterSnapshotStyles(cfg) {
+  const widthPx = Math.max(1280, Number(cfg.posterViewportWidthPx) || 1460);
+  return [
+    ".kpiDash__posterSnapshot {",
+    "  position: fixed;",
+    "  left: -24000px;",
+    "  top: 0;",
+    "  width: " + widthPx + "px;",
+    "  background: #ffffff;",
+    "  z-index: -1;",
+    "  pointer-events: none;",
+    "  overflow: hidden;",
+    "  --desktop-shell-max: 1280px;",
+    "  --desktop-reading-max: 1120px;",
+    "  --desktop-wide-max: 1380px;",
+    "  --desktop-gutter: clamp(24px, 2.4vw, 40px);",
+    "  --desktop-section-gap: clamp(36px, 4vw, 64px);",
+    "  --desktop-card-gap: clamp(18px, 1.8vw, 28px);",
+    "  --desktop-panel-radius: 30px;",
+    "}",
+    ".kpiDash__posterSnapshot, .kpiDash__posterSnapshot * {",
+    "  -webkit-print-color-adjust: exact !important;",
+    "  print-color-adjust: exact !important;",
+    "}",
+    ".kpiDash__posterSnapshot .container {",
+    "  width: min(calc(100% - (var(--desktop-gutter) * 2)), var(--desktop-wide-max)) !important;",
+    "  margin-inline: auto !important;",
+    "}",
+    ".kpiDash__posterSnapshot .partners-bar .container {",
+    "  width: min(calc(100% - (var(--desktop-gutter) * 2)), 1120px) !important;",
+    "}",
+    ".kpiDash__posterSnapshot .site-header {",
+    "  position: static !important;",
+    "  left: auto !important;",
+    "  top: auto !important;",
+    "  width: 100% !important;",
+    "  max-width: none !important;",
+    "}",
+    ".kpiDash__posterSnapshot .site-topbar,",
+    ".kpiDash__posterSnapshot .topbar,",
+    ".kpiDash__posterSnapshot .site-topbar__inner {",
+    "  width: min(calc(100% - (var(--desktop-gutter) * 2)), var(--desktop-wide-max)) !important;",
+    "  max-width: var(--desktop-wide-max) !important;",
+    "  margin-inline: auto !important;",
+    "}",
+    ".kpiDash__posterSnapshot .site-nav,",
+    ".kpiDash__posterSnapshot #mobileDockWrap,",
+    ".kpiDash__posterSnapshot .nav-toggle,",
+    ".kpiDash__posterSnapshot .mobile-fixed-dock,",
+    ".kpiDash__posterSnapshot .back-to-top,",
+    ".kpiDash__posterSnapshot .modal,",
+    ".kpiDash__posterSnapshot .modal-backdrop,",
+    ".kpiDash__posterSnapshot .auth-gate,",
+    ".kpiDash__posterSnapshot #auth-gate,",
+    ".kpiDash__posterSnapshot .auth-gate-backdrop,",
+    ".kpiDash__posterSnapshot .toast,",
+    ".kpiDash__posterSnapshot .snackbar,",
+    ".kpiDash__posterSnapshot .tooltip,",
+    ".kpiDash__posterSnapshot .tippy-box,",
+    ".kpiDash__posterSnapshot .loading-overlay {",
+    "  display: none !important;",
+    "  visibility: hidden !important;",
+    "}",
+    ".kpiDash__posterSnapshot .logo-strip {",
+    "  margin-bottom: 16px !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__reportActions,",
+    ".kpiDash__posterSnapshot .kpiDash__reportBtn,",
+    ".kpiDash__posterSnapshot .kpiDash__reportBtn--primary {",
+    "  display: none !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__reportHeader,",
+    ".kpiDash__posterSnapshot .kpiDash__execPanel,",
+    ".kpiDash__posterSnapshot .kpiDash__panel,",
+    ".kpiDash__posterSnapshot .kpiDash__funnel,",
+    ".kpiDash__posterSnapshot .kpiDash__stock,",
+    ".kpiDash__posterSnapshot .kpiDash__tableWrap,",
+    ".kpiDash__posterSnapshot .kpiDash__chart,",
+    ".kpiDash__posterSnapshot .ppccr-sankey {",
+    "  overflow: visible !important;",
+    "  break-inside: avoid;",
+    "  page-break-inside: avoid;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__tableWrap {",
+    "  overflow: visible !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__table {",
+    "  min-width: 0 !important;",
+    "  width: 100% !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash {",
+    "  margin-top: 0 !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__reportRoot {",
+    "  margin-top: 22px !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__shell {",
+    "  display: grid !important;",
+    "  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__reportHeader,",
+    ".kpiDash__posterSnapshot .kpiDash__exec,",
+    ".kpiDash__posterSnapshot .kpiDash__charts,",
+    ".kpiDash__posterSnapshot .kpiDash__funnel--avance,",
+    ".kpiDash__posterSnapshot .kpiDash__funnel[aria-label='Flujo FIT por estación'],",
+    ".kpiDash__posterSnapshot .kpiDash__stock {",
+    "  grid-column: 1 / -1 !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__reportHeader {",
+    "  flex-direction: row !important;",
+    "  align-items: center !important;",
+    "  padding: 0.92rem 0.96rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__reportHeadMeta {",
+    "  width: auto !important;",
+    "  justify-items: end !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__reportHeadMain h3 {",
+    "  font-size: 1.04rem !important;",
+    "  letter-spacing: -0.015em !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__reportHeadMain p {",
+    "  margin-top: 0.18rem !important;",
+    "  font-size: 0.76rem !important;",
+    "  line-height: 1.32 !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__exec {",
+    "  display: grid !important;",
+    "  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__exec > .kpiDash__summary {",
+    "  grid-column: span 6 !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__exec > .kpiDash__fitFlow {",
+    "  grid-column: span 6 !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__execHeader h4 {",
+    "  font-size: 1.02rem !important;",
+    "  letter-spacing: -0.012em !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__execHeader p {",
+    "  font-size: 0.76rem !important;",
+    "  line-height: 1.32 !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__charts {",
+    "  display: grid !important;",
+    "  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;",
+    "  gap: 0.96rem !important;",
+    "  align-items: stretch !important;",
+    "  --kpi-chart-row-height: 314px;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__panel--bars,",
+    ".kpiDash__posterSnapshot .kpiDash__panel--aux {",
+    "  grid-column: span 6 !important;",
+    "  padding: 0.94rem 0.88rem 0.96rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__panelHeader {",
+    "  align-items: flex-start !important;",
+    "  margin-bottom: 0.68rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__panelHeader h4 {",
+    "  font-size: 1.04rem !important;",
+    "  letter-spacing: -0.018em !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__panelHeader p {",
+    "  padding-top: 0.08rem !important;",
+    "  font-size: 0.73rem !important;",
+    "  line-height: 1.32 !important;",
+    "}",
+  ].join("\n");
+}
+
+function normalizeHeaderCloneForPoster(headerClone) {
+  if (!headerClone) {
+    return;
+  }
+
+  headerClone
+    .querySelectorAll(".site-nav, #mobileDockWrap, .mobile-fixed-dock, .nav-toggle")
+    .forEach((node) => {
+      node.remove();
+    });
+
+  headerClone.querySelectorAll(".site-topbar").forEach((node) => {
+    node.style.position = "static";
+    node.style.top = "auto";
+    node.style.left = "auto";
+  });
+}
+
+function snapshotCanvasNodesToImages({ sourceRoot, targetRoot }) {
+  if (!sourceRoot || !targetRoot) {
+    return;
+  }
+
+  const sourceCanvases = Array.from(sourceRoot.querySelectorAll("canvas"));
+  const targetCanvases = Array.from(targetRoot.querySelectorAll("canvas"));
+  const total = Math.min(sourceCanvases.length, targetCanvases.length);
+
+  for (let i = 0; i < total; i += 1) {
+    const sourceCanvas = sourceCanvases[i];
+    const targetCanvas = targetCanvases[i];
+
+    if (!sourceCanvas || !targetCanvas || !targetCanvas.parentElement) {
+      continue;
+    }
+
+    if ((Number(sourceCanvas.width) || 0) <= 0 || (Number(sourceCanvas.height) || 0) <= 0) {
+      continue;
+    }
+
+    try {
+      const img = document.createElement("img");
+      img.src = sourceCanvas.toDataURL("image/png");
+      img.alt = "";
+      img.decoding = "sync";
+      img.setAttribute("aria-hidden", "true");
+      img.style.display = "block";
+      img.style.width = "100%";
+      img.style.height = "auto";
+      img.style.maxWidth = "100%";
+      if (targetCanvas.className) {
+        img.className = targetCanvas.className;
+      }
+      targetCanvas.parentElement.replaceChild(img, targetCanvas);
+    } catch (error) {
+      // no-op: se mantiene el canvas clonado como fallback.
+    }
+  }
+}
+
+function applySnapshotReplacementsToRoot({ targetRoot, replacements }) {
+  if (!targetRoot || !Array.isArray(replacements) || replacements.length === 0) {
+    return;
+  }
+
+  replacements
+    .slice()
+    .sort((a, b) => b.path.length - a.path.length)
+    .forEach((replacement) => {
+      const target = resolveNodeByPath(targetRoot, replacement.path);
+      if (!target || !target.parentElement) {
+        return;
+      }
+
+      const widthPx = Number(replacement.width) > 0 ? Number(replacement.width) : target.offsetWidth;
+      const heightPx =
+        Number(replacement.height) > 0 ? Number(replacement.height) : target.offsetHeight;
+
+      const img = document.createElement("img");
+      img.src = replacement.dataUrl;
+      img.alt = "";
+      img.decoding = "sync";
+      img.setAttribute("aria-hidden", "true");
+      img.className = "kpiDash__pdfSwapImage";
+      img.style.display = "inline-block";
+      img.style.width = widthPx > 0 ? widthPx + "px" : "100%";
+      img.style.height = heightPx > 0 ? heightPx + "px" : "auto";
+      img.style.maxWidth = "100%";
+      img.style.objectFit = "contain";
+      img.style.verticalAlign = "middle";
+
+      target.parentElement.replaceChild(img, target);
+    });
+}
+
+async function replaceSvgNodesWithSnapshots({
+  sourceRoot,
+  targetRoot,
+  html2canvas,
+  selectors,
+  scale,
+  debug,
+}) {
+  if (!sourceRoot || !targetRoot || !Array.isArray(selectors) || selectors.length === 0) {
+    return;
+  }
+
+  const seenPaths = new Set();
+
+  for (let i = 0; i < selectors.length; i += 1) {
+    const selector = selectors[i];
+    const sourceNodes = Array.from(sourceRoot.querySelectorAll(selector));
+
+    for (let index = 0; index < sourceNodes.length; index += 1) {
+      const sourceNode = sourceNodes[index];
+      if (!sourceNode || String(sourceNode.tagName || "").toLowerCase() !== "svg") {
+        continue;
+      }
+
+      const path = getNodePathWithinRoot(sourceNode, sourceRoot);
+      const pathKey = Array.isArray(path) ? path.join(".") : "";
+      if (!path || !pathKey || seenPaths.has(pathKey)) {
+        continue;
+      }
+
+      const targetNode = resolveNodeByPath(targetRoot, path);
+      if (!targetNode || !targetNode.parentElement) {
+        continue;
+      }
+
+      const rect = sourceNode.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        continue;
+      }
+
+      try {
+        const canvas = await captureLiveNodeSnapshot({
+          node: sourceNode,
+          html2canvas,
+          scale,
+          debug,
+        });
+        const img = document.createElement("img");
+        img.src = canvas.toDataURL("image/png");
+        img.alt = "";
+        img.decoding = "sync";
+        img.setAttribute("aria-hidden", "true");
+        img.className = "kpiDash__pdfSwapImage";
+        img.style.display = "block";
+        img.style.width = rect.width + "px";
+        img.style.height = rect.height + "px";
+        img.style.maxWidth = "100%";
+        img.style.objectFit = "contain";
+        targetNode.parentElement.replaceChild(img, targetNode);
+        seenPaths.add(pathKey);
+      } catch (error) {
+        // Se conserva el SVG clonado si el snapshot falla.
+      }
+    }
+  }
+}
+
+async function buildAdaptiveSinglePagePosterPdfVariant({
+  libs,
+  blocks,
+  cfg,
+  resultMeta,
+}) {
+  const attempts = [];
+  const posterAssetCache = new Map();
+  const strategies = await buildPosterCodecStrategies({ libs, blocks });
+  let bestSoftBudget = null;
+  let bestHardBudget = null;
+  let smallestVariant = null;
+
+  outer: for (let i = 0; i < cfg.preferredScalePresets.length; i += 1) {
+    const preset = cfg.preferredScalePresets[i];
+
+    for (let j = 0; j < strategies.length; j += 1) {
+      const strategy = strategies[j];
+      const variant = await buildSinglePagePosterPdfVariant({
+        libs,
+        blocks,
+        cfg,
+        resultMeta,
+        preset,
+        strategy,
+        posterAssetCache,
+      });
+
+      attempts.push({
+        name: preset.name,
+        scale: preset.scale,
+        jpegQuality: preset.jpegQuality,
+        strategy: strategy.name,
+        pages: variant.pages,
+        blobSizeBytes: variant.blobSizeBytes,
+        captureMode: variant.captureMode,
+        usedTiles: variant.usedTiles,
+        renderWidthMm: variant.renderWidthMm,
+        layoutMode: variant.layoutMode,
+        finalPosterCodec: variant.finalPosterCodec,
+      });
+
+      if (!smallestVariant || variant.blobSizeBytes < smallestVariant.blobSizeBytes) {
+        smallestVariant = variant;
+      }
+
+      if (
+        !bestHardBudget &&
+        variant.singlePageSatisfied &&
+        variant.blobSizeBytes <= cfg.hardMaxPdfBytes
+      ) {
+        bestHardBudget = variant;
+      }
+
+      if (
+        variant.singlePageSatisfied &&
+        variant.blobSizeBytes <= cfg.softMaxPdfBytes
+      ) {
+        bestSoftBudget = variant;
+        break outer;
+      }
+    }
+  }
+
+  const chosenVariant = bestSoftBudget || bestHardBudget || smallestVariant;
+  if (!chosenVariant) {
+    throw new Error("No se pudo generar ninguna variante válida del PDF single-page poster.");
+  }
+
+  if (!bestSoftBudget && bestHardBudget) {
+    pushPdfWarning(
+      resultMeta,
+      "Ninguna variante single-page entró en el soft budget. Se usa la más fiel dentro del hard budget.",
+    );
+  }
+
+  if (!bestHardBudget) {
+    pushPdfWarning(
+      resultMeta,
+      "Ninguna variante single-page entró en el hard budget. Se usa la más liviana generada.",
+    );
+  }
+
+  if (!chosenVariant.singlePageSatisfied) {
+    pushPdfWarning(
+      resultMeta,
+      "La variante elegida no confirmó una sola página. Revisar composición poster.",
+    );
+  }
+
+  if (chosenVariant.finalPosterCodec === "JPEG") {
+    pushPdfWarning(
+      resultMeta,
+      "Se utilizó JPEG como último recurso para el poster final.",
+    );
+  }
+
+  chosenVariant.variantAttempts = attempts;
+  chosenVariant.softBudgetHit = chosenVariant.blobSizeBytes <= cfg.softMaxPdfBytes;
+  chosenVariant.hardBudgetHit = chosenVariant.blobSizeBytes <= cfg.hardMaxPdfBytes;
+
+  return chosenVariant;
+}
+
+async function buildSinglePagePosterPdfVariant({
+  libs,
+  blocks,
+  cfg,
+  resultMeta,
+  preset,
+  strategy,
+  posterAssetCache,
+}) {
+  const layout = computePosterLayoutMetrics(blocks);
+  const posterCanvas = await composePosterCanvas({
+    blocks,
+    layout,
+    preset,
+    strategy,
+    posterAssetCache,
+  });
+
+  const drawableWidthMm =
+    (cfg.targetReportWidthMm * posterCanvas.width) /
+    Math.max(1, layout.reportRootWidthPx);
+  const drawableHeightMm = (drawableWidthMm * posterCanvas.height) / Math.max(1, posterCanvas.width);
+  const isLandscape = cfg.pageOrientation === "landscape";
+  const a4PageWidthMm = isLandscape ? PAGE_A4_MM.height : PAGE_A4_MM.width;
+  const a4PageHeightMm = isLandscape ? PAGE_A4_MM.width : PAGE_A4_MM.height;
+  const useCustomPageSize = cfg.pdfPageSizeMode === "custom";
+  let pageWidthMm = drawableWidthMm + cfg.posterMarginMm * 2;
+  let pageHeightMm = drawableHeightMm + cfg.posterMarginMm * 2;
+  let renderWidthMm = drawableWidthMm;
+  let renderHeightMm = drawableHeightMm;
+  let imageXmm = cfg.posterMarginMm;
+  let imageYmm = cfg.posterMarginMm;
+
+  if (!useCustomPageSize) {
+    const margins = cfg.marginsMm || DEFAULT_OPTIONS.marginsMm;
+    const availableWidthMm = Math.max(20, a4PageWidthMm - margins.left - margins.right);
+    const availableHeightMm = Math.max(20, a4PageHeightMm - margins.top - margins.bottom);
+    const fitScale = Math.min(
+      availableWidthMm / Math.max(1, drawableWidthMm),
+      availableHeightMm / Math.max(1, drawableHeightMm),
+    );
+
+    pageWidthMm = a4PageWidthMm;
+    pageHeightMm = a4PageHeightMm;
+    renderWidthMm = drawableWidthMm * fitScale;
+    renderHeightMm = drawableHeightMm * fitScale;
+    imageXmm = margins.left + (availableWidthMm - renderWidthMm) / 2;
+    imageYmm = margins.top;
+  }
+
+  const posterAsset = await createPosterPdfImageAsset(posterCanvas, {
+    codec: strategy.finalCodec,
+    jpegQuality: preset.jpegQuality,
+  });
+
+  const doc = new libs.jsPDF({
+    orientation: pageWidthMm > pageHeightMm ? "l" : "p",
+    unit: "mm",
+    format: useCustomPageSize ? [pageWidthMm, pageHeightMm] : "a4",
+    compress: true,
+  });
+
+  doc.addImage(
+    posterAsset.dataUrl,
+    posterAsset.format,
+    imageXmm,
+    imageYmm,
+    renderWidthMm,
+    renderHeightMm,
+  );
+
+  const blob = await measurePdfVariant(doc);
+  const pages = doc.getNumberOfPages();
+
+  return {
+    blob,
+    blobSizeBytes: blob.size,
+    pages,
+    chosenPreset: {
+      name: preset.name,
+      scale: preset.scale,
+      jpegQuality: preset.jpegQuality,
+      strategy: strategy.name,
+    },
+    captureMode: "single-page-poster",
+    usedTiles: Boolean(resultMeta.fallbackTilesUsed),
+    renderWidthMm: round2(renderWidthMm),
+    layoutMode: pages === 1
+      ? useCustomPageSize
+        ? "single-page-poster-custom"
+        : "single-page-poster-a4"
+      : "single-page-unexpected",
+    pageBreaks: [],
+    blockFormats: { ...strategy.blockFormats },
+    selectedCodecPerBlock: { ...strategy.blockFormats },
+    finalPosterCodec: posterAsset.format,
+    finalPosterBytesEstimate: posterAsset.bytes,
+    posterCanvasPx: {
+      width: posterCanvas.width,
+      height: posterCanvas.height,
+    },
+    pdfPageMm: {
+      width: round2(pageWidthMm),
+      height: round2(pageHeightMm),
+    },
+    usedCustomPageSize: useCustomPageSize,
+    singlePageSatisfied: pages === 1,
+    visualBlocksIncluded: blocks.map((block) => block.id),
+  };
+}
+
+async function buildPosterCodecStrategies({ libs, blocks }) {
+  const baseFormats = blocks.reduce((acc, block) => {
+    acc[block.id] = "PNG";
+    return acc;
+  }, {});
+  const supportsWebp = await canUsePdfImageFormat({
+    libs,
+    format: "WEBP",
+  });
+  const strategies = [
+    {
+      name: "all-png-final-png",
+      blockFormats: { ...baseFormats },
+      finalCodec: "PNG",
+    },
+  ];
+
+  if (supportsWebp) {
+    strategies.push(
+      {
+        name: "all-png-final-webp",
+        blockFormats: { ...baseFormats },
+        finalCodec: "WEBP",
+      },
+      {
+        name: "charts-webp-final-webp",
+        blockFormats: {
+          ...baseFormats,
+          "charts-row": "WEBP",
+        },
+        finalCodec: "WEBP",
+      },
+      {
+        name: "charts-executive-webp-final-webp",
+        blockFormats: {
+          ...baseFormats,
+          executive: "WEBP",
+          "charts-row": "WEBP",
+        },
+        finalCodec: "WEBP",
+      },
+    );
+  }
+
+  strategies.push({
+    name: supportsWebp
+      ? "charts-executive-webp-final-jpeg"
+      : "all-png-final-jpeg",
+    blockFormats: supportsWebp
+      ? {
+          ...baseFormats,
+          executive: "WEBP",
+          "charts-row": "WEBP",
+        }
+      : { ...baseFormats },
+    finalCodec: "JPEG",
+  });
+
+  return strategies;
+}
+
+async function composePosterCanvas({
+  blocks,
+  layout,
+  preset,
+  strategy,
+  posterAssetCache,
+}) {
+  const posterCanvas = document.createElement("canvas");
+  posterCanvas.width = Math.max(1, Math.round(layout.widthPx * preset.scale));
+  posterCanvas.height = Math.max(1, Math.round(layout.heightPx * preset.scale));
+
+  const ctx = posterCanvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("No se pudo crear el canvas maestro del poster PDF.");
+  }
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, posterCanvas.width, posterCanvas.height);
+  ctx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in ctx) {
+    ctx.imageSmoothingQuality = "high";
+  }
+
+  for (let i = 0; i < blocks.length; i += 1) {
+    const block = blocks[i];
+    const blockLayout = layout.blocks.find((entry) => entry.id === block.id);
+    if (!blockLayout) {
+      continue;
+    }
+
+    const preparedCanvas = await getPreparedPosterBlockCanvas({
+      block,
+      preset,
+      codec: strategy.blockFormats[block.id] || "PNG",
+      cache: posterAssetCache,
+    });
+    const x = Math.round(blockLayout.x * preset.scale);
+    const y = Math.round(blockLayout.y * preset.scale);
+    const width = Math.max(1, Math.round(blockLayout.width * preset.scale));
+    const height = Math.max(1, Math.round(blockLayout.height * preset.scale));
+
+    ctx.drawImage(preparedCanvas, x, y, width, height);
+  }
+
+  return posterCanvas;
+}
+
+async function getPreparedPosterBlockCanvas({ block, preset, codec, cache }) {
+  const normalizedCodec = normalizePosterCodec(codec);
+  const cacheKey = [
+    block.id,
+    normalizedCodec,
+    round2(preset.scale),
+    round2(block.captureScale),
+  ].join("|");
+
+  if (cache && cache.has(cacheKey)) {
+    return cache.get(cacheKey);
+  }
+
+  const factor = resolvePresetDownsampleFactor(block.captureScale, preset.scale);
+  const resizedCanvas = resizeCanvasForFactor(block.canvas, factor);
+  let preparedCanvas = resizedCanvas;
+
+  if (normalizedCodec === "WEBP") {
+    preparedCanvas = await transcodeCanvasToCanvas(resizedCanvas, {
+      mimeType: "image/webp",
+      quality: POSTER_DEFAULT_WEBP_QUALITY,
+    });
+  } else if (normalizedCodec === "JPEG") {
+    preparedCanvas = await transcodeCanvasToCanvas(resizedCanvas, {
+      mimeType: "image/jpeg",
+      quality: preset.jpegQuality,
+    });
+  }
+
+  if (cache) {
+    cache.set(cacheKey, preparedCanvas);
+  }
+
+  return preparedCanvas;
+}
+
+function computePosterLayoutMetrics(blocks) {
+  const rects = blocks
+    .map((block) => {
+      const rect = block.element.getBoundingClientRect();
+      return {
+        id: block.id,
+        rect,
+      };
+    })
+    .filter((entry) => entry.rect.width > 0 && entry.rect.height > 0);
+
+  if (rects.length === 0) {
+    throw new Error("No hay bloques visibles para componer el poster PDF.");
+  }
+
+  const union = rects.reduce(
+    (acc, entry) => {
+      acc.left = Math.min(acc.left, entry.rect.left);
+      acc.top = Math.min(acc.top, entry.rect.top);
+      acc.right = Math.max(acc.right, entry.rect.right);
+      acc.bottom = Math.max(acc.bottom, entry.rect.bottom);
+      return acc;
+    },
+    {
+      left: Infinity,
+      top: Infinity,
+      right: -Infinity,
+      bottom: -Infinity,
+    },
+  );
+
+  const reportHeaderBlock = blocks.find((block) => block.id === "report-header");
+  const reportRootEl = reportHeaderBlock
+    ? reportHeaderBlock.element.closest("[data-ppccr-poster-report-root], [data-kpi-report-root]")
+    : null;
+  const reportRootRect = reportRootEl ? reportRootEl.getBoundingClientRect() : null;
+
+  return {
+    widthPx: Math.max(1, Math.round(union.right - union.left)),
+    heightPx: Math.max(1, Math.round(union.bottom - union.top)),
+    reportRootWidthPx: Math.max(
+      1,
+      round2(reportRootRect ? reportRootRect.width : union.right - union.left),
+    ),
+    blocks: rects.map((entry) => {
+      return {
+        id: entry.id,
+        x: round2(entry.rect.left - union.left),
+        y: round2(entry.rect.top - union.top),
+        width: round2(entry.rect.width),
+        height: round2(entry.rect.height),
+      };
+    }),
+  };
+}
+
+async function createPosterPdfImageAsset(
+  canvas,
+  { codec = "PNG", jpegQuality = POSTER_DEFAULT_JPEG_QUALITY } = {},
+) {
+  const normalizedCodec = normalizePosterCodec(codec);
+  const mimeType =
+    normalizedCodec === "PNG"
+      ? "image/png"
+      : normalizedCodec === "WEBP"
+        ? "image/webp"
+        : "image/jpeg";
+  const quality =
+    normalizedCodec === "PNG"
+      ? undefined
+      : normalizedCodec === "WEBP"
+        ? POSTER_DEFAULT_WEBP_QUALITY
+        : clampJpegQuality(jpegQuality);
+  const blob = await canvasToBlobAsync(canvas, mimeType, quality);
+  const dataUrl = await blobToDataUrl(blob);
+
+  return {
+    dataUrl,
+    format: normalizedCodec,
+    bytes: blob.size,
+  };
+}
+
+function normalizePosterCodec(codec) {
+  const upper = String(codec || "PNG").trim().toUpperCase();
+  if (upper === "WEBP") {
+    return "WEBP";
+  }
+  if (upper === "JPEG" || upper === "JPG") {
+    return "JPEG";
+  }
+  return "PNG";
+}
+
+async function transcodeCanvasToCanvas(sourceCanvas, { mimeType, quality }) {
+  const blob = await canvasToBlobAsync(sourceCanvas, mimeType, quality);
+  return blobToCanvas(blob, sourceCanvas.width, sourceCanvas.height);
+}
+
+async function canvasToBlobAsync(canvas, mimeType, quality) {
+  if (!canvas) {
+    throw new Error("Canvas inválido para serializar asset PDF.");
+  }
+
+  if (typeof canvas.toBlob === "function") {
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (nextBlob) => {
+          if (nextBlob) {
+            resolve(nextBlob);
+            return;
+          }
+          reject(new Error("No se pudo serializar el canvas como blob."));
+        },
+        mimeType,
+        quality,
+      );
+    });
+    return blob;
+  }
+
+  return dataUrlToBlob(canvas.toDataURL(mimeType, quality));
+}
+
+async function blobToCanvas(blob, width, height) {
+  const image = await loadImageFromBlob(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(width || image.width || 1));
+  canvas.height = Math.max(1, Math.round(height || image.height || 1));
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return canvas;
+  }
+
+  ctx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in ctx) {
+    ctx.imageSmoothingQuality = "high";
+  }
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  return canvas;
+}
+
+async function loadImageFromBlob(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = async () => {
+      try {
+        if (typeof img.decode === "function") {
+          await img.decode().catch(() => {});
+        }
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+      resolve(img);
+    };
+    img.onerror = (error) => {
+      URL.revokeObjectURL(url);
+      reject(error || new Error("No se pudo cargar el blob como imagen."));
+    };
+    img.src = url;
+  });
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () =>
+      reject(reader.error || new Error("No se pudo convertir blob a data URL."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function dataUrlToBlob(dataUrl) {
+  const match = String(dataUrl || "").match(/^data:([^;,]+)?(?:;base64)?,(.*)$/);
+  if (!match) {
+    throw new Error("Data URL inválida para convertir a blob.");
+  }
+
+  const mimeType = match[1] || "application/octet-stream";
+  const payload = match[2] || "";
+  const binary = atob(payload);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return new Blob([bytes], { type: mimeType });
+}
+
+async function canUsePdfImageFormat({ libs, format }) {
+  const normalizedFormat = normalizePosterCodec(format);
+  if (normalizedFormat === "PNG" || normalizedFormat === "JPEG") {
+    return true;
+  }
+
+  const supportKey = "__ppccrPdfImageSupport_" + normalizedFormat;
+  if (Object.prototype.hasOwnProperty.call(window, supportKey)) {
+    return Boolean(window[supportKey]);
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    window[supportKey] = false;
+    return false;
+  }
+
+  ctx.fillStyle = "#0f5fa6";
+  ctx.fillRect(0, 0, 1, 1);
+
+  let dataUrl = "";
+  try {
+    dataUrl = canvas.toDataURL("image/webp", 1);
+  } catch (error) {
+    window[supportKey] = false;
+    return false;
+  }
+
+  if (dataUrl.indexOf("data:image/webp") !== 0) {
+    window[supportKey] = false;
+    return false;
+  }
+
+  try {
+    const doc = new libs.jsPDF({
+      orientation: "p",
+      unit: "mm",
+      format: [10, 10],
+    });
+    doc.addImage(dataUrl, normalizedFormat, 1, 1, 8, 8);
+    window[supportKey] = true;
+  } catch (error) {
+    window[supportKey] = false;
+  }
+
+  return Boolean(window[supportKey]);
 }
 
 async function buildAdaptiveBlockPdfVariant({
@@ -2131,8 +3262,15 @@ function normalizeOptions(options) {
   );
   merged.maxPdfBytes = merged.hardMaxPdfBytes;
   merged.fitSinglePage = options.fitSinglePage !== false;
+  merged.pageStrategy =
+    String(options.pageStrategy || DEFAULT_OPTIONS.pageStrategy).trim() ===
+    "single-page-poster"
+      ? "single-page-poster"
+      : "multi-page";
   merged.preferLegibilityOverSinglePage =
-    options.preferLegibilityOverSinglePage !== false;
+    merged.pageStrategy === "single-page-poster"
+      ? options.preferLegibilityOverSinglePage === true
+      : options.preferLegibilityOverSinglePage !== false;
   merged.minSinglePageScale = Math.max(
     0.7,
     Math.min(1, Number(options.minSinglePageScale) || DEFAULT_OPTIONS.minSinglePageScale),
@@ -2156,6 +3294,27 @@ function normalizeOptions(options) {
     "landscape"
       ? "landscape"
       : "portrait";
+  merged.pdfPageSizeMode =
+    String(options.pdfPageSizeMode || DEFAULT_OPTIONS.pdfPageSizeMode).trim() === "custom"
+      ? "custom"
+      : "a4";
+  merged.posterLayoutBasis =
+    typeof options.posterLayoutBasis === "string" &&
+    options.posterLayoutBasis.trim().length > 0
+      ? options.posterLayoutBasis.trim()
+      : DEFAULT_OPTIONS.posterLayoutBasis;
+  merged.posterViewportWidthPx = Math.max(
+    1280,
+    Number(options.posterViewportWidthPx) || DEFAULT_OPTIONS.posterViewportWidthPx,
+  );
+  merged.posterMarginMm = Math.max(
+    0,
+    Number(options.posterMarginMm) || DEFAULT_OPTIONS.posterMarginMm,
+  );
+  merged.targetReportWidthMm = Math.max(
+    120,
+    Number(options.targetReportWidthMm) || DEFAULT_OPTIONS.targetReportWidthMm,
+  );
   merged.blockLayoutMode =
     typeof options.blockLayoutMode === "string" && options.blockLayoutMode.trim().length > 0
       ? options.blockLayoutMode.trim()
@@ -2207,9 +3366,12 @@ function initPdfDebugState() {
   }
 
   window.__PPCCR_PDF_DEBUG__ = {
+    mode: null,
     chosenPreset: null,
+    pageCount: 0,
     pages: 0,
     blobSizeBytes: 0,
+    finalBlobBytes: 0,
     captureMode: null,
     usedTiles: false,
     renderWidthMm: null,
@@ -2220,6 +3382,14 @@ function initPdfDebugState() {
     includedSectionHeader: false,
     layoutMode: null,
     blockFormats: {},
+    selectedCodecPerBlock: {},
+    finalPosterCodec: null,
+    finalPosterBytesEstimate: 0,
+    posterCanvasPx: null,
+    pdfPageMm: null,
+    usedCustomPageSize: false,
+    singlePageSatisfied: false,
+    visualBlocksIncluded: [],
     warnings: [],
     timings: {},
   };

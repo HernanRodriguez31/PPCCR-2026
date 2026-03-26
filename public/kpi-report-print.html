@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>PPCCR KPI Report Print</title>
+    <link rel="icon" href="assets/favicon.png" />
+    <link
+      rel="stylesheet"
+      href="styles.css?v=20260311-home-sponsors-spacing1"
+    />
+    <link
+      rel="stylesheet"
+      href="kpis-dashboard.css?v=20260326-pdf-export-v5-server-a4"
+    />
+    <link
+      rel="stylesheet"
+      href="ppccr-sankey-participantes.css?v=20260325-dashboard-live-fix1"
+    />
+    <link
+      rel="stylesheet"
+      href="site-desktop-shell.css?v=20260314-home-final-touch1"
+    />
+    <style>
+      :root {
+        --kpi-print-page-width: 1240px;
+        --kpi-print-page-height: 1754px;
+        --kpi-print-page-padding: 34px;
+        --kpi-print-natural-width: 1440px;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-width: 1440px;
+        background: #edf3f9;
+      }
+
+      body.page-kpi-print {
+        min-height: 100vh;
+        overflow: auto;
+      }
+
+      .page-kpi-print .kpiPrintShell {
+        min-width: 1440px;
+        padding: 28px 0;
+        display: flex;
+        justify-content: center;
+      }
+
+      .page-kpi-print #kpi-print-page {
+        width: var(--kpi-print-page-width);
+        height: var(--kpi-print-page-height);
+        background: #ffffff;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .page-kpi-print #kpi-print-pageInner {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        padding: var(--kpi-print-page-padding);
+        box-sizing: border-box;
+        background: #ffffff;
+      }
+
+      .page-kpi-print #kpi-print-document {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: var(--kpi-print-natural-width);
+        transform-origin: top left;
+        background: #ffffff;
+      }
+
+      .page-kpi-print .site-header.site-topbar {
+        position: static !important;
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+        box-shadow: none !important;
+      }
+
+      .page-kpi-print .site-topbar__inner {
+        width: min(calc(100% - (var(--desktop-gutter) * 2)), var(--desktop-wide-max));
+        margin-inline: auto;
+      }
+
+      .page-kpi-print .site-nav,
+      .page-kpi-print #mobileDockWrap,
+      .page-kpi-print .nav-toggle,
+      .page-kpi-print .mobile-fixed-dock,
+      .page-kpi-print .back-to-top,
+      .page-kpi-print .modal,
+      .page-kpi-print .modal-backdrop,
+      .page-kpi-print .auth-gate,
+      .page-kpi-print #auth-gate,
+      .page-kpi-print .auth-gate-backdrop,
+      .page-kpi-print .loading-overlay,
+      .page-kpi-print .toast,
+      .page-kpi-print .snackbar,
+      .page-kpi-print .tooltip,
+      .page-kpi-print .tippy-box {
+        display: none !important;
+      }
+
+      .page-kpi-print .site-main {
+        padding-bottom: 0 !important;
+      }
+
+      .page-kpi-print #kpis {
+        margin: 0;
+        padding-top: 18px;
+      }
+
+      .page-kpi-print #kpis .container {
+        width: min(calc(100% - (var(--desktop-gutter) * 2)), var(--desktop-wide-max));
+        margin-inline: auto;
+      }
+
+      .page-kpi-print .kpiDash__reportActions,
+      .page-kpi-print .kpiDash__reportBtn,
+      .page-kpi-print .kpiDash__reportBtn--primary {
+        display: none !important;
+      }
+
+      .page-kpi-print .kpiDash__reportRoot {
+        background: #ffffff;
+      }
+
+      .page-kpi-print .kpiDash__reportHeader,
+      .page-kpi-print .kpiDash__execPanel,
+      .page-kpi-print .kpiDash__panel,
+      .page-kpi-print .kpiDash__funnel,
+      .page-kpi-print .kpiDash__stock,
+      .page-kpi-print .kpiDash__tableWrap,
+      .page-kpi-print .kpiDash__chart,
+      .page-kpi-print .ppccr-sankey {
+        overflow: visible !important;
+      }
+
+      .page-kpi-print *,
+      .page-kpi-print *::before,
+      .page-kpi-print *::after {
+        animation: none !important;
+        transition: none !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    </style>
+    <script
+      src="ppccr-sankey-participantes.js?v=20260325-dashboard-live-fix1"
+      defer
+    ></script>
+    <script
+      src="kpis-dashboard.js?v=20260326-pdf-export-v5-server-a4-localhost-fix5"
+      defer
+    ></script>
+  </head>
+  <body class="page-home page-kpi-print">
+    <div class="kpiPrintShell">
+      <div id="kpi-print-page" aria-label="Página A4 KPI">
+        <div id="kpi-print-pageInner">
+          <div id="kpi-print-document">
+            <header class="site-header site-topbar" id="top">
+              <div class="topbar site-topbar__inner" id="siteTopbar">
+                <div class="brand" aria-label="Identidad del programa">
+                  <div class="brand-mark brand-mark--left">
+                    <img
+                      class="brand-ribbon"
+                      src="assets/logo%20cinta%20azul.png"
+                      alt="Listón azul de concientización"
+                      decoding="async"
+                    />
+                  </div>
+
+                  <div class="brand-copy">
+                    <p class="brand-kicker" hidden></p>
+                    <h1 class="brand-title">
+                      Programa de Prevención de Cáncer Colorrectal
+                    </h1>
+                  </div>
+                </div>
+              </div>
+
+              <div class="logo-strip partners-bar" aria-label="Partners del programa">
+                <div class="container">
+                  <div
+                    class="logo-strip__inner partners-strip partners-grid"
+                    id="partner-logos"
+                  >
+                    <div class="partner-logo partner-pill" data-partner="fep">
+                      <img
+                        src="assets/logo-fep.png?v=20260208"
+                        alt="Fundación Enfermeros Protagonistas"
+                        loading="eager"
+                        decoding="async"
+                        width="290"
+                        height="110"
+                      />
+                      <span>Fundación Enfermeros Protagonistas</span>
+                    </div>
+                    <div class="partner-logo partner-pill" data-partner="gedyt">
+                      <img
+                        src="assets/logo-gedyt.png"
+                        alt="Fundación GEDyT"
+                        loading="eager"
+                        decoding="async"
+                        width="290"
+                        height="110"
+                      />
+                      <span>Fundación GEDyT</span>
+                    </div>
+                    <div class="partner-logo partner-pill" data-partner="merck">
+                      <img
+                        src="assets/logo-merck.png"
+                        alt="Merck Foundation"
+                        loading="eager"
+                        decoding="async"
+                        width="290"
+                        height="110"
+                      />
+                      <span>Merck Foundation</span>
+                    </div>
+                    <div class="partner-logo partner-pill" data-partner="gcba">
+                      <img
+                        src="assets/logo-gcba.png"
+                        alt="Gobierno de la Ciudad de Buenos Aires"
+                        loading="eager"
+                        decoding="async"
+                        width="290"
+                        height="110"
+                      />
+                      <span>Gobierno de la Ciudad de Buenos Aires</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            <main class="site-main">
+              <section
+                class="section section-anchor"
+                id="kpis"
+                aria-labelledby="kpi-print-title"
+              >
+                <div class="container">
+                  <header class="section-header">
+                    <h2 class="section-title" id="kpi-print-title">
+                      KPIs / Reporte consolidado
+                    </h2>
+                    <p class="section-subtitle">Visualización en tiempo real.</p>
+                  </header>
+
+                  <div
+                    id="kpi-dashboard-ppccr"
+                    class="kpiDash"
+                    data-kpi-dashboard
+                    aria-live="polite"
+                  ></div>
+                </div>
+              </section>
+            </main>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

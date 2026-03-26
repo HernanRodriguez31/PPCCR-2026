@@ -33,6 +33,10 @@
         "function": "submitAlgorithmStage1"
       },
       {
+        "source": "/api/export-kpi-pdf-a4",
+        "function": "exportKpiPdfA4"
+      },
+      {
         "source": "/exports/informe-fit-entregados-lab.xlsx",
         "function": "exportInformeFitEntregadosLab"
       }
@@ -40,6 +44,15 @@
     "headers": [
       {
         "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/kpi-report-print.html",
         "headers": [
           {
             "key": "Cache-Control",

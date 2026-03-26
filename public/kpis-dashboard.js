@@ -55,6 +55,27 @@
   const KPI_DEBUG_KEY = "__PPCCR_KPI_DEBUG__";
   const KPI_SLOW_LOAD_MESSAGE =
     "Dashboard cargando más de lo esperado. Revisar consola.";
+  const KPI_LOCAL_HOSTNAMES = Object.freeze(new Set(["localhost", "127.0.0.1", "[::1]"]));
+  const KPI_PDF_ENDPOINT_PATH = "/api/export-kpi-pdf-a4";
+  const KPI_PDF_ENDPOINT_LOCAL_FUNCTIONS =
+    "http://127.0.0.1:5001/ppccr-2026/us-central1/exportKpiPdfA4";
+  const KPI_PDF_ENDPOINT_OVERRIDE_KEY = "__PPCCR_KPI_PDF_ENDPOINT__";
+  const KPI_PRINT_STATE_KEY = "__PPCCR_KPI_PRINT__";
+  const KPI_PRINT_PAGE_SELECTOR = "#kpi-print-page";
+  const KPI_PRINT_PAGE_INNER_SELECTOR = "#kpi-print-pageInner";
+  const KPI_PRINT_DOCUMENT_SELECTOR = "#kpi-print-document";
+  const KPI_PRINT_VERSION = "20260326-pdf-export-v5-server-a4-localhost-fix5";
+  const KPI_PRINT_INCLUDED_BLOCKS = Object.freeze([
+    "branding-top",
+    "section-header",
+    "report-header",
+    "executive",
+    "charts-row",
+    "funnel",
+    "stock",
+  ]);
+  let kpiPrintLayoutRaf = 0;
+  let kpiPrintResizeBound = false;
 
   function ensureKpiDebugState() {
     if (typeof window === "undefined") {
@@ -164,6 +185,305 @@
     return Object.assign(serialized, extra || {});
   }
 
+  function isKpiPrintPage() {
+    return Boolean(document.body && document.body.classList.contains("page-kpi-print"));
+  }
+
+  function resetKpiPrintState() {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    const initialState = {
+      ready: false,
+      scale: 1,
+      naturalWidth: 0,
+      naturalHeight: 0,
+      pageWidthPx: 0,
+      pageHeightPx: 0,
+      includedBlocks: [],
+      missingBlocks: KPI_PRINT_INCLUDED_BLOCKS.slice(),
+    };
+
+    window[KPI_PRINT_STATE_KEY] = initialState;
+    return initialState;
+  }
+
+  function updateKpiPrintState(patch) {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    const target = window[KPI_PRINT_STATE_KEY] || resetKpiPrintState();
+    Object.assign(target, patch || {});
+    return target;
+  }
+
+  function saveBlobAsFile(blob, filename) {
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  }
+
+  function buildFilenameFromDisposition(headerValue) {
+    const source = String(headerValue || "");
+    const utf8Match = source.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match && utf8Match[1]) {
+      return decodeURIComponent(utf8Match[1]).trim();
+    }
+
+    const plainMatch = source.match(/filename="?([^\";]+)"?/i);
+    if (plainMatch && plainMatch[1]) {
+      return plainMatch[1].trim();
+    }
+
+    const now = new Date();
+    const datePart = now.toISOString().slice(0, 10);
+    return "PPCCR_Reporte_A4_" + datePart + ".pdf";
+  }
+
+  function isLocalHostRuntime() {
+    const hostname = String(window.location && window.location.hostname ? window.location.hostname : "")
+      .trim()
+      .toLowerCase();
+    return KPI_LOCAL_HOSTNAMES.has(hostname);
+  }
+
+  function isFirebaseHostingEmulatorRuntime() {
+    const host = String(window.location && window.location.host ? window.location.host : "")
+      .trim()
+      .toLowerCase();
+    return host === "127.0.0.1:8085" || host === "localhost:8085" || host === "[::1]:8085";
+  }
+
+  function isHttpsRuntime() {
+    return String(window.location && window.location.protocol ? window.location.protocol : "")
+      .trim()
+      .toLowerCase() === "https:";
+  }
+
+  function normalizeKpiPdfErrorMessage(message) {
+    const text = String(message || "").trim();
+    if (!text) {
+      return "No se pudo generar el PDF A4.";
+    }
+
+    if (
+      /cannot get\s+\/api\/export-kpi-pdf-a4/i.test(text) ||
+      /<!doctype html/i.test(text) ||
+      /<html/i.test(text)
+    ) {
+      return (
+        "El servidor actual no expone el endpoint PDF. En localhost levantá Functions Emulator " +
+        "(http://127.0.0.1:5001) o usá Firebase Hosting Emulator (http://127.0.0.1:8085)."
+      );
+    }
+
+    return text;
+  }
+
+  function normalizeKpiPdfRequestError(error) {
+    const rawMessage =
+      error && typeof error === "object" && error.message
+        ? String(error.message)
+        : String(error || "");
+
+    if (/failed to fetch|networkerror|load failed|fetch/i.test(rawMessage)) {
+      return (
+        "No se pudo conectar al servicio PDF desde este entorno local. " +
+        "Verificá Functions Emulator en http://127.0.0.1:5001."
+      );
+    }
+
+    return normalizeKpiPdfErrorMessage(rawMessage);
+  }
+
+  function resolveKpiPdfEndpointCandidates() {
+    const configured = String(window[KPI_PDF_ENDPOINT_OVERRIDE_KEY] || "").trim();
+    if (configured) {
+      return [configured];
+    }
+
+    if (!isLocalHostRuntime()) {
+      return [KPI_PDF_ENDPOINT_PATH];
+    }
+
+    if (isFirebaseHostingEmulatorRuntime()) {
+      return [KPI_PDF_ENDPOINT_PATH];
+    }
+
+    return [KPI_PDF_ENDPOINT_LOCAL_FUNCTIONS];
+  }
+
+  function resolveKpiPdfExportStrategy() {
+    const forceLegacyExporter = Boolean(window.__PPCCR_ENABLE_LEGACY_PDF_EXPORT__);
+    const localRuntime = isLocalHostRuntime();
+    const hostingEmulator = isFirebaseHostingEmulatorRuntime();
+
+    if (forceLegacyExporter) {
+      return {
+        mode: "legacy-forced",
+        buttonLabel: "Generando PDF...",
+        attempts: [{ type: "legacy", reason: "explicit-override" }],
+      };
+    }
+
+    if (!localRuntime || hostingEmulator) {
+      return {
+        mode: "server-side-primary",
+        buttonLabel: "Generando PDF A4...",
+        attempts: [{ type: "server-side", reason: "default-server-side" }],
+      };
+    }
+
+    if (isHttpsRuntime()) {
+      return {
+        mode: "localhost-legacy-primary",
+        buttonLabel: "Generando PDF...",
+        attempts: [{ type: "legacy", reason: "local-https-contingency" }],
+      };
+    }
+
+    return {
+      mode: "localhost-server-side-then-legacy",
+      buttonLabel: "Generando PDF...",
+      attempts: [
+        { type: "server-side", reason: "local-http-primary" },
+        { type: "legacy", reason: "local-http-contingency" },
+      ],
+    };
+  }
+
+  async function readErrorMessageFromResponse(response) {
+    const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+
+    if (contentType.includes("application/json")) {
+      try {
+        const payload = await response.json();
+        if (payload && typeof payload.message === "string" && payload.message.trim()) {
+          return normalizeKpiPdfErrorMessage(payload.message.trim());
+        }
+      } catch (error) {
+        // no-op
+      }
+    }
+
+    try {
+      const text = await response.text();
+      if (text && text.trim()) {
+        return normalizeKpiPdfErrorMessage(text.trim());
+      }
+    } catch (error) {
+      // no-op
+    }
+
+    return "HTTP " + response.status;
+  }
+
+  async function exportarReportePDFLegacy() {
+    const pdfModule = await loadPpccrPdfModule();
+    if (!pdfModule || typeof pdfModule.exportPPCCRToPdf !== "function") {
+      throw new Error("No se pudo cargar exportPPCCRToPdf desde el módulo de exportación.");
+    }
+
+    await pdfModule.exportPPCCRToPdf({
+      headerSelector: "#top",
+      exportScopeSelector: "#kpis .container",
+      dashboardSelector: "#kpi-dashboard-ppccr",
+      filenamePrefix: "PPCCR_Reporte",
+      softMaxPdfBytes: 12 * 1024 * 1024,
+      hardMaxPdfBytes: 25 * 1024 * 1024,
+      preferredScalePresets: [
+        { name: "preset-1", scale: 2.8, jpegQuality: 0.96 },
+        { name: "preset-2", scale: 2.6, jpegQuality: 0.94 },
+        { name: "preset-3", scale: 2.4, jpegQuality: 0.92 },
+        { name: "preset-4", scale: 2.2, jpegQuality: 0.9 },
+        { name: "preset-5", scale: 2.0, jpegQuality: 0.88 },
+      ],
+      marginsMm: { top: 10, right: 10, bottom: 10, left: 10 },
+      includeSectionHeader: true,
+      pageStrategy: "single-page-poster",
+      pdfPageSizeMode: "a4",
+      posterLayoutBasis: "desktop-fixed",
+      posterViewportWidthPx: 1460,
+      posterMarginMm: 2,
+      targetReportWidthMm: 190,
+      preferLegibilityOverSinglePage: false,
+      pageOrientation: "portrait",
+      blockLayoutMode: "wysiwyg-v5-single-page-a4",
+      snapshotSelectors: [".kpiDash__trkGaugeWrap", ".ppccr-sankey svg"],
+      debug: false,
+      debugPdf: Boolean(window.__PPCCR_ENABLE_PDF_DEBUG__),
+    });
+  }
+
+  async function exportarReportePDFServerSide() {
+    const candidates = resolveKpiPdfEndpointCandidates();
+    let lastError = null;
+
+    for (let index = 0; index < candidates.length; index += 1) {
+      const endpoint = candidates[index];
+      const hasMoreCandidates = index < candidates.length - 1;
+
+      try {
+        const response = await fetch(endpoint, {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            Accept: "application/pdf",
+          },
+        });
+
+        if (!response.ok) {
+          const message = await readErrorMessageFromResponse(response);
+          throw new Error(message || "No se pudo generar el PDF A4.");
+        }
+
+        const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+        if (!contentType.includes("application/pdf")) {
+          const message = await readErrorMessageFromResponse(response);
+          throw new Error(message || "El servicio PDF no devolvió un PDF.");
+        }
+
+        const blob = await response.blob();
+        if (blob.size <= 0) {
+          throw new Error("El endpoint PDF respondió vacío.");
+        }
+
+        const filename = buildFilenameFromDisposition(
+          response.headers.get("content-disposition"),
+        );
+        saveBlobAsFile(blob, filename);
+        return;
+      } catch (error) {
+        const normalizedMessage = normalizeKpiPdfRequestError(error);
+        lastError = new Error(normalizedMessage);
+        if (hasMoreCandidates) {
+          console.warn("[KPI Dashboard] Endpoint PDF no disponible, usando fallback.", {
+            endpoint,
+            error: normalizedMessage,
+          });
+        }
+      }
+    }
+
+    throw (lastError || new Error("No se pudo generar el PDF A4."));
+  }
+
+  async function executeKpiPdfExportAttempt(attempt) {
+    if (attempt && attempt.type === "legacy") {
+      return exportarReportePDFLegacy();
+    }
+
+    return exportarReportePDFServerSide();
+  }
+
   function showSlowLoadFallback(root) {
     if (!root || !root.querySelector(".kpiDash__loadingShell")) {
       return false;
@@ -192,6 +512,9 @@
     }
 
     resetKpiDebugState();
+    if (isKpiPrintPage()) {
+      resetKpiPrintState();
+    }
     updateKpiDebugState({ stage: "init" });
     console.info(KPI_LOG_PREFIX + " init start.", {
       rootSelector: SELECTORS.root,
@@ -224,6 +547,8 @@
         renderDashboard(root, model);
         return renderCharts(root, model).then(() => {
           updateKpiDebugState({ stage: "rendered" });
+          scheduleKpiPrintLayoutSync(root);
+          bindKpiPrintLayoutListeners(root);
         });
       })
       .catch((error) => {
@@ -512,6 +837,11 @@
 
   function renderLoading(root) {
     root.innerHTML = buildLoadingShellMarkup();
+    updateKpiPrintState({
+      ready: false,
+      includedBlocks: [],
+      missingBlocks: KPI_PRINT_INCLUDED_BLOCKS.slice(),
+    });
   }
 
   function renderEmptyState(root) {
@@ -521,6 +851,11 @@
       "<p>No fue posible leer las fuentes agregadas por estación. Verificá permisos y consultas GViz.</p>",
       "</div>",
     ].join("");
+    updateKpiPrintState({
+      ready: false,
+      includedBlocks: [],
+      missingBlocks: KPI_PRINT_INCLUDED_BLOCKS.slice(),
+    });
   }
 
   async function fetchCsv(url) {
@@ -1733,40 +2068,49 @@
     const downloadBtn = controls && controls.downloadBtn ? controls.downloadBtn : null;
     const refreshBtn = controls && controls.refreshBtn ? controls.refreshBtn : null;
     const defaultDownloadLabel = downloadBtn ? downloadBtn.textContent : "";
+    const strategy = resolveKpiPdfExportStrategy();
 
     setExportActionState([downloadBtn, refreshBtn], true);
     if (downloadBtn) {
-      downloadBtn.textContent = "Generando PDF...";
+      downloadBtn.textContent = strategy.buttonLabel;
     }
 
+    console.info("[KPI Dashboard] Estrategia de exportación PDF.", strategy);
+
     try {
-      const pdfModule = await loadPpccrPdfModule();
-      if (!pdfModule || typeof pdfModule.exportPPCCRToPdf !== "function") {
-        throw new Error("No se pudo cargar exportPPCCRToPdf desde el módulo de exportación.");
+      let lastError = null;
+
+      for (let index = 0; index < strategy.attempts.length; index += 1) {
+        const attempt = strategy.attempts[index];
+        const hasFallback = index < strategy.attempts.length - 1;
+
+        try {
+          if (
+            attempt.type === "legacy" &&
+            strategy.mode !== "legacy-forced"
+          ) {
+            console.info("[KPI Dashboard] Activando contingencia PDF local.", {
+              strategy: strategy.mode,
+              reason: attempt.reason,
+            });
+          }
+
+          await executeKpiPdfExportAttempt(attempt);
+          return;
+        } catch (error) {
+          lastError = error;
+          if (hasFallback) {
+            console.warn("[KPI Dashboard] Falló intento de exportación PDF. Probando contingencia.", {
+              attemptType: attempt.type,
+              reason: attempt.reason,
+              error:
+                error && error.message ? String(error.message) : String(error || "Error"),
+            });
+          }
+        }
       }
 
-      await pdfModule.exportPPCCRToPdf({
-        headerSelector: "#top",
-        exportScopeSelector: "#kpis .container",
-        dashboardSelector: "#kpi-dashboard-ppccr",
-        filenamePrefix: "PPCCR_Reporte",
-        softMaxPdfBytes: 12 * 1024 * 1024,
-        hardMaxPdfBytes: 25 * 1024 * 1024,
-        preferredScalePresets: [
-          { name: "preset-1", scale: 2.8, jpegQuality: 0.96 },
-          { name: "preset-2", scale: 2.6, jpegQuality: 0.94 },
-          { name: "preset-3", scale: 2.4, jpegQuality: 0.92 },
-          { name: "preset-4", scale: 2.2, jpegQuality: 0.9 },
-          { name: "preset-5", scale: 2.0, jpegQuality: 0.88 },
-        ],
-        includeSectionHeader: true,
-        preferLegibilityOverSinglePage: true,
-        pageOrientation: "portrait",
-        blockLayoutMode: "wysiwyg-v3",
-        snapshotSelectors: [".kpiDash__trkGaugeWrap", ".ppccr-sankey svg"],
-        debug: false,
-        debugPdf: Boolean(window.__PPCCR_ENABLE_PDF_DEBUG__),
-      });
+      throw (lastError || new Error("No se pudo exportar el PDF."));
     } catch (err) {
       console.error("[KPI Dashboard] Falló exportPPCCRToPdf.", err);
       const reason =
@@ -1784,19 +2128,29 @@
     const isLocalDevHost = /^(localhost|127\.0\.0\.1)$/i.test(
       String(window.location && window.location.hostname ? window.location.hostname : ""),
     );
+    const isLocalPublicPath = /\/public\//i.test(
+      String(window.location && window.location.pathname ? window.location.pathname : ""),
+    );
 
     if (!isLocalDevHost && window.__ppccrPdfModulePromise) {
       return window.__ppccrPdfModulePromise;
     }
 
-    const baseCandidates = [
-      "/assets/js/export/ppccr-export-pdf.js",
-      "./assets/js/export/ppccr-export-pdf.js",
-      "assets/js/export/ppccr-export-pdf.js",
-    ];
+    const baseCandidates = isLocalPublicPath
+      ? [
+          "./assets/js/export/ppccr-export-pdf.js",
+          "/public/assets/js/export/ppccr-export-pdf.js",
+          "assets/js/export/ppccr-export-pdf.js",
+          "/assets/js/export/ppccr-export-pdf.js",
+        ]
+      : [
+          "/assets/js/export/ppccr-export-pdf.js",
+          "./assets/js/export/ppccr-export-pdf.js",
+          "assets/js/export/ppccr-export-pdf.js",
+        ];
     const moduleVersion = isLocalDevHost
       ? String(Date.now())
-      : "20260325-pdf-export-v3-wysiwyg";
+      : KPI_PRINT_VERSION;
     const candidates = baseCandidates
       .map((path) => path + "?v=" + encodeURIComponent(moduleVersion))
       .concat(baseCandidates);
@@ -1832,6 +2186,117 @@
 
   async function downloadPDF(reportRoot, controls) {
     return exportarReportePDF(controls);
+  }
+
+  function bindKpiPrintLayoutListeners(root) {
+    if (!isKpiPrintPage() || kpiPrintResizeBound) {
+      return;
+    }
+
+    const schedule = () => scheduleKpiPrintLayoutSync(root);
+    window.addEventListener("resize", schedule, { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", schedule, {
+        passive: true,
+      });
+    }
+    kpiPrintResizeBound = true;
+  }
+
+  function scheduleKpiPrintLayoutSync(root) {
+    if (!isKpiPrintPage()) {
+      return;
+    }
+
+    if (kpiPrintLayoutRaf) {
+      window.cancelAnimationFrame(kpiPrintLayoutRaf);
+    }
+
+    kpiPrintLayoutRaf = window.requestAnimationFrame(() => {
+      kpiPrintLayoutRaf = 0;
+      window.requestAnimationFrame(() => syncKpiPrintLayout(root));
+    });
+  }
+
+  function syncKpiPrintLayout(root) {
+    if (!isKpiPrintPage()) {
+      return;
+    }
+
+    const pageEl = document.querySelector(KPI_PRINT_PAGE_SELECTOR);
+    const pageInnerEl = document.querySelector(KPI_PRINT_PAGE_INNER_SELECTOR);
+    const documentEl = document.querySelector(KPI_PRINT_DOCUMENT_SELECTOR);
+    const reportRoot = root ? root.querySelector(SELECTORS.reportRoot) : null;
+
+    if (!pageEl || !pageInnerEl || !documentEl || !reportRoot) {
+      updateKpiPrintState({
+        ready: false,
+        includedBlocks: [],
+        missingBlocks: KPI_PRINT_INCLUDED_BLOCKS.slice(),
+      });
+      return;
+    }
+
+    documentEl.style.transform = "none";
+    documentEl.style.left = "0px";
+    documentEl.style.top = "0px";
+
+    const naturalWidth = Math.max(
+      1440,
+      Math.ceil(documentEl.scrollWidth || documentEl.getBoundingClientRect().width || 0),
+    );
+    const naturalHeight = Math.max(
+      1,
+      Math.ceil(documentEl.scrollHeight || documentEl.getBoundingClientRect().height || 0),
+    );
+    const pageWidthPx = Math.max(1, Math.round(pageInnerEl.clientWidth || 0));
+    const pageHeightPx = Math.max(1, Math.round(pageInnerEl.clientHeight || 0));
+    const scale = Math.min(pageWidthPx / naturalWidth, pageHeightPx / naturalHeight);
+    const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+    const scaledWidth = naturalWidth * safeScale;
+    const scaledHeight = naturalHeight * safeScale;
+    const offsetLeft = Math.max(0, Math.round((pageWidthPx - scaledWidth) / 2));
+    const offsetTop = Math.max(0, Math.round((pageHeightPx - scaledHeight) / 2));
+
+    documentEl.style.transformOrigin = "top left";
+    documentEl.style.transform = "scale(" + safeScale + ")";
+    documentEl.style.left = offsetLeft + "px";
+    documentEl.style.top = offsetTop + "px";
+
+    const blockSelectors = {
+      "branding-top": "#top",
+      "section-header": "#kpi-print-document .section-header",
+      "report-header": "[data-kpi-report-root] .kpiDash__reportHeader",
+      executive: "[data-kpi-report-root] .kpiDash__exec",
+      "charts-row": "[data-kpi-report-root] .kpiDash__charts",
+      funnel: "[data-kpi-report-root] .kpiDash__funnel",
+      stock: "[data-kpi-report-root] .kpiDash__stock",
+    };
+    const includedBlocks = KPI_PRINT_INCLUDED_BLOCKS.filter((blockId) => {
+      const selector = blockSelectors[blockId];
+      return Boolean(selector && document.querySelector(selector));
+    });
+    const missingBlocks = KPI_PRINT_INCLUDED_BLOCKS.filter(
+      (blockId) => includedBlocks.indexOf(blockId) === -1,
+    );
+    const ready =
+      updateKpiDebugState({}) &&
+      window[KPI_DEBUG_KEY] &&
+      window[KPI_DEBUG_KEY].stage === "rendered" &&
+      !document.querySelector(".kpiDash__loadingShell") &&
+      missingBlocks.length === 0 &&
+      safeScale > 0;
+
+    updateKpiPrintState({
+      ready: Boolean(ready),
+      scale: Number(safeScale.toFixed(5)),
+      naturalWidth,
+      naturalHeight,
+      pageWidthPx,
+      pageHeightPx,
+      includedBlocks,
+      missingBlocks,
+    });
   }
 
   function setExportActionState(buttons, disabled) {

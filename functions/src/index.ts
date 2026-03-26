@@ -1,10 +1,15 @@
+import fs from "node:fs";
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import path from "node:path";
 import { logger } from "firebase-functions";
 import { defineSecret, defineString } from "firebase-functions/params";
 import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
+import chromium from "@sparticuz/chromium";
 import ExcelJS from "exceljs";
 import jwt from "jsonwebtoken";
+import { PDFDocument } from "pdf-lib";
+import { chromium as playwrightChromium } from "playwright-core";
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -31,6 +36,19 @@ const EXPORT_SHEET_NAME = "Informe de FIT entregados a Lab";
 const EXPORT_RANGE = `'${EXPORT_SHEET_NAME}'!A1:G`;
 const EXPORT_TIMEZONE = "America/Argentina/Buenos_Aires";
 const EXPORT_FILENAME_PREFIX = "Informe_FIT_entregados_a_lab";
+const KPI_PDF_FILENAME_PREFIX = "PPCCR_Reporte_A4";
+const KPI_PRINT_SNAPSHOT_PATH = "/kpi-report-print.html";
+const KPI_PRINT_READY_TIMEOUT_MS = 90000;
+const KPI_PRINT_VIEWPORT = Object.freeze({
+  width: 1440,
+  height: 2200,
+  deviceScaleFactor: 2,
+});
+const KPI_PDF_A4_PAGE = Object.freeze({
+  widthPt: 595.2755905511812,
+  heightPt: 841.8897637795277,
+});
+const KPI_PDF_JPEG_FALLBACK_QUALITY = 97;
 
 const SHEETS_SERVICE_ACCOUNT_EMAIL_SECRET = defineSecret(
   "PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL",
@@ -340,6 +358,297 @@ function setExportCorsHeaders(res: { set: (key: string, value: string) => void }
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET,OPTIONS");
   res.set("Access-Control-Allow-Headers", "Authorization,Content-Type");
+}
+
+function normalizeBaseUrl(value: unknown): string {
+  return String(value || "")
+    .trim()
+    .replace(/\/+$/, "");
+}
+
+function getHeaderValue(
+  headers: Record<string, unknown> | undefined,
+  key: string,
+): string {
+  if (!headers || typeof headers !== "object") return "";
+  const raw = headers[key] ?? headers[key.toLowerCase()];
+  if (Array.isArray(raw)) {
+    return String(raw[0] || "").trim();
+  }
+  return String(raw || "").trim();
+}
+
+function resolveRequestProtocol(req: {
+  headers?: Record<string, unknown>;
+  protocol?: string;
+}): "http" | "https" {
+  const forwardedProto = getHeaderValue(req.headers, "x-forwarded-proto")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+  if (forwardedProto === "http" || forwardedProto === "https") {
+    return forwardedProto;
+  }
+
+  const protocol = String(req.protocol || "").trim().toLowerCase();
+  return protocol === "http" ? "http" : "https";
+}
+
+function resolveKpiSnapshotBaseUrl(req: {
+  headers?: Record<string, unknown>;
+  protocol?: string;
+}): string {
+  const explicitBaseUrl = normalizeBaseUrl(process.env.PPCCR_PUBLIC_BASE_URL);
+  if (explicitBaseUrl) {
+    return explicitBaseUrl;
+  }
+
+  const forwardedHost = getHeaderValue(req.headers, "x-forwarded-host")
+    .split(",")[0]
+    .trim();
+  const host = forwardedHost || getHeaderValue(req.headers, "host");
+  const protocol = resolveRequestProtocol(req);
+  const isEmulator = Boolean(process.env.FUNCTIONS_EMULATOR);
+
+  if (isEmulator) {
+    if (host && !host.endsWith(":5001")) {
+      return `${protocol}://${host}`;
+    }
+    return "http://127.0.0.1:8085";
+  }
+
+  if (host) {
+    return `${protocol}://${host}`;
+  }
+
+  throw new Error("No se pudo resolver la base URL pública del snapshot KPI.");
+}
+
+function fileExists(candidate: string): boolean {
+  if (!candidate) return false;
+  try {
+    return fs.existsSync(candidate);
+  } catch {
+    return false;
+  }
+}
+
+async function resolvePlaywrightExecutablePath(): Promise<{
+  executablePath: string;
+  args: string[];
+  source: string;
+}> {
+  const envExecutablePath = normalizeBaseUrl(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH);
+  if (envExecutablePath && fileExists(envExecutablePath)) {
+    return {
+      executablePath: envExecutablePath,
+      args: [],
+      source: "env",
+    };
+  }
+
+  const localCandidates = [
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/chromium",
+    "/snap/bin/chromium",
+  ];
+
+  for (let index = 0; index < localCandidates.length; index += 1) {
+    const candidate = localCandidates[index];
+    if (fileExists(candidate)) {
+      return {
+        executablePath: candidate,
+        args: [],
+        source: "local-system",
+      };
+    }
+  }
+
+  try {
+    const bundledExecutablePath = await chromium.executablePath();
+    if (bundledExecutablePath && fileExists(bundledExecutablePath)) {
+      return {
+        executablePath: bundledExecutablePath,
+        args: [...chromium.args],
+        source: "sparticuz",
+      };
+    }
+  } catch (error) {
+    // no-op
+  }
+
+  const playwrightCacheRoot = path.join(
+    process.env.HOME || "",
+    "Library",
+    "Caches",
+    "ms-playwright",
+  );
+  if (fileExists(playwrightCacheRoot)) {
+    const chromiumBinary = findPlaywrightChromiumBinary(playwrightCacheRoot);
+    if (chromiumBinary) {
+      return {
+        executablePath: chromiumBinary,
+        args: [],
+        source: "playwright-cache",
+      };
+    }
+  }
+
+  throw new Error(
+    "No se encontró un ejecutable Chromium para Playwright. Definí PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH o instalá Chromium localmente.",
+  );
+}
+
+function findPlaywrightChromiumBinary(cacheRoot: string): string {
+  if (!cacheRoot || !fileExists(cacheRoot)) return "";
+
+  try {
+    const entries = fs.readdirSync(cacheRoot);
+    for (let entryIdx = 0; entryIdx < entries.length; entryIdx += 1) {
+      const entry = entries[entryIdx];
+      if (!entry.startsWith("chromium-")) continue;
+
+      const macCandidate = path.join(
+        cacheRoot,
+        entry,
+        "chrome-mac",
+        "Chromium.app",
+        "Contents",
+        "MacOS",
+        "Chromium",
+      );
+      if (fileExists(macCandidate)) {
+        return macCandidate;
+      }
+
+      const linuxCandidate = path.join(cacheRoot, entry, "chrome-linux", "chrome");
+      if (fileExists(linuxCandidate)) {
+        return linuxCandidate;
+      }
+    }
+  } catch {
+    // no-op
+  }
+
+  return "";
+}
+
+async function waitForKpiPrintReady(page: {
+  waitForFunction: (...args: unknown[]) => Promise<unknown>;
+  waitForTimeout: (ms: number) => Promise<void>;
+  evaluate: <T>(fn: () => T | Promise<T>) => Promise<T>;
+}): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      const debugState = (window as typeof window & {
+        __PPCCR_KPI_DEBUG__?: { stage?: string };
+        __PPCCR_KPI_PRINT__?: { ready?: boolean };
+      }).__PPCCR_KPI_DEBUG__;
+      const printState = (window as typeof window & {
+        __PPCCR_KPI_PRINT__?: { ready?: boolean };
+      }).__PPCCR_KPI_PRINT__;
+      return (
+        debugState &&
+        debugState.stage === "rendered" &&
+        !document.querySelector(".kpiDash__loadingShell") &&
+        printState &&
+        printState.ready === true
+      );
+    },
+    {
+      timeout: KPI_PRINT_READY_TIMEOUT_MS,
+    },
+  );
+
+  await page.evaluate(async () => {
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+
+    const pendingImages = Array.from(document.images || []).filter((image) => {
+      return !(image.complete && image.naturalWidth > 0);
+    });
+
+    await Promise.all(
+      pendingImages.map((image) => {
+        return new Promise<void>((resolve) => {
+          image.addEventListener("load", () => resolve(), { once: true });
+          image.addEventListener("error", () => resolve(), { once: true });
+          window.setTimeout(() => resolve(), 2000);
+        });
+      }),
+    );
+  });
+
+  await page.waitForTimeout(450);
+}
+
+async function captureKpiPrintPage(
+  page: {
+    locator: (selector: string) => {
+      waitFor: (options: { state: "visible"; timeout: number }) => Promise<void>;
+      screenshot: (options: Record<string, unknown>) => Promise<Buffer>;
+    };
+  },
+  format: "png" | "jpeg",
+): Promise<Buffer> {
+  const locator = page.locator("#kpi-print-page");
+  await locator.waitFor({ state: "visible", timeout: 20000 });
+
+  if (format === "jpeg") {
+    return locator.screenshot({
+      type: "jpeg",
+      quality: KPI_PDF_JPEG_FALLBACK_QUALITY,
+      animations: "disabled",
+      caret: "hide",
+      omitBackground: false,
+    });
+  }
+
+  return locator.screenshot({
+    type: "png",
+    animations: "disabled",
+    caret: "hide",
+    omitBackground: false,
+  });
+}
+
+async function buildPdfFromScreenshot(
+  imageBuffer: Buffer,
+  format: "png" | "jpeg",
+): Promise<Buffer> {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([
+    KPI_PDF_A4_PAGE.widthPt,
+    KPI_PDF_A4_PAGE.heightPt,
+  ]);
+
+  const image =
+    format === "png"
+      ? await pdfDoc.embedPng(imageBuffer)
+      : await pdfDoc.embedJpg(imageBuffer);
+
+  page.drawImage(image, {
+    x: 0,
+    y: 0,
+    width: KPI_PDF_A4_PAGE.widthPt,
+    height: KPI_PDF_A4_PAGE.heightPt,
+  });
+
+  return Buffer.from(
+    await pdfDoc.save({
+      useObjectStreams: false,
+    }),
+  );
+}
+
+function buildKpiPdfFilename(date: Date): string {
+  return `${KPI_PDF_FILENAME_PREFIX}_${formatFilenameTimestampAR(date)}.pdf`;
 }
 
 function parseServiceAccountFromJsonOrFallback(): {
@@ -1732,6 +2041,124 @@ export const exportInformeFitEntregadosLab = onRequest(
         ok: false,
         message: "No se pudo generar el Excel.",
       });
+    }
+  },
+);
+
+export const exportKpiPdfA4 = onRequest(
+  {
+    region: "us-central1",
+    timeoutSeconds: 120,
+    memory: "2GiB",
+  },
+  async (req, res) => {
+    setExportCorsHeaders(res);
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+
+    if (req.method !== "GET") {
+      res.status(405).json({
+        ok: false,
+        message: "Metodo no permitido. Usar GET.",
+      });
+      return;
+    }
+
+    let browser: Awaited<ReturnType<typeof playwrightChromium.launch>> | null = null;
+    let context: Awaited<ReturnType<Awaited<ReturnType<typeof playwrightChromium.launch>>["newContext"]>> | null =
+      null;
+
+    try {
+      const baseUrl = resolveKpiSnapshotBaseUrl(req);
+      const snapshotUrl = `${baseUrl}${KPI_PRINT_SNAPSHOT_PATH}`;
+      const executable = await resolvePlaywrightExecutablePath();
+
+      browser = await playwrightChromium.launch({
+        executablePath: executable.executablePath,
+        args: executable.args,
+        headless: true,
+      });
+
+      context = await browser.newContext({
+        viewport: {
+          width: KPI_PRINT_VIEWPORT.width,
+          height: KPI_PRINT_VIEWPORT.height,
+        },
+        deviceScaleFactor: KPI_PRINT_VIEWPORT.deviceScaleFactor,
+        locale: "es-AR",
+        serviceWorkers: "block",
+      });
+
+      const page = await context.newPage();
+      page.setDefaultTimeout(KPI_PRINT_READY_TIMEOUT_MS);
+      await page.emulateMedia({
+        media: "screen",
+        colorScheme: "light",
+        reducedMotion: "reduce",
+      });
+      await page.goto(snapshotUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: KPI_PRINT_READY_TIMEOUT_MS,
+      });
+      await page.addStyleTag({
+        content: [
+          "*, *::before, *::after {",
+          "  animation: none !important;",
+          "  transition: none !important;",
+          "  caret-color: transparent !important;",
+          "}",
+        ].join("\n"),
+      });
+      await waitForKpiPrintReady(page);
+
+      let finalImageFormat: "png" | "jpeg" = "png";
+      let screenshotBuffer = await captureKpiPrintPage(page, "png");
+      let pdfBuffer = await buildPdfFromScreenshot(screenshotBuffer, "png");
+
+      if (pdfBuffer.byteLength > 25 * 1024 * 1024) {
+        finalImageFormat = "jpeg";
+        screenshotBuffer = await captureKpiPrintPage(page, "jpeg");
+        pdfBuffer = await buildPdfFromScreenshot(screenshotBuffer, "jpeg");
+      }
+
+      const filename = buildKpiPdfFilename(new Date());
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("X-PPCCR-PDF-CODEC", finalImageFormat.toUpperCase());
+      res.setHeader("X-PPCCR-PDF-PAGES", "1");
+      res.setHeader("X-PPCCR-PDF-PAGE-MODE", "A4");
+      res.setHeader("X-PPCCR-PDF-BYTES", String(pdfBuffer.byteLength));
+      res.status(200).send(pdfBuffer);
+
+      logger.info("PPCCR KPI PDF A4 generado.", {
+        snapshotUrl,
+        finalImageFormat,
+        pdfBytes: pdfBuffer.byteLength,
+        browserSource: executable.source,
+      });
+    } catch (error) {
+      logger.error("No se pudo exportar el PDF KPI A4.", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      res.status(500).json({
+        ok: false,
+        message:
+          error instanceof Error && error.message
+            ? error.message
+            : "No se pudo generar el PDF KPI A4.",
+      });
+    } finally {
+      if (context) {
+        await context.close().catch(() => {});
+      }
+      if (browser) {
+        await browser.close().catch(() => {});
+      }
     }
   },
 );
