@@ -1,14 +1,14 @@
 "use strict";
 
-const SHELL_CACHE = "ppccr-shell-v20260325-pdf-export-v2";
-const STATIC_CACHE = "ppccr-static-v20260325-pdf-export-v2";
+const SHELL_CACHE = "ppccr-shell-v20260325-pdf-export-v3-wysiwyg";
+const STATIC_CACHE = "ppccr-static-v20260325-pdf-export-v3-wysiwyg";
 const ACTIVE_CACHES = [SHELL_CACHE, STATIC_CACHE];
 const PRECACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest?v=20260313-home-phase2-release-blockers1",
   "/styles.css?v=20260311-home-sponsors-spacing1",
-  "/kpis-dashboard.css?v=20260325-pdf-export-v2",
+  "/kpis-dashboard.css?v=20260325-pdf-export-v3-wysiwyg",
   "/ppccr-sankey-participantes.css?v=20260325-dashboard-live-fix1",
   "/home-mobile-shell.css?v=20260313-home-phase2-release-blockers1",
   "/host-guard.js",
@@ -16,11 +16,11 @@ const PRECACHE_URLS = [
   "/domain/home-algorithm-domain.js",
   "/app/home-algorithm-service.js",
   "/app.js?v=20260313-home-phase2-release-blockers1",
-  "/kpis-dashboard.js?v=20260325-pdf-export-v2",
+  "/kpis-dashboard.js?v=20260325-pdf-export-v3-wysiwyg",
   "/ppccr-sankey-participantes.js?v=20260325-dashboard-live-fix1",
   "/auth-gate.js?v=20260313-home-phase2-release-blockers1",
   "/home-mobile-shell.js?v=20260313-home-phase2-release-blockers1",
-  "/pwa-register.js?v=20260325-pdf-export-v2",
+  "/pwa-register.js?v=20260325-pdf-export-v3-wysiwyg",
   "/assets/favicon.png",
   "/assets/logo-ppccr.png",
   "/assets/logo%20cinta%20azul.png",

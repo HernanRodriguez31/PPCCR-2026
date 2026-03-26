@@ -472,6 +472,36 @@
   overflow: visible;
 }
 
+.kpiDash__reportRoot.kpiDash--pdfV3,
+.kpiDash__reportRoot.kpiDash--pdfV3 * {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__reportActions,
+.kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__reportBtn,
+.kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__reportBtn--primary {
+  display: none !important;
+}
+
+.kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__reportHeader,
+.kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__execPanel,
+.kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__panel,
+.kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__funnel,
+.kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__stock,
+.kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__tableWrap,
+.kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__chart,
+.kpiDash__reportRoot.kpiDash--pdfV3 .ppccr-sankey {
+  overflow: visible !important;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__table {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
 .kpiDash__reportRoot.kpiDash--exporting .kpiDash__reportActions {
   display: none;
 }

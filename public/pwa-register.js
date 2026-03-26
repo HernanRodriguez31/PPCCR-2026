@@ -2,7 +2,7 @@
 
 (() => {
   if (!("serviceWorker" in navigator)) return;
-  const swUrl = "/sw.js?v=20260325-pdf-export-v2";
+  const swUrl = "/sw.js?v=20260325-pdf-export-v3-wysiwyg";
   const isLocalDevHost =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1";

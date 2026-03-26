@@ -1747,16 +1747,22 @@
 
       await pdfModule.exportPPCCRToPdf({
         headerSelector: "#top",
+        exportScopeSelector: "#kpis .container",
         dashboardSelector: "#kpi-dashboard-ppccr",
         filenamePrefix: "PPCCR_Reporte",
-        maxPdfBytes: 25 * 1024 * 1024,
+        softMaxPdfBytes: 12 * 1024 * 1024,
+        hardMaxPdfBytes: 25 * 1024 * 1024,
         preferredScalePresets: [
-          { name: "preset-1", scale: 2.4, jpegQuality: 0.92 },
-          { name: "preset-2", scale: 2.2, jpegQuality: 0.88 },
-          { name: "preset-3", scale: 2.0, jpegQuality: 0.85 },
-          { name: "preset-4", scale: 1.8, jpegQuality: 0.82 },
+          { name: "preset-1", scale: 2.8, jpegQuality: 0.96 },
+          { name: "preset-2", scale: 2.6, jpegQuality: 0.94 },
+          { name: "preset-3", scale: 2.4, jpegQuality: 0.92 },
+          { name: "preset-4", scale: 2.2, jpegQuality: 0.9 },
+          { name: "preset-5", scale: 2.0, jpegQuality: 0.88 },
         ],
+        includeSectionHeader: true,
         preferLegibilityOverSinglePage: true,
+        pageOrientation: "portrait",
+        blockLayoutMode: "wysiwyg-v3",
         snapshotSelectors: [".kpiDash__trkGaugeWrap", ".ppccr-sankey svg"],
         debug: false,
         debugPdf: Boolean(window.__PPCCR_ENABLE_PDF_DEBUG__),
@@ -1790,7 +1796,7 @@
     ];
     const moduleVersion = isLocalDevHost
       ? String(Date.now())
-      : "20260325-pdf-export-v2";
+      : "20260325-pdf-export-v3-wysiwyg";
     const candidates = baseCandidates
       .map((path) => path + "?v=" + encodeURIComponent(moduleVersion))
       .concat(baseCandidates);

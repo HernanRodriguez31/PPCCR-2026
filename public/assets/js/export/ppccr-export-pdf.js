@@ -11,14 +11,16 @@ const PAGE_A4_MM = {
 };
 
 const DEFAULT_SCALE_PRESETS = [
-  { name: "preset-1", scale: 2.4, jpegQuality: 0.92 },
-  { name: "preset-2", scale: 2.2, jpegQuality: 0.88 },
-  { name: "preset-3", scale: 2.0, jpegQuality: 0.85 },
-  { name: "preset-4", scale: 1.8, jpegQuality: 0.82 },
+  { name: "preset-1", scale: 2.8, jpegQuality: 0.96 },
+  { name: "preset-2", scale: 2.6, jpegQuality: 0.94 },
+  { name: "preset-3", scale: 2.4, jpegQuality: 0.92 },
+  { name: "preset-4", scale: 2.2, jpegQuality: 0.9 },
+  { name: "preset-5", scale: 2.0, jpegQuality: 0.88 },
 ];
 
 const DEFAULT_OPTIONS = {
   headerSelector: "#top",
+  exportScopeSelector: "#kpis .container",
   dashboardSelector: "#kpi-dashboard-ppccr",
   filenamePrefix: "PPCCR_Reporte",
   desiredScale: 3.2,
@@ -31,12 +33,17 @@ const DEFAULT_OPTIONS = {
   headerHeightMultiplier: 1,
   fitSinglePage: true,
   minSinglePageScale: 0.9,
+  softMaxPdfBytes: 12 * 1024 * 1024,
+  hardMaxPdfBytes: 25 * 1024 * 1024,
   maxPdfBytes: 25 * 1024 * 1024,
   preferredScalePresets: DEFAULT_SCALE_PRESETS,
   preferLegibilityOverSinglePage: true,
   repeatHeaderOnEachPage: true,
   enableSnapshotSwap: true,
   snapshotSelectors: [".kpiDash__trkGaugeWrap", ".ppccr-sankey svg"],
+  includeSectionHeader: true,
+  pageOrientation: "portrait",
+  blockLayoutMode: "wysiwyg-v3",
   ignoreSelectors: [],
   extraCloneCss: "",
   debug: false,
@@ -87,34 +94,61 @@ export async function exportPPCCRToPdf(options = {}) {
     chosenPreset: null,
     pages: 0,
     blobSizeBytes: 0,
-    captureMode: null,
+    captureMode: "block-layout",
     usedTiles: false,
     renderWidthMm: null,
+    exportedScope: null,
+    pageBreaks: [],
+    softBudgetHit: false,
+    hardBudgetHit: false,
+    includedSectionHeader: false,
+    layoutMode: null,
+    blockFormats: {},
     warnings: [],
     timings: {},
   });
   const totalStart = nowMs();
   const timings = {};
   const libs = await ensureExportLibs();
-  const headerEl = resolveElement(cfg.headerSelector, "Header");
+  const headerEl = resolveElement(cfg.headerSelector, "Branding");
+  const exportScopeEl = resolveElement(
+    cfg.exportScopeSelector,
+    "Scope de exportación",
+  );
   const dashEl = resolveElement(cfg.dashboardSelector, "Dashboard");
+  const reportRootEl =
+    dashEl.querySelector("[data-kpi-report-root]") ||
+    resolveElement("[data-kpi-report-root]", "Reporte KPI");
+  const sectionHeaderEl = cfg.includeSectionHeader
+    ? resolveElementWithin(
+        exportScopeEl,
+        ".section-header",
+        "Section header de KPIs",
+      )
+    : null;
 
   ensureElementHasSize(headerEl, "Header");
   ensureElementHasSize(dashEl, "Dashboard");
+  if (sectionHeaderEl) {
+    ensureElementHasSize(sectionHeaderEl, "Section header de KPIs");
+  }
 
   const resultMeta = {
     fallbackTilesUsed: false,
     tilesCount: 0,
     dashboardCapture: null,
+    blockCaptures: [],
     canvasReport: [],
     headerCaptureScale: null,
     dashboardCaptureScale: null,
+    pageBreaks: [],
     warnings: [],
   };
 
   try {
     const assetsStart = nowMs();
     await waitForAssets(headerEl);
+    await waitForAssets(exportScopeEl);
     await waitForAssets(dashEl);
     timings.assetsReadyMs = round2(nowMs() - assetsStart);
 
@@ -138,10 +172,6 @@ export async function exportPPCCRToPdf(options = {}) {
     timings.canvasStableMs = round2(nowMs() - canvasStableStart);
 
     const baseCaptureScale = resolveBaseCaptureScale(cfg);
-    const scaleHeader = computeSafeScale(headerEl, baseCaptureScale, cfg.maxDimPx);
-    const scaleDash = computeSafeScale(dashEl, baseCaptureScale, cfg.maxDimPx);
-    resultMeta.headerCaptureScale = scaleHeader;
-    resultMeta.dashboardCaptureScale = scaleDash;
     const headerCloneCss = mergeCloneCss(cfg.extraCloneCss, PDF_HEADER_VISUAL_ENHANCE_CSS);
     const dashboardCloneCss = mergeCloneCss(cfg.extraCloneCss, PDF_DASHBOARD_VISUAL_ENHANCE_CSS);
     const snapshotStart = nowMs();
@@ -156,161 +186,44 @@ export async function exportPPCCRToPdf(options = {}) {
       : [];
     timings.snapshotPrepMs = round2(nowMs() - snapshotStart);
 
-    let headerCanvas = null;
-    const headerCaptureStart = nowMs();
-    try {
-      headerCanvas = await captureElement(headerEl, {
-        html2canvas: libs.html2canvas,
-        scale: scaleHeader,
-        backgroundColor: "#FFF",
-        extraCloneCss: headerCloneCss,
-        ignoreSelectors: cfg.ignoreSelectors,
-        debug: cfg.debug,
-        cloneMutator(clonedDoc) {
-          normalizeHeaderForPdfClone(clonedDoc, cfg.headerSelector);
-        },
-      });
-    } catch (headerError) {
-      console.warn(
-        "[PPCCR PDF] Falló captura del encabezado. Se usa placeholder para continuar.",
-        headerError,
-      );
-      pushPdfWarning(
-        resultMeta,
-        "Falló captura del encabezado. Se usa placeholder para continuar.",
-      );
-      headerCanvas = createPlaceholderCanvasFromElement(
-        headerEl,
-        scaleHeader,
-        "Encabezado",
-      );
-    }
-    timings.headerCaptureMs = round2(nowMs() - headerCaptureStart);
-
     const pageMetrics = createPageMetrics(cfg);
-    const headerHeightMm =
-      toHeightMm(headerCanvas, pageMetrics.contentWidthMm) * cfg.headerHeightMultiplier;
-
-    const dashboardAvailMm = getDashboardAvailableMm({
-      pageMetrics,
-      headerHeightMm,
-      footerMm: cfg.footerMm,
-      contentGapMm: cfg.contentGapMm,
-      repeatHeaderOnEachPage: cfg.repeatHeaderOnEachPage,
-      pageIndex: 0,
+    const blockCaptureStart = nowMs();
+    const blockManifest = buildExportBlockManifest({
+      headerEl,
+      sectionHeaderEl,
+      reportRootEl,
     });
-
-    let dashboardCanvas = null;
-    let primaryDashboardCaptureError = null;
-    let dashboardRenderWidthMm = pageMetrics.contentWidthMm;
-
-    const dashboardCaptureStart = nowMs();
-    try {
-      dashboardCanvas = await captureElement(dashEl, {
-        html2canvas: libs.html2canvas,
-        scale: scaleDash,
-        backgroundColor: "#FFF",
-        extraCloneCss: dashboardCloneCss,
-        ignoreSelectors: cfg.ignoreSelectors,
-        debug: cfg.debug,
-        targetSelector: cfg.dashboardSelector,
-        snapshotReplacements,
-        cloneMutator(clonedDoc) {
-          stabilizeTrkGaugeInClone(clonedDoc, cfg.dashboardSelector);
-        },
-      });
-    } catch (error) {
-      primaryDashboardCaptureError = error;
-      if (cfg.debug) {
-        console.warn(
-          "[PPCCR PDF] Captura única de dashboard falló. Se intentará fallback por tiles.",
-          error,
-        );
-      }
-    }
-    timings.dashboardCaptureMs = round2(nowMs() - dashboardCaptureStart);
-
-    let dashboardSlices = null;
-    const shouldUseTiles =
-      !dashboardCanvas || isCanvasOverLimits(dashboardCanvas, cfg.maxDimPx, cfg.maxAreaPx);
-
-    if (shouldUseTiles) {
-      const tileCaptureStart = nowMs();
-      try {
-        dashboardSlices = await captureDashboardTiles({
-          element: dashEl,
-          html2canvas: libs.html2canvas,
-          scale: scaleDash,
-          maxDimPx: cfg.maxDimPx,
-          maxAreaPx: cfg.maxAreaPx,
-          pageContentWidthMm: pageMetrics.contentWidthMm,
-          pageContentHeightMm: dashboardAvailMm,
-          extraCloneCss: dashboardCloneCss,
-          ignoreSelectors: cfg.ignoreSelectors,
-          debug: cfg.debug,
-          targetSelector: cfg.dashboardSelector,
-          snapshotReplacements,
-          cloneMutator(clonedDoc) {
-            stabilizeTrkGaugeInClone(clonedDoc, cfg.dashboardSelector);
-          },
-        });
-      } catch (tileError) {
-        console.warn(
-          "[PPCCR PDF] Falló captura por tiles. Se usa placeholder para completar exportación.",
-          tileError,
-        );
-        pushPdfWarning(
-          resultMeta,
-          "Falló captura por tiles. Se usa placeholder para completar exportación.",
-        );
-        dashboardSlices = [
-          createPlaceholderCanvasFromElement(dashEl, scaleDash, "Dashboard"),
-        ];
-      }
-      timings.dashboardTilesMs = round2(nowMs() - tileCaptureStart);
-
-      resultMeta.fallbackTilesUsed = true;
-      resultMeta.tilesCount = dashboardSlices.length;
-      dashboardCanvas = null;
-      pushPdfWarning(
-        resultMeta,
-        "Se utilizó fallback por tiles para exportar el dashboard.",
-      );
-
-      if (cfg.debug && primaryDashboardCaptureError) {
-        console.log("[PPCCR PDF] Motivo fallback tiles:", primaryDashboardCaptureError.message);
-      }
-    }
-    if (dashboardCanvas) {
-      resultMeta.dashboardCapture = {
-        mode: "single",
-        width: dashboardCanvas.width,
-        height: dashboardCanvas.height,
-        area: dashboardCanvas.width * dashboardCanvas.height,
-      };
-    } else {
-      resultMeta.dashboardCapture = {
-        mode: "tiles",
-        width: null,
-        height: null,
-        area: null,
-      };
-    }
+    const capturedBlocks = await captureExportBlocks({
+      manifest: blockManifest,
+      libs,
+      cfg,
+      pageMetrics,
+      headerCloneCss,
+      dashboardCloneCss,
+      snapshotReplacements,
+      dashboardSelector: cfg.dashboardSelector,
+      baseCaptureScale,
+      resultMeta,
+    });
+    timings.blockCaptureMs = round2(nowMs() - blockCaptureStart);
+    resultMeta.dashboardCapture = {
+      mode: "block-layout",
+      width: null,
+      height: null,
+      area: capturedBlocks.reduce((sum, block) => {
+        return sum + Math.max(1, block.canvas.width) * Math.max(1, block.canvas.height);
+      }, 0),
+    };
 
     const variantStart = nowMs();
-    const chosenVariant = await buildAdaptivePdfVariant({
+    const chosenVariant = await buildAdaptiveBlockPdfVariant({
       libs,
-      headerCanvas,
-      headerHeightMm,
-      dashboardCanvas,
-      dashboardSlices,
+      blocks: capturedBlocks,
       pageMetrics,
-      dashboardAvailMm,
       cfg,
       resultMeta,
     });
     timings.variantSelectionMs = round2(nowMs() - variantStart);
-    dashboardRenderWidthMm = chosenVariant.renderWidthMm;
     const filename = buildFilename(cfg.filenamePrefix, new Date());
     saveBlobAsFile(chosenVariant.blob, filename);
     timings.totalMs = round2(nowMs() - totalStart);
@@ -321,28 +234,36 @@ export async function exportPPCCRToPdf(options = {}) {
       captureMode: chosenVariant.captureMode,
       usedTiles: chosenVariant.usedTiles,
       renderWidthMm: chosenVariant.renderWidthMm,
+      exportedScope: {
+        headerSelector: cfg.headerSelector,
+        exportScopeSelector: cfg.exportScopeSelector,
+        blocks: capturedBlocks.map((block) => block.id),
+      },
+      pageBreaks: chosenVariant.pageBreaks,
+      softBudgetHit: chosenVariant.softBudgetHit,
+      hardBudgetHit: chosenVariant.hardBudgetHit,
+      includedSectionHeader: Boolean(sectionHeaderEl),
+      layoutMode: chosenVariant.layoutMode,
+      blockFormats: chosenVariant.blockFormats,
       warnings: resultMeta.warnings.slice(),
       timings: {
         ...timings,
         presetAttempts: chosenVariant.variantAttempts,
       },
-      layoutMode: chosenVariant.layoutMode,
     });
 
     if (cfg.debugPdf || cfg.debug) {
       console.groupCollapsed("[PPCCR PDF] Export debug");
       console.log("canvasReport:", resultMeta.canvasReport);
-      console.log("headerCanvas:", {
-        width: headerCanvas.width,
-        height: headerCanvas.height,
-      });
       console.log("dashboardCapture:", resultMeta.dashboardCapture);
+      console.log("blockCaptures:", resultMeta.blockCaptures);
       console.log("fallbackTilesUsed:", resultMeta.fallbackTilesUsed);
       console.log("tilesCount:", resultMeta.tilesCount);
       console.log("snapshotReplacements:", snapshotReplacements.length);
       console.log("chosenPreset:", chosenVariant.chosenPreset);
       console.log("blobSizeBytes:", chosenVariant.blobSizeBytes);
       console.log("layoutMode:", chosenVariant.layoutMode);
+      console.log("pageBreaks:", chosenVariant.pageBreaks);
       console.groupEnd();
     }
 
@@ -357,6 +278,11 @@ export async function exportPPCCRToPdf(options = {}) {
       tilesCount: resultMeta.tilesCount,
       canvasReport: resultMeta.canvasReport,
       layoutMode: chosenVariant.layoutMode,
+      includedSectionHeader: Boolean(sectionHeaderEl),
+      pageBreaks: chosenVariant.pageBreaks,
+      blockFormats: chosenVariant.blockFormats,
+      softBudgetHit: chosenVariant.softBudgetHit,
+      hardBudgetHit: chosenVariant.hardBudgetHit,
     };
   } catch (error) {
     timings.totalMs = round2(nowMs() - totalStart);
@@ -1151,6 +1077,562 @@ async function captureDashboardTiles({
   return slices;
 }
 
+function resolveElementWithin(root, selector, label) {
+  if (!root) {
+    throw new Error((label || "Elemento") + " no encontró root para buscar " + selector + ".");
+  }
+
+  const el = root.querySelector(selector);
+  if (!el) {
+    throw new Error((label || "Elemento") + " no encontrado para selector: " + selector);
+  }
+
+  return el;
+}
+
+function buildExportBlockManifest({ headerEl, sectionHeaderEl, reportRootEl }) {
+  return [
+    {
+      id: "branding-top",
+      label: "Branding superior",
+      element: headerEl,
+      format: "PNG",
+      cloneArea: "header",
+      pageBreakBefore: false,
+    },
+    sectionHeaderEl
+      ? {
+          id: "section-header",
+          label: "Encabezado de sección KPI",
+          element: sectionHeaderEl,
+          format: "PNG",
+          cloneArea: "scope",
+          pageBreakBefore: false,
+        }
+      : null,
+    {
+      id: "report-header",
+      label: "Encabezado consolidado KPI",
+      element: resolveElementWithin(
+        reportRootEl,
+        ".kpiDash__reportHeader",
+        "Encabezado consolidado KPI",
+      ),
+      format: "PNG",
+      cloneArea: "dashboard",
+      pageBreakBefore: false,
+    },
+    {
+      id: "executive",
+      label: "Resumen ejecutivo KPI",
+      element: resolveElementWithin(reportRootEl, ".kpiDash__exec", "Resumen ejecutivo KPI"),
+      format: "JPEG",
+      cloneArea: "dashboard",
+      pageBreakBefore: false,
+    },
+    {
+      id: "charts-row",
+      label: "Fila de charts KPI",
+      element: resolveElementWithin(reportRootEl, ".kpiDash__charts", "Fila de charts KPI"),
+      format: "JPEG",
+      cloneArea: "dashboard",
+      pageBreakBefore: false,
+    },
+    {
+      id: "funnel",
+      label: "Flujo FIT por estación",
+      element: resolveElementWithin(reportRootEl, ".kpiDash__funnel", "Flujo FIT por estación"),
+      format: "JPEG",
+      cloneArea: "dashboard",
+      pageBreakBefore: true,
+    },
+    {
+      id: "stock",
+      label: "Stock de kits por estación",
+      element: resolveElementWithin(reportRootEl, ".kpiDash__stock", "Stock de kits por estación"),
+      format: "PNG",
+      cloneArea: "dashboard",
+      pageBreakBefore: false,
+    },
+  ].filter(Boolean);
+}
+
+async function captureExportBlocks({
+  manifest,
+  libs,
+  cfg,
+  pageMetrics,
+  headerCloneCss,
+  dashboardCloneCss,
+  snapshotReplacements,
+  dashboardSelector,
+  baseCaptureScale,
+  resultMeta,
+}) {
+  const captured = [];
+
+  for (let i = 0; i < manifest.length; i += 1) {
+    const block = manifest[i];
+    const startedAt = nowMs();
+    const capture = await captureExportBlock({
+      block,
+      libs,
+      cfg,
+      pageMetrics,
+      headerCloneCss,
+      dashboardCloneCss,
+      snapshotReplacements,
+      dashboardSelector,
+      baseCaptureScale,
+      resultMeta,
+    });
+
+    const capturedBlock = {
+      ...block,
+      canvas: capture.canvas,
+      captureScale: capture.captureScale,
+      usedTiles: capture.usedTiles,
+      tileCount: capture.tileCount,
+    };
+
+    resultMeta.blockCaptures.push({
+      id: block.id,
+      label: block.label,
+      format: block.format,
+      captureScale: round2(capture.captureScale),
+      width: capture.canvas.width,
+      height: capture.canvas.height,
+      usedTiles: capture.usedTiles,
+      tileCount: capture.tileCount,
+      durationMs: round2(nowMs() - startedAt),
+    });
+
+    captured.push(capturedBlock);
+  }
+
+  return captured;
+}
+
+async function captureExportBlock({
+  block,
+  libs,
+  cfg,
+  pageMetrics,
+  headerCloneCss,
+  dashboardCloneCss,
+  snapshotReplacements,
+  dashboardSelector,
+  baseCaptureScale,
+  resultMeta,
+}) {
+  const captureScale = computeSafeScale(
+    block.element,
+    baseCaptureScale,
+    cfg.maxDimPx,
+  );
+
+  const isHeaderBlock = block.cloneArea === "header";
+  const isDashboardBlock = block.cloneArea === "dashboard";
+  const extraCloneCss = isHeaderBlock ? headerCloneCss : dashboardCloneCss;
+  const captureTargetSelector = isDashboardBlock ? dashboardSelector : "";
+  const cloneMutator = isHeaderBlock
+    ? (clonedDoc) => {
+        normalizeHeaderForPdfClone(clonedDoc, cfg.headerSelector);
+      }
+    : isDashboardBlock
+      ? (clonedDoc) => {
+          stabilizeTrkGaugeInClone(clonedDoc, dashboardSelector, "kpiDash--pdfV3");
+        }
+      : null;
+  const replacements = isDashboardBlock ? snapshotReplacements : [];
+
+  try {
+    const canvas = await captureElement(block.element, {
+      html2canvas: libs.html2canvas,
+      scale: captureScale,
+      backgroundColor: "#FFF",
+      extraCloneCss,
+      ignoreSelectors: cfg.ignoreSelectors,
+      debug: cfg.debug,
+      targetSelector: captureTargetSelector,
+      snapshotReplacements: replacements,
+      cloneMutator,
+    });
+
+    if (!isCanvasOverLimits(canvas, cfg.maxDimPx, cfg.maxAreaPx)) {
+      return {
+        canvas,
+        captureScale,
+        usedTiles: false,
+        tileCount: 0,
+      };
+    }
+
+    throw new Error("Captura por bloque excedió límites seguros. Se intentará fallback por tiles.");
+  } catch (captureError) {
+    try {
+      const pageContentHeightMm =
+        pageMetrics.pageHeightMm -
+        pageMetrics.margins.top -
+        pageMetrics.margins.bottom -
+        cfg.footerMm;
+      const slices = await captureDashboardTiles({
+        element: block.element,
+        html2canvas: libs.html2canvas,
+        scale: captureScale,
+        maxDimPx: cfg.maxDimPx,
+        maxAreaPx: cfg.maxAreaPx,
+        pageContentWidthMm: pageMetrics.contentWidthMm,
+        pageContentHeightMm,
+        extraCloneCss,
+        ignoreSelectors: cfg.ignoreSelectors,
+        cloneMutator,
+        debug: cfg.debug,
+        targetSelector: captureTargetSelector,
+        snapshotReplacements: replacements,
+      });
+      const stitched = stitchCanvasesVertically(slices);
+      resultMeta.fallbackTilesUsed = true;
+      resultMeta.tilesCount += slices.length;
+      pushPdfWarning(
+        resultMeta,
+        "Se utilizó fallback por tiles para el bloque " + block.id + ".",
+      );
+
+      return {
+        canvas: stitched,
+        captureScale,
+        usedTiles: true,
+        tileCount: slices.length,
+      };
+    } catch (tileError) {
+      console.warn(
+        "[PPCCR PDF] Falló captura del bloque. Se usa placeholder.",
+        {
+          blockId: block.id,
+          captureError,
+          tileError,
+        },
+      );
+      pushPdfWarning(
+        resultMeta,
+        "Falló captura del bloque " + block.id + ". Se usa placeholder.",
+      );
+      return {
+        canvas: createPlaceholderCanvasFromElement(
+          block.element,
+          captureScale,
+          block.label,
+        ),
+        captureScale,
+        usedTiles: false,
+        tileCount: 0,
+      };
+    }
+  }
+}
+
+function stitchCanvasesVertically(slices) {
+  const validSlices = Array.isArray(slices) ? slices.filter(Boolean) : [];
+  if (validSlices.length === 0) {
+    throw new Error("No hay slices válidos para recomponer el bloque exportado.");
+  }
+
+  if (validSlices.length === 1) {
+    return validSlices[0];
+  }
+
+  const width = Math.max.apply(
+    null,
+    validSlices.map((slice) => Math.max(1, Number(slice.width) || 1)),
+  );
+  const height = validSlices.reduce((sum, slice) => {
+    return sum + Math.max(1, Number(slice.height) || 1);
+  }, 0);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = Math.max(1, height);
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return validSlices[0];
+  }
+
+  let offsetY = 0;
+  validSlices.forEach((slice) => {
+    const drawHeight = Math.max(1, Number(slice.height) || 1);
+    ctx.drawImage(slice, 0, offsetY);
+    offsetY += drawHeight;
+  });
+
+  return canvas;
+}
+
+async function buildAdaptiveBlockPdfVariant({
+  libs,
+  blocks,
+  pageMetrics,
+  cfg,
+  resultMeta,
+}) {
+  const attempts = [];
+  let bestSoftBudget = null;
+  let bestHardBudget = null;
+  let smallestVariant = null;
+
+  for (let i = 0; i < cfg.preferredScalePresets.length; i += 1) {
+    const preset = cfg.preferredScalePresets[i];
+    const variant = await buildBlockPdfVariant({
+      libs,
+      blocks,
+      pageMetrics,
+      cfg,
+      resultMeta,
+      preset,
+    });
+
+    attempts.push({
+      name: preset.name,
+      scale: preset.scale,
+      jpegQuality: preset.jpegQuality,
+      pages: variant.pages,
+      blobSizeBytes: variant.blobSizeBytes,
+      captureMode: variant.captureMode,
+      usedTiles: variant.usedTiles,
+      renderWidthMm: variant.renderWidthMm,
+      layoutMode: variant.layoutMode,
+    });
+
+    if (!smallestVariant || variant.blobSizeBytes < smallestVariant.blobSizeBytes) {
+      smallestVariant = variant;
+    }
+
+    if (!bestHardBudget && variant.blobSizeBytes <= cfg.hardMaxPdfBytes) {
+      bestHardBudget = variant;
+    }
+
+    if (variant.blobSizeBytes <= cfg.softMaxPdfBytes) {
+      bestSoftBudget = variant;
+      break;
+    }
+  }
+
+  const chosenVariant = bestSoftBudget || bestHardBudget || smallestVariant;
+  if (!chosenVariant) {
+    throw new Error("No se pudo generar ninguna variante válida del PDF por bloques.");
+  }
+
+  if (!bestSoftBudget && bestHardBudget) {
+    pushPdfWarning(
+      resultMeta,
+      "Ningún preset entró en el soft budget. Se usa la variante más fiel dentro del hard budget.",
+    );
+  }
+
+  if (!bestHardBudget) {
+    pushPdfWarning(
+      resultMeta,
+      "Ningún preset entró en el hard budget. Se usa la variante más liviana generada.",
+    );
+  }
+
+  chosenVariant.variantAttempts = attempts;
+  chosenVariant.softBudgetHit = chosenVariant.blobSizeBytes <= cfg.softMaxPdfBytes;
+  chosenVariant.hardBudgetHit = chosenVariant.blobSizeBytes <= cfg.hardMaxPdfBytes;
+
+  return chosenVariant;
+}
+
+async function buildBlockPdfVariant({
+  libs,
+  blocks,
+  pageMetrics,
+  cfg,
+  resultMeta,
+  preset,
+}) {
+  const doc = new libs.jsPDF({
+    orientation: cfg.pageOrientation === "landscape" ? "l" : "p",
+    unit: "mm",
+    format: "a4",
+  });
+
+  const blockAssets = blocks.map((block) => {
+    return {
+      ...block,
+      asset: createPdfImageAsset(block.canvas, {
+        sourceCaptureScale: block.captureScale,
+        targetScale: preset.scale,
+        jpegQuality: preset.jpegQuality,
+        format: block.format,
+      }),
+      baseHeightMm: toHeightMm(block.canvas, pageMetrics.contentWidthMm),
+    };
+  });
+
+  const composition = composeBlockPages({
+    blockAssets,
+    pageMetrics,
+    cfg,
+    resultMeta,
+  });
+
+  renderComposedBlockPages({
+    doc,
+    pages: composition.pages,
+    pageMetrics,
+    cfg,
+  });
+  applyFooterPageNumbers(doc, pageMetrics, cfg.footerMm);
+  const blob = await measurePdfVariant(doc);
+  const pages = doc.getNumberOfPages();
+
+  return {
+    blob,
+    blobSizeBytes: blob.size,
+    pages,
+    chosenPreset: {
+      name: preset.name,
+      scale: preset.scale,
+      jpegQuality: preset.jpegQuality,
+    },
+    captureMode: "block-layout",
+    usedTiles: Boolean(resultMeta.fallbackTilesUsed),
+    renderWidthMm: round2(pageMetrics.contentWidthMm),
+    layoutMode: pages > 1 ? "multi-page" : "single-page",
+    pageBreaks: composition.pageBreaks,
+    blockFormats: blockAssets.reduce((acc, block) => {
+      acc[block.id] = block.asset.format;
+      return acc;
+    }, {}),
+  };
+}
+
+function composeBlockPages({ blockAssets, pageMetrics, cfg, resultMeta }) {
+  const availableHeightMm =
+    pageMetrics.pageHeightMm -
+    pageMetrics.margins.top -
+    pageMetrics.margins.bottom -
+    cfg.footerMm;
+  const minScale = 0.97;
+  const pages = [];
+  const pageBreaks = [];
+  let currentPage = { blocks: [] };
+
+  blockAssets.forEach((block) => {
+    if (block.pageBreakBefore && currentPage.blocks.length > 0) {
+      pages.push(finalizeBlockPage(currentPage, availableHeightMm, cfg, minScale, resultMeta));
+      pageBreaks.push({
+        beforeBlock: block.id,
+        reason: "planned-break",
+        page: pages.length + 1,
+      });
+      currentPage = { blocks: [] };
+    }
+
+    const nextBlocks = currentPage.blocks.concat(block);
+    const nextHeight = calculatePageBlocksHeight(nextBlocks, cfg.contentGapMm);
+    const nextScale = nextHeight > 0 ? availableHeightMm / nextHeight : 1;
+
+    if (
+      currentPage.blocks.length > 0 &&
+      nextHeight > availableHeightMm &&
+      nextScale < minScale
+    ) {
+      pages.push(finalizeBlockPage(currentPage, availableHeightMm, cfg, minScale, resultMeta));
+      pageBreaks.push({
+        beforeBlock: block.id,
+        reason: "overflow-break",
+        page: pages.length + 1,
+      });
+      currentPage = { blocks: [block] };
+      return;
+    }
+
+    currentPage.blocks = nextBlocks;
+  });
+
+  if (currentPage.blocks.length > 0) {
+    pages.push(finalizeBlockPage(currentPage, availableHeightMm, cfg, minScale, resultMeta));
+  }
+
+  return {
+    pages,
+    pageBreaks,
+  };
+}
+
+function finalizeBlockPage(page, availableHeightMm, cfg, minScale, resultMeta) {
+  const totalHeightMm = calculatePageBlocksHeight(page.blocks, cfg.contentGapMm);
+  if (totalHeightMm <= 0) {
+    return {
+      blocks: page.blocks.slice(),
+      scale: 1,
+      totalHeightMm: 0,
+    };
+  }
+
+  let scale = Math.min(1, availableHeightMm / totalHeightMm);
+  if (scale < minScale && page.blocks.length === 1) {
+    pushPdfWarning(
+      resultMeta,
+      "Un bloque individual superó el alto disponible y requirió shrink excepcional.",
+    );
+    scale = Math.max(0.9, scale);
+  } else {
+    scale = Math.max(minScale, scale);
+  }
+
+  return {
+    blocks: page.blocks.slice(),
+    scale: round2(scale),
+    totalHeightMm: round2(totalHeightMm),
+  };
+}
+
+function calculatePageBlocksHeight(blocks, gapMm) {
+  if (!Array.isArray(blocks) || blocks.length === 0) {
+    return 0;
+  }
+
+  const safeGap = Math.max(0, Number(gapMm) || 0);
+  return blocks.reduce((sum, block, index) => {
+    const next = sum + Math.max(0, Number(block.baseHeightMm) || 0);
+    return index === 0 ? next : next + safeGap;
+  }, 0);
+}
+
+function renderComposedBlockPages({ doc, pages, pageMetrics, cfg }) {
+  pages.forEach((page, pageIndex) => {
+    if (pageIndex > 0) {
+      doc.addPage();
+    }
+
+    const scale = Math.max(0.9, Math.min(1, Number(page.scale) || 1));
+    const targetWidthMm = pageMetrics.contentWidthMm * scale;
+    const contentX =
+      pageMetrics.margins.left + (pageMetrics.contentWidthMm - targetWidthMm) / 2;
+    const gapMm = Math.max(0, Number(cfg.contentGapMm) || 0) * scale;
+    let cursorY = pageMetrics.margins.top;
+
+    page.blocks.forEach((block, index) => {
+      if (index > 0) {
+        cursorY += gapMm;
+      }
+      const targetHeightMm = Math.max(1, block.baseHeightMm * scale);
+      doc.addImage(
+        block.asset.dataUrl,
+        block.asset.format,
+        contentX,
+        cursorY,
+        targetWidthMm,
+        targetHeightMm,
+      );
+      cursorY += targetHeightMm;
+    });
+  });
+}
+
 async function buildAdaptivePdfVariant({
   libs,
   headerCanvas,
@@ -1319,14 +1801,18 @@ async function measurePdfVariant(doc) {
 
 function createPdfImageAsset(
   sourceCanvas,
-  { sourceCaptureScale, targetScale, jpegQuality },
+  { sourceCaptureScale, targetScale, jpegQuality, format = "JPEG" },
 ) {
   const factor = resolvePresetDownsampleFactor(sourceCaptureScale, targetScale);
   const preparedCanvas = resizeCanvasForFactor(sourceCanvas, factor);
+  const normalizedFormat = String(format || "JPEG").toUpperCase() === "PNG" ? "PNG" : "JPEG";
 
   return {
-    dataUrl: preparedCanvas.toDataURL("image/jpeg", clampJpegQuality(jpegQuality)),
-    format: "JPEG",
+    dataUrl:
+      normalizedFormat === "PNG"
+        ? preparedCanvas.toDataURL("image/png")
+        : preparedCanvas.toDataURL("image/jpeg", clampJpegQuality(jpegQuality)),
+    format: normalizedFormat,
     widthPx: preparedCanvas.width,
     heightPx: preparedCanvas.height,
   };
@@ -1541,12 +2027,15 @@ function applyFooterPageNumbers(doc, pageMetrics, footerMm) {
 
 function createPageMetrics(cfg) {
   const margins = cfg.marginsMm;
+  const isLandscape = cfg.pageOrientation === "landscape";
+  const pageWidthMm = isLandscape ? PAGE_A4_MM.height : PAGE_A4_MM.width;
+  const pageHeightMm = isLandscape ? PAGE_A4_MM.width : PAGE_A4_MM.height;
 
   return {
-    pageWidthMm: PAGE_A4_MM.width,
-    pageHeightMm: PAGE_A4_MM.height,
+    pageWidthMm,
+    pageHeightMm,
     margins,
-    contentWidthMm: PAGE_A4_MM.width - margins.left - margins.right,
+    contentWidthMm: pageWidthMm - margins.left - margins.right,
   };
 }
 
@@ -1630,10 +2119,17 @@ function normalizeOptions(options) {
     0.9,
     Number(options.headerHeightMultiplier) || DEFAULT_OPTIONS.headerHeightMultiplier,
   );
-  merged.maxPdfBytes = Math.max(
+  merged.softMaxPdfBytes = Math.max(
     1024 * 1024,
-    Number(options.maxPdfBytes) || DEFAULT_OPTIONS.maxPdfBytes,
+    Number(options.softMaxPdfBytes) || DEFAULT_OPTIONS.softMaxPdfBytes,
   );
+  merged.hardMaxPdfBytes = Math.max(
+    merged.softMaxPdfBytes,
+    Number(options.hardMaxPdfBytes) ||
+      Number(options.maxPdfBytes) ||
+      DEFAULT_OPTIONS.hardMaxPdfBytes,
+  );
+  merged.maxPdfBytes = merged.hardMaxPdfBytes;
   merged.fitSinglePage = options.fitSinglePage !== false;
   merged.preferLegibilityOverSinglePage =
     options.preferLegibilityOverSinglePage !== false;
@@ -1649,6 +2145,21 @@ function normalizeOptions(options) {
   merged.snapshotSelectors = Array.isArray(options.snapshotSelectors)
     ? options.snapshotSelectors.filter(Boolean)
     : DEFAULT_OPTIONS.snapshotSelectors.slice();
+  merged.includeSectionHeader = options.includeSectionHeader !== false;
+  merged.exportScopeSelector =
+    typeof options.exportScopeSelector === "string" &&
+    options.exportScopeSelector.trim().length > 0
+      ? options.exportScopeSelector.trim()
+      : DEFAULT_OPTIONS.exportScopeSelector;
+  merged.pageOrientation =
+    String(options.pageOrientation || DEFAULT_OPTIONS.pageOrientation).toLowerCase() ===
+    "landscape"
+      ? "landscape"
+      : "portrait";
+  merged.blockLayoutMode =
+    typeof options.blockLayoutMode === "string" && options.blockLayoutMode.trim().length > 0
+      ? options.blockLayoutMode.trim()
+      : DEFAULT_OPTIONS.blockLayoutMode;
   merged.preferredScalePresets = normalizeScalePresets(options.preferredScalePresets);
   merged.debugPdf = options.debugPdf === true || options.debug === true;
 
@@ -1702,6 +2213,13 @@ function initPdfDebugState() {
     captureMode: null,
     usedTiles: false,
     renderWidthMm: null,
+    exportedScope: null,
+    pageBreaks: [],
+    softBudgetHit: false,
+    hardBudgetHit: false,
+    includedSectionHeader: false,
+    layoutMode: null,
+    blockFormats: {},
     warnings: [],
     timings: {},
   };
@@ -2114,13 +2632,21 @@ function isLikelyBlankCanvas(canvas) {
   return nonBlankRatio < 0.008;
 }
 
-function stabilizeTrkGaugeInClone(clonedDoc, dashboardSelector) {
+function stabilizeTrkGaugeInClone(
+  clonedDoc,
+  dashboardSelector,
+  exportClassName = "kpiDash--pdfV2",
+) {
   const scope = clonedDoc.querySelector(dashboardSelector) || clonedDoc;
+  const extraClass =
+    typeof exportClassName === "string" && exportClassName.trim()
+      ? exportClassName.trim()
+      : "kpiDash--pdfV2";
   if (scope.classList && scope.classList.contains("kpiDash__reportRoot")) {
-    scope.classList.add("kpiDash--pdfV2");
+    scope.classList.add(extraClass);
   }
   scope.querySelectorAll(".kpiDash__reportRoot").forEach((node) => {
-    node.classList.add("kpiDash--pdfV2");
+    node.classList.add(extraClass);
   });
 
   const gauges = Array.from(scope.querySelectorAll(".kpiDash__trkGauge"));
