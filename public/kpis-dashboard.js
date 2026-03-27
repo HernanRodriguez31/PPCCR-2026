@@ -3161,16 +3161,7 @@
   }
 
   function stockBadgeHtml(badge) {
-    if (!badge || badge.label === "Estable") {
-      return "";
-    }
-    return (
-      '<span class="kpiDash__badge ' +
-      badge.className +
-      '">' +
-      badge.label +
-      "</span>"
-    );
+    return "";
   }
 
   function conversionLabel(current, previous) {
