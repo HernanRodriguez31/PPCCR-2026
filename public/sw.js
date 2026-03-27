@@ -1,7 +1,7 @@
 "use strict";
 
-const SHELL_CACHE = "ppccr-shell-v20260326-pdf-export-v5-server-a4-localhost-fix5";
-const STATIC_CACHE = "ppccr-static-v20260326-pdf-export-v5-server-a4-localhost-fix5";
+const SHELL_CACHE = "ppccr-shell-v20260326-stock-live-fix1";
+const STATIC_CACHE = "ppccr-static-v20260326-stock-live-fix1";
 const ACTIVE_CACHES = [SHELL_CACHE, STATIC_CACHE];
 const PRECACHE_URLS = [
   "/",
@@ -16,11 +16,11 @@ const PRECACHE_URLS = [
   "/domain/home-algorithm-domain.js",
   "/app/home-algorithm-service.js",
   "/app.js?v=20260313-home-phase2-release-blockers1",
-  "/kpis-dashboard.js?v=20260326-pdf-export-v5-server-a4-localhost-fix5",
+  "/kpis-dashboard.js?v=20260326-stock-live-fix1",
   "/ppccr-sankey-participantes.js?v=20260325-dashboard-live-fix1",
   "/auth-gate.js?v=20260313-home-phase2-release-blockers1",
   "/home-mobile-shell.js?v=20260313-home-phase2-release-blockers1",
-  "/pwa-register.js?v=20260326-pdf-export-v5-server-a4-localhost-fix5",
+  "/pwa-register.js?v=20260326-stock-live-fix1",
   "/assets/favicon.png",
   "/assets/logo-ppccr.png",
   "/assets/logo%20cinta%20azul.png",

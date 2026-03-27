@@ -25,6 +25,11 @@
       sheet: "Recepción de Resultados de FIT",
       tq: "select K, count(A) where K is not null and K <> 'No encontrado' and F is not null group by K pivot F",
     },
+    stockSnapshot: {
+      label: "Stock snapshot",
+      gid: GID_ENTREVISTAS,
+      tq: "select AB, AC, AD, AE, AF, AH, AI, AJ, AK, AL where AH is not null limit 1",
+    },
   };
 
   const STATION_LABELS = {
@@ -34,6 +39,12 @@
     aristobulo: "Aristóbulo del Valle",
   };
   const BASE_STATION_KEYS = Object.keys(STATION_LABELS);
+  const STOCK_SNAPSHOT_STATION_COLUMNS = Object.freeze({
+    saavedra: { stockActual: 1, stockInicial: 6 },
+    rivadavia: { stockActual: 2, stockInicial: 7 },
+    chacabuco: { stockActual: 3, stockInicial: 8 },
+    aristobulo: { stockActual: 4, stockInicial: 9 },
+  });
 
   const STOCK_INICIAL_POR_ESTACION = 75;
   const STOCK_UMBRAL = 20;
@@ -956,16 +967,37 @@
       matrices.resultadosFitPorEstacion,
       status.resultadosFitPorEstacion,
     );
+    const stockSnapshotMeta = applyStockSnapshot(
+      stationsMap,
+      matrices.stockSnapshot,
+      status.stockSnapshot,
+    );
+
+    const effectiveStatus = Object.assign({}, status);
+    if (effectiveStatus.stockSnapshot === "ok" && !stockSnapshotMeta.usable) {
+      effectiveStatus.stockSnapshot = "error";
+    }
+    const stockSnapshotOk = effectiveStatus.stockSnapshot === "ok";
 
     const stationsRaw = Array.from(stationsMap.values())
       .map((station) => {
         const entregados = isFiniteMetric(station.criterioFitKits)
           ? Number(station.criterioFitKits)
           : null;
-        const remanente =
-          isFiniteMetric(station.stockInicial) && isFiniteMetric(entregados)
-            ? Math.max(0, Number(station.stockInicial) - Number(entregados))
+        const stockInicial = isFiniteMetric(station.stockInicial)
+          ? Number(station.stockInicial)
+          : null;
+        const stockActual = isFiniteMetric(station.stockActual)
+          ? Number(station.stockActual)
+          : null;
+        const remanenteCalculado =
+          isFiniteMetric(stockInicial) && isFiniteMetric(entregados)
+            ? Math.max(0, Number(stockInicial) - Number(entregados))
             : null;
+        const remanente =
+          stockSnapshotOk && isFiniteMetric(stockActual)
+            ? stockActual
+            : remanenteCalculado;
 
         return {
           station: station.station,
@@ -982,15 +1014,18 @@
           fitInformados: station.fitInformados,
           resultadosFitNegativos: station.resultadosFitNegativos,
           resultadosFitPositivos: station.resultadosFitPositivos,
-          stockInicial: station.stockInicial,
+          stockInicial,
+          stockActual,
           entregados,
           remanente,
+          remanenteCalculado,
         };
       })
       .filter((station) => {
         const hasOperationalData =
           station.participantesTotal > 0 ||
           station.stockInicial > 0 ||
+          station.stockActual > 0 ||
           (typeof station.muestrasRecibidas === "number" && station.muestrasRecibidas > 0) ||
           (typeof station.muestrasALab === "number" && station.muestrasALab > 0) ||
           (typeof station.resultadosFitRecibidos === "number" &&
@@ -1022,7 +1057,6 @@
       Boolean(STATION_LABELS[station.key]),
     );
 
-    const effectiveStatus = Object.assign({}, status);
     if (
       effectiveStatus.entrevistasPivot === "ok" &&
       sumNullableField(stations, "participantesTotal") === null
@@ -1056,14 +1090,11 @@
           ? auditSources.some((source) => source.status !== "ok")
           : true,
     });
-    const stockInicialTotal = STOCK_INICIAL_POR_ESTACION * BASE_STATION_KEYS.length;
+    const stockInicialTotal = sumNullableField(stations, "stockInicial");
     const entregadosTotal = entrevistasOk
       ? sumNullableField(stations, "entregados")
       : null;
-    const remanenteTotal =
-      entrevistasOk && isFiniteMetric(entregadosTotal)
-        ? Math.max(0, stockInicialTotal - Number(entregadosTotal))
-        : null;
+    const remanenteTotal = sumNullableField(stations, "remanente");
 
     const totals = {
       participantesTotal: entrevistasOk
@@ -1123,7 +1154,11 @@
       fitFlowTotals,
       sourceStatus: effectiveStatus,
       audit: normalizedAudit,
-      integrity: validateDataIntegrity(stations, totals),
+      stockSnapshot: stockSnapshotMeta,
+      integrity: validateDataIntegrity(stations, totals, {
+        stockLiveMode: stockSnapshotOk,
+        stockSnapshotTotals: stockSnapshotMeta.totals,
+      }),
     };
 
     updateKpiDebugState({
@@ -1133,6 +1168,7 @@
     console.info(KPI_LOG_PREFIX + " Resumen final del model.", {
       stations: model.stations,
       totals: model.totals,
+      stockSnapshot: model.stockSnapshot,
       integrity: model.integrity,
       sourceStatus: model.sourceStatus,
     });
@@ -1165,15 +1201,13 @@
         stockInicial: STATION_LABELS[safeKey]
           ? STOCK_INICIAL_POR_ESTACION
           : 0,
+        stockActual: null,
       });
     }
 
     const station = stationsMap.get(safeKey);
     if (rawLabel && (!station.station || station.station === "Sin estación")) {
       station.station = stationLabelForKey(safeKey, rawLabel);
-    }
-    if (STATION_LABELS[safeKey]) {
-      station.stockInicial = STOCK_INICIAL_POR_ESTACION;
     }
 
     return station;
@@ -1388,6 +1422,82 @@
       station.resultadosFitRecibidos += totalResultados;
       station.fitInformados += totalResultados;
     });
+  }
+
+  function applyStockSnapshot(stationsMap, matrix, status) {
+    const snapshotMeta = {
+      usable: false,
+      headers: Array.isArray(matrix?.[0]) ? matrix[0].slice() : [],
+      row: Array.isArray(matrix?.[1]) ? matrix[1].slice() : [],
+      totals: {
+        stockActual: null,
+        stockInicial: null,
+      },
+      stations: {},
+    };
+
+    if (status !== "ok" || !Array.isArray(matrix) || matrix.length < 2) {
+      console.warn(
+        KPI_LOG_PREFIX + " stockSnapshot no disponible o vacío. Se mantiene fallback legacy.",
+        {
+          status: status || "unknown",
+          rowsRead: Array.isArray(matrix) ? Math.max(0, matrix.length - 1) : null,
+        },
+      );
+      return snapshotMeta;
+    }
+
+    const row = matrix[1];
+    snapshotMeta.headers = Array.isArray(matrix[0]) ? matrix[0].slice() : [];
+    snapshotMeta.row = Array.isArray(row) ? row.slice() : [];
+    snapshotMeta.totals = {
+      stockActual: toNullableInt(getCell(row, 0)),
+      stockInicial: toNullableInt(getCell(row, 5)),
+    };
+
+    BASE_STATION_KEYS.forEach((stationKey) => {
+      const station = ensureStation(stationsMap, stationKey, STATION_LABELS[stationKey]);
+      if (!station) {
+        return;
+      }
+
+      const columnMap = STOCK_SNAPSHOT_STATION_COLUMNS[stationKey];
+      const stockActual = toNullableInt(getCell(row, columnMap.stockActual));
+      const stockInicial = toNullableInt(getCell(row, columnMap.stockInicial));
+
+      if (stockInicial !== null) {
+        station.stockInicial = stockInicial;
+      }
+      station.stockActual = stockActual;
+
+      snapshotMeta.stations[stationKey] = {
+        station: station.station,
+        stockActual,
+        stockInicial: station.stockInicial,
+      };
+    });
+
+    snapshotMeta.usable =
+      isFiniteMetric(snapshotMeta.totals.stockActual) ||
+      isFiniteMetric(snapshotMeta.totals.stockInicial) ||
+      Object.values(snapshotMeta.stations).some((station) => {
+        return (
+          isFiniteMetric(station.stockActual) ||
+          isFiniteMetric(station.stockInicial)
+        );
+      });
+
+    console.info(KPI_LOG_PREFIX + " stockSnapshot parseado.", {
+      headers: snapshotMeta.headers,
+      row: snapshotMeta.row,
+      parsedRow: {
+        totalStockActual: snapshotMeta.totals.stockActual,
+        totalStockInicial: snapshotMeta.totals.stockInicial,
+      },
+      stations: snapshotMeta.stations,
+    });
+
+    return snapshotMeta;
   }
 
   function renderDashboard(root, model) {
@@ -2728,10 +2838,17 @@
     });
   }
 
-  function validateDataIntegrity(stations, totals) {
+  function validateDataIntegrity(stations, totals, options) {
     const issues = [];
+    const warnings = [];
     const safeStations = Array.isArray(stations) ? stations : [];
     const safeTotals = totals || {};
+    const safeOptions = options || {};
+    const stockLiveMode = safeOptions.stockLiveMode === true;
+    const stockSnapshotTotals =
+      safeOptions.stockSnapshotTotals && typeof safeOptions.stockSnapshotTotals === "object"
+        ? safeOptions.stockSnapshotTotals
+        : null;
 
     const participantesEsperado = sumIfNumeric([
       safeTotals.criterioFitKits,
@@ -2767,10 +2884,9 @@
       informadosEsperado,
     );
 
-    const stockEsperado = subtractIfNumeric(
-      safeTotals.stockInicial,
-      safeTotals.entregados,
-    );
+    const stockEsperado = stockLiveMode
+      ? sumNullableField(safeStations, "remanente")
+      : subtractIfNumeric(safeTotals.stockInicial, safeTotals.entregados);
     collectMismatch(issues, "Stock total", safeTotals.remanente, stockEsperado);
 
     safeStations.forEach((station) => {
@@ -2808,18 +2924,59 @@
         informedByStation,
       );
 
-      const stockByStation = subtractIfNumeric(station.stockInicial, station.entregados);
+      const stockByStation =
+        stockLiveMode && isFiniteMetric(station.stockActual)
+          ? station.stockActual
+          : subtractIfNumeric(station.stockInicial, station.entregados);
       collectMismatch(
         issues,
         "Stock " + station.station,
         station.remanente,
         stockByStation,
       );
+
+      if (stockLiveMode && isFiniteMetric(station.stockActual)) {
+        collectWarning(
+          warnings,
+          "Stock live vs derivado " + station.station,
+          station.stockActual,
+          subtractIfNumeric(station.stockInicial, station.entregados),
+        );
+      }
     });
+
+    if (stockLiveMode) {
+      collectWarning(
+        warnings,
+        "Stock total live vs derivado",
+        safeTotals.remanente,
+        subtractIfNumeric(safeTotals.stockInicial, safeTotals.entregados),
+      );
+    }
+
+    if (stockSnapshotTotals) {
+      collectWarning(
+        warnings,
+        "Stock snapshot total actual vs suma estaciones",
+        stockSnapshotTotals.stockActual,
+        safeTotals.remanente,
+      );
+      collectWarning(
+        warnings,
+        "Stock snapshot total inicial vs suma estaciones",
+        stockSnapshotTotals.stockInicial,
+        safeTotals.stockInicial,
+      );
+    }
+
+    if (warnings.length > 0) {
+      console.warn(KPI_LOG_PREFIX + " Desvíos de stock detectados.", warnings);
+    }
 
     return {
       hasIssues: issues.length > 0,
       issues,
+      warnings,
     };
   }
 
@@ -3057,19 +3214,33 @@
     return Number(left) - Number(right);
   }
 
+  function collectWarning(warnings, label, actual, expected) {
+    const message = buildMismatchMessage(label, actual, expected);
+    if (message) {
+      warnings.push(message);
+    }
+  }
+
   function collectMismatch(issues, label, actual, expected) {
+    const message = buildMismatchMessage(label, actual, expected);
+    if (message) {
+      issues.push(message);
+    }
+  }
+
+  function buildMismatchMessage(label, actual, expected) {
     if (!isFiniteMetric(actual) || !isFiniteMetric(expected)) {
-      return;
+      return "";
     }
     if (Math.round(Number(actual)) === Math.round(Number(expected))) {
-      return;
+      return "";
     }
-    issues.push(
+    return (
       label +
-        ": " +
-        formatNumber(actual) +
-        " vs " +
-        formatNumber(expected),
+      ": " +
+      formatNumber(actual) +
+      " vs " +
+      formatNumber(expected)
     );
   }
 
@@ -3813,6 +3984,14 @@
     }
 
     return Math.max(0, Math.round(parsed));
+  }
+
+  function toNullableInt(value) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return null;
+    }
+    return toInt(raw);
   }
 
   function sumField(items, field) {
