@@ -2483,24 +2483,48 @@
 }
 
 .kpiDash__consultasPostStockHeader {
-  align-items: flex-start;
-  margin-bottom: 0.8rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 220px);
+  align-items: start;
+  column-gap: 0.96rem;
+  row-gap: 0.72rem;
+  margin-bottom: 0.78rem;
 }
 
 .kpiDash__consultasPostStockIntro {
+  display: grid;
+  row-gap: 0.12rem;
+  align-content: start;
   min-width: 0;
+  max-width: 68ch;
+}
+
+.kpiDash__consultasPostStockSubtitle {
+  max-width: 68ch;
+}
+
+.kpiDash__consultasPostStockNarrative {
+  max-width: 68ch;
+  padding-top: 0.14rem;
+  line-height: inherit;
+  font-weight: 400;
+  color: inherit;
 }
 
 .kpiDash__consultasPostStockTotal {
-  min-width: 220px;
-  border: 1px solid rgba(12, 78, 141, 0.1);
+  width: min(100%, 212px);
+  min-width: 0;
+  min-height: 100px;
+  border: 1px solid rgba(0, 75, 143, 0.2);
   border-radius: 14px;
-  background: linear-gradient(150deg, rgba(234, 243, 255, 0.78), #ffffff);
-  padding: 0.76rem 0.86rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  background: linear-gradient(150deg, var(--kpi-blue-900), var(--kpi-blue-700));
+  padding: 0.74rem 0.88rem;
+  box-shadow: var(--kpi-shadow-card);
   display: grid;
-  justify-items: end;
-  gap: 0.1rem;
+  justify-self: center;
+  align-content: center;
+  justify-items: start;
+  gap: 0.12rem;
 }
 
 .kpiDash__consultasPostStockLabel {
@@ -2508,34 +2532,30 @@
   line-height: 1.2;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--kpi-muted);
+  color: #f5f9ff;
 }
 
 .kpiDash__consultasPostStockValue {
   font-size: clamp(1.78rem, 3.2vw, 2.22rem);
   line-height: 1;
   font-weight: 720;
-  color: var(--kpi-blue-900);
+  color: #f5f9ff;
   font-variant-numeric: tabular-nums;
 }
 
-.kpiDash__consultasPostStockMeta,
-.kpiDash__consultasPostStockHint {
+.kpiDash__consultasPostStockMeta {
   font-size: 0.77rem;
   line-height: 1.25;
-  color: var(--kpi-muted);
-}
-
-.kpiDash__consultasPostStockHint {
-  margin-top: 0.08rem;
+  color: #f5f9ff;
 }
 
 .kpiDash__consultasPostStockChartWrap {
   position: relative;
+  margin-top: 0.04rem;
 }
 
 .kpiDash__chart--consultasPostStock {
-  min-height: 304px;
+  min-height: 288px;
 }
 
 .kpiDash__badge {
@@ -2746,14 +2766,19 @@
   }
 
   .kpiDash__consultasPostStockHeader {
-    flex-direction: column;
-    gap: 0.72rem;
+    grid-template-columns: 1fr;
+    gap: 0.68rem;
   }
 
   .kpiDash__consultasPostStockTotal {
-    width: 100%;
-    min-width: 0;
-    justify-items: start;
+    width: min(100%, 252px);
+    justify-self: center;
+  }
+
+  .kpiDash__consultasPostStockIntro,
+  .kpiDash__consultasPostStockSubtitle,
+  .kpiDash__consultasPostStockNarrative {
+    max-width: none;
   }
 
   .kpiDash__summaryCard {

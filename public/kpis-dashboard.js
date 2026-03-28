@@ -9,6 +9,8 @@
     "Consultas realizadas posteriormente a finalizar stock";
   const CONSULTAS_POST_STOCK_SUBTITLE =
     "Evolución diaria consolidada del 27 mar al 03 abr";
+  const CONSULTAS_POST_STOCK_NARRATIVE =
+    "Tras finalizar el stock de kits de FIT, se continuó activamente con las acciones de prevención. A cada participante se le brindó orientación y consejos sobre la importancia del cuidado y la salud colorrectal.";
   const CONSULTAS_POST_STOCK_FIXED_DATES = Object.freeze([
     "2026-03-27",
     "2026-03-28",
@@ -97,7 +99,7 @@
   const KPI_PRINT_PAGE_SELECTOR = "#kpi-print-page";
   const KPI_PRINT_PAGE_INNER_SELECTOR = "#kpi-print-pageInner";
   const KPI_PRINT_DOCUMENT_SELECTOR = "#kpi-print-document";
-  const KPI_PRINT_VERSION = "20260328-consultas-post-stock-v1";
+  const KPI_PRINT_VERSION = "20260328-consultas-post-stock-v3";
   const KPI_PRINT_INCLUDED_BLOCKS = Object.freeze([
     "branding-top",
     "section-header",
@@ -1882,10 +1884,6 @@
             total: 0,
             sourceMeta: { isEmpty: true },
           };
-    const sourceMeta =
-      sectionModel.sourceMeta && typeof sectionModel.sourceMeta === "object"
-        ? sectionModel.sourceMeta
-        : {};
 
     return [
       '<section class="kpiDash__consultasPostStock" aria-label="' +
@@ -1894,17 +1892,19 @@
       '<header class="kpiDash__panelHeader kpiDash__consultasPostStockHeader">',
       '<div class="kpiDash__consultasPostStockIntro">',
       "<h4>" + escapeHtml(CONSULTAS_POST_STOCK_TITLE) + "</h4>",
-      "<p>" + escapeHtml(CONSULTAS_POST_STOCK_SUBTITLE) + "</p>",
+      '<p class="kpiDash__consultasPostStockSubtitle">' +
+        escapeHtml(CONSULTAS_POST_STOCK_SUBTITLE) +
+        "</p>",
+      '<p class="kpiDash__consultasPostStockNarrative">' +
+        escapeHtml(CONSULTAS_POST_STOCK_NARRATIVE) +
+        "</p>",
       "</div>",
       '<div class="kpiDash__consultasPostStockTotal" aria-label="Total de consultas del rango">',
-      '<span class="kpiDash__consultasPostStockLabel">Total del rango</span>',
+      '<span class="kpiDash__consultasPostStockLabel">TOTAL DEL RANGO</span>',
       '<strong class="kpiDash__consultasPostStockValue">' +
         formatMetric(sectionModel.total) +
         "</strong>",
       '<span class="kpiDash__consultasPostStockMeta">consultas</span>',
-      sourceMeta.isEmpty
-        ? '<span class="kpiDash__consultasPostStockHint">Sin registros en el rango</span>'
-        : '<span class="kpiDash__consultasPostStockHint">Fuente live consolidada</span>',
       "</div>",
       "</header>",
       '<div class="kpiDash__consultasPostStockChartWrap">',
@@ -3996,6 +3996,23 @@
         },
         0,
       );
+      const consultasPostStockPalette = [
+        "#0C4E8D",
+        "#1462A5",
+        "#1B74B7",
+        "#2788C7",
+        "#3D9DD2",
+        "#58B1DB",
+        "#73C2DE",
+        "#60C5C9",
+      ];
+      const consultasPostStockPlaceholderValue =
+        consultasPostStockMaxValue > 0
+          ? Math.min(
+              6,
+              Math.max(0.42, Number((consultasPostStockMaxValue * 0.08).toFixed(2))),
+            )
+          : 0.34;
 
       const buildPosNegOption = (viewMode) => {
         const isMobile = viewMode === "mobile";
@@ -4077,9 +4094,37 @@
         const graphicText =
           consultasPostStockSourceStatus === "error"
             ? "No se pudo leer la fuente live"
-            : consultasPostStockMeta.isEmpty
-              ? "Sin consultas registradas\nen el rango"
-              : "";
+            : "";
+        const barMaxWidth = isMobile ? 20 : isTablet ? 28 : 34;
+        const mainSeriesData = consultasPostStockSeries.map((point, index) => {
+          if (point.value === null || point.value === undefined) {
+            return null;
+          }
+
+          return {
+            value: point.value,
+            itemStyle: {
+              color: consultasPostStockPalette[index],
+              borderRadius: [8, 8, 0, 0],
+            },
+          };
+        });
+        const placeholderSeriesData = consultasPostStockSeries.map((point, index) => {
+          if (!point.isFuture || point.hasData) {
+            return null;
+          }
+
+          return {
+            value: consultasPostStockPlaceholderValue,
+            itemStyle: {
+              color: "rgba(96, 197, 201, 0.13)",
+              borderColor: consultasPostStockPalette[index],
+              borderWidth: 1,
+              borderType: "dashed",
+              borderRadius: [8, 8, 0, 0],
+            },
+          };
+        });
         const yAxis = {
           type: "value",
           min: 0,
@@ -4110,7 +4155,7 @@
             trigger: "axis",
             axisPointer: {
               type: "shadow",
-              shadowStyle: { color: "rgba(0, 75, 143, 0.04)" },
+              shadowStyle: { color: "rgba(0, 75, 143, 0.035)" },
             },
             backgroundColor: "rgba(255, 255, 255, 0.97)",
             borderColor: "rgba(95, 115, 147, 0.18)",
@@ -4134,17 +4179,17 @@
 
               const valueLabel =
                 point.value === null || point.value === undefined
-                  ? "Sin dato disponible todavía"
+                  ? "Sin dato aún"
                   : formatNumber(point.value);
 
               return point.fullLabel + "<br/>Consultas: " + valueLabel;
             },
           },
           grid: {
-            left: isMobile ? 34 : 44,
+            left: isMobile ? 34 : 42,
             right: isMobile ? 10 : 18,
-            top: 24,
-            bottom: isMobile ? 50 : 38,
+            top: 16,
+            bottom: isMobile ? 44 : 32,
           },
           xAxis: {
             type: "category",
@@ -4180,17 +4225,31 @@
             : [],
           series: [
             {
+              name: "Sin dato aún",
+              type: "bar",
+              silent: true,
+              barMaxWidth: barMaxWidth,
+              barGap: "-100%",
+              data: placeholderSeriesData,
+              z: 1,
+              label: {
+                show: false,
+              },
+              emphasis: {
+                disabled: true,
+              },
+            },
+            {
               name: "Consultas",
               type: "bar",
-              barMaxWidth: isMobile ? 22 : isTablet ? 30 : 36,
-              data: consultasPostStockSeries.map((point) => point.value),
-              itemStyle: {
-                borderRadius: [8, 8, 0, 0],
-              },
+              barMaxWidth: barMaxWidth,
+              barGap: "-100%",
+              data: mainSeriesData,
+              z: 2,
               label: {
                 show: true,
                 position: "top",
-                distance: 6,
+                distance: 5,
                 color: chartPalette.axisText,
                 fontSize: isMobile ? 10 : 10.5,
                 fontWeight: 600,

@@ -1227,6 +1227,8 @@ function renderRoles() {
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9.8 4.5h4.4"></path><path d="M10.4 4.5v3.6l-2.8 4.7a5 5 0 0 0 4.4 7.2 5 5 0 0 0 4.4-7.2l-2.8-4.7V4.5"></path><path d="M9.4 13.1h5.2"></path><path d="M12 17.8v.01"></path></svg>',
     envioMuestrasLaboratorio:
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 9h11.5v7.8H3.5z"></path><path d="M15 11h3.3l2.2 2.2v3.6H15z"></path><path d="M6.8 18.2h.1"></path><path d="M17.8 18.2h.1"></path><path d="M6.8 18.2a1.7 1.7 0 1 0 0 .01"></path><path d="M17.8 18.2a1.7 1.7 0 1 0 0 .01"></path><path d="M6 6.3h5.6"></path></svg>',
+    numeroPersonasConsultaron:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="4.5" width="12" height="15" rx="2"></rect><path d="M9 9h6"></path><path d="M9 12h6"></path><path d="M9 15h6"></path></svg>',
     recepcionResultadosFIT:
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="4.5" width="12" height="15" rx="2"></rect><path d="M9 9h6"></path><path d="M9 12h6"></path><path d="m9.2 15.2 1.6 1.6 3.2-3.2"></path></svg>',
     informeFITEntregadosLab:
@@ -1242,7 +1244,8 @@ function renderRoles() {
   const shortLabels = {
     entregaKitFIT: "Entrega de kit FIT",
     recepcionMuestraFIT: "Recepción de muestra de FIT",
-    envioMuestrasLaboratorio: "Entrega de FIT al laboratorio",
+    envioMuestrasLaboratorio: "Entrega de muestras de FIT al transportador",
+    numeroPersonasConsultaron: "Número de personas que consultaron",
     recepcionResultadosFIT: "Recepción de resultado de FIT",
     informeFITEntregadosLab: "Informe de FIT entregados a lab",
     entrevistaMedica: "Entrevista médica",
@@ -1257,13 +1260,22 @@ function renderRoles() {
   const recepcionMuestraFIT = byKey("recepcionMuestraFIT");
   const envioMuestrasLaboratorio = byKey("envioMuestrasLaboratorio");
   const recepcionResultadosFIT = byKey("recepcionResultadosFIT");
+  const numeroPersonasConsultaron = {
+    key: "numeroPersonasConsultaron",
+    label: "Número de personas que consultaron",
+    url: "https://9kxsjveuebz.typeform.com/to/R8feIfLu",
+  };
 
   const roles = [
     {
       key: "navigators",
       title: "Navigators",
       desc: "",
-      items: [recepcionMuestraFIT, envioMuestrasLaboratorio].filter(Boolean),
+      items: [
+        recepcionMuestraFIT,
+        envioMuestrasLaboratorio,
+        numeroPersonasConsultaron,
+      ].filter(Boolean),
     },
     {
       key: "administrador",
