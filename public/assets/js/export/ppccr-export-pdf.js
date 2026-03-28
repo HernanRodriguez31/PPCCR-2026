@@ -1257,6 +1257,19 @@ function buildExportBlockManifest({
       pageBreakBefore: false,
       captureTargetSelector: dashboardSelector || "",
     },
+    {
+      id: "consultas-post-stock",
+      label: "Consultas realizadas posteriormente a finalizar stock",
+      element: resolveElementWithin(
+        reportRootEl,
+        ".kpiDash__consultasPostStock",
+        "Consultas realizadas posteriormente a finalizar stock",
+      ),
+      format: blockFormat || "PNG",
+      cloneArea: "dashboard",
+      pageBreakBefore: false,
+      captureTargetSelector: dashboardSelector || "",
+    },
   ].filter(Boolean);
 }
 
@@ -1638,6 +1651,7 @@ function buildPosterSnapshotStyles(cfg) {
     ".kpiDash__posterSnapshot .kpiDash__panel,",
     ".kpiDash__posterSnapshot .kpiDash__funnel,",
     ".kpiDash__posterSnapshot .kpiDash__stock,",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStock,",
     ".kpiDash__posterSnapshot .kpiDash__tableWrap,",
     ".kpiDash__posterSnapshot .kpiDash__chart,",
     ".kpiDash__posterSnapshot .ppccr-sankey {",
@@ -1667,7 +1681,8 @@ function buildPosterSnapshotStyles(cfg) {
     ".kpiDash__posterSnapshot .kpiDash__charts,",
     ".kpiDash__posterSnapshot .kpiDash__funnel--avance,",
     ".kpiDash__posterSnapshot .kpiDash__funnel[aria-label='Flujo FIT por estación'],",
-    ".kpiDash__posterSnapshot .kpiDash__stock {",
+    ".kpiDash__posterSnapshot .kpiDash__stock,",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStock {",
     "  grid-column: 1 / -1 !important;",
     "}",
     ".kpiDash__posterSnapshot .kpiDash__reportHeader {",

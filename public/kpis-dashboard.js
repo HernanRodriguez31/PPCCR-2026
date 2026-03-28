@@ -3,6 +3,22 @@
 
   const SHEET_ID = "1le0b37MzYrWxfWt3r__QdiWDasLC1u_e6v9Exluttrc";
   const GID_ENTREVISTAS = "1342787691";
+  const CONSULTAS_POST_STOCK_SHEET =
+    "Personas que consultaron luego de agotados los Kit FIT";
+  const CONSULTAS_POST_STOCK_TITLE =
+    "Consultas realizadas posteriormente a finalizar stock";
+  const CONSULTAS_POST_STOCK_SUBTITLE =
+    "Evolución diaria consolidada del 27 mar al 03 abr";
+  const CONSULTAS_POST_STOCK_FIXED_DATES = Object.freeze([
+    "2026-03-27",
+    "2026-03-28",
+    "2026-03-29",
+    "2026-03-30",
+    "2026-03-31",
+    "2026-04-01",
+    "2026-04-02",
+    "2026-04-03",
+  ]);
 
   const GVIZ_SOURCES = {
     entrevistasPivot: {
@@ -29,6 +45,11 @@
       label: "Stock snapshot",
       gid: GID_ENTREVISTAS,
       tq: "select AB, AC, AD, AE, AF, AH, AI, AJ, AK, AL where AH is not null limit 1",
+    },
+    consultasPostStock: {
+      label: CONSULTAS_POST_STOCK_TITLE,
+      sheet: CONSULTAS_POST_STOCK_SHEET,
+      tq: "select A, B, C, D, E where A is not null",
     },
   };
 
@@ -61,6 +82,7 @@
     bars: "[data-kpi-chart-bars]",
     sankey: "[data-kpi-chart-flow]",
     posneg: "[data-kpi-chart-posneg]",
+    consultasPostStock: "[data-kpi-chart-consultas-post-stock]",
   };
   const KPI_LOG_PREFIX = "[KPI Dashboard]";
   const KPI_DEBUG_KEY = "__PPCCR_KPI_DEBUG__";
@@ -75,7 +97,7 @@
   const KPI_PRINT_PAGE_SELECTOR = "#kpi-print-page";
   const KPI_PRINT_PAGE_INNER_SELECTOR = "#kpi-print-pageInner";
   const KPI_PRINT_DOCUMENT_SELECTOR = "#kpi-print-document";
-  const KPI_PRINT_VERSION = "20260326-pdf-export-v5-server-a4-localhost-fix5";
+  const KPI_PRINT_VERSION = "20260328-consultas-post-stock-v1";
   const KPI_PRINT_INCLUDED_BLOCKS = Object.freeze([
     "branding-top",
     "section-header",
@@ -84,6 +106,7 @@
     "charts-row",
     "funnel",
     "stock",
+    "consultas-post-stock",
   ]);
   let kpiPrintLayoutRaf = 0;
   let kpiPrintResizeBound = false;
@@ -972,10 +995,20 @@
       matrices.stockSnapshot,
       status.stockSnapshot,
     );
+    const consultasPostStock = buildConsultasPostStockModel(
+      matrices.consultasPostStock,
+      status.consultasPostStock,
+    );
 
     const effectiveStatus = Object.assign({}, status);
     if (effectiveStatus.stockSnapshot === "ok" && !stockSnapshotMeta.usable) {
       effectiveStatus.stockSnapshot = "error";
+    }
+    if (
+      effectiveStatus.consultasPostStock === "ok" &&
+      !consultasPostStock.sourceMeta.usable
+    ) {
+      effectiveStatus.consultasPostStock = "error";
     }
     const stockSnapshotOk = effectiveStatus.stockSnapshot === "ok";
 
@@ -1155,6 +1188,7 @@
       sourceStatus: effectiveStatus,
       audit: normalizedAudit,
       stockSnapshot: stockSnapshotMeta,
+      consultasPostStock,
       integrity: validateDataIntegrity(stations, totals, {
         stockLiveMode: stockSnapshotOk,
         stockSnapshotTotals: stockSnapshotMeta.totals,
@@ -1169,6 +1203,7 @@
       stations: model.stations,
       totals: model.totals,
       stockSnapshot: model.stockSnapshot,
+      consultasPostStock: model.consultasPostStock,
       integrity: model.integrity,
       sourceStatus: model.sourceStatus,
     });
@@ -1500,6 +1535,200 @@
     return snapshotMeta;
   }
 
+  function buildConsultasPostStockModel(matrix, status) {
+    const todayIsoDate = currentLocalIsoDate();
+    const sourceMeta = {
+      sheet: CONSULTAS_POST_STOCK_SHEET,
+      rangeStart: CONSULTAS_POST_STOCK_FIXED_DATES[0],
+      rangeEnd:
+        CONSULTAS_POST_STOCK_FIXED_DATES[CONSULTAS_POST_STOCK_FIXED_DATES.length - 1],
+      todayIsoDate,
+      usable: false,
+      status: status || "unknown",
+      headers: Array.isArray(matrix?.[0]) ? matrix[0].slice() : [],
+      rowCount: Array.isArray(matrix) ? Math.max(0, matrix.length - 1) : 0,
+      rowsParsed: 0,
+      rowsInRange: 0,
+      dateColumnIndex: null,
+      stationColumnIndex: null,
+      valueColumnIndex: null,
+      sampleRows: [],
+      isEmpty: true,
+      emptyState: "source-unavailable",
+    };
+    const emptyModel = {
+      total: 0,
+      series: buildConsultasPostStockSeries({}, {}, todayIsoDate),
+      sourceMeta,
+    };
+
+    if (status !== "ok" || !Array.isArray(matrix) || matrix.length === 0) {
+      console.warn(
+        KPI_LOG_PREFIX + " consultasPostStock no disponible o vacío.",
+        {
+          status: status || "unknown",
+          rowsRead: Array.isArray(matrix) ? Math.max(0, matrix.length - 1) : null,
+        },
+      );
+      return emptyModel;
+    }
+
+    const headers = matrix[0].map((header) => normalizeText(header));
+    const columnIndexes = resolveConsultasPostStockColumnIndexes(headers, matrix);
+
+    sourceMeta.headers = Array.isArray(matrix[0]) ? matrix[0].slice() : [];
+    sourceMeta.dateColumnIndex = columnIndexes.dateIndex;
+    sourceMeta.stationColumnIndex = columnIndexes.stationIndex;
+    sourceMeta.valueColumnIndex = columnIndexes.valueIndex;
+
+    if (columnIndexes.dateIndex < 0 || columnIndexes.valueIndex < 0) {
+      sourceMeta.emptyState = "invalid-structure";
+      console.warn(
+        KPI_LOG_PREFIX + " consultasPostStock con columnas no reconocibles.",
+        {
+          headers: matrix[0],
+          dateColumnIndex: columnIndexes.dateIndex,
+          valueColumnIndex: columnIndexes.valueIndex,
+        },
+      );
+      return emptyModel;
+    }
+
+    const totalsByDate = Object.create(null);
+    const presenceByDate = Object.create(null);
+
+    matrix.slice(1).forEach((row, index) => {
+      const isoDate = parseSheetDateToIso(getCell(row, columnIndexes.dateIndex));
+      const value = toNullableInt(getCell(row, columnIndexes.valueIndex));
+
+      if (!isoDate || value === null) {
+        return;
+      }
+
+      sourceMeta.rowsParsed += 1;
+
+      if (sourceMeta.sampleRows.length < 8) {
+        sourceMeta.sampleRows.push({
+          rowNumber: index + 2,
+          isoDate,
+          station:
+            columnIndexes.stationIndex >= 0
+              ? getCell(row, columnIndexes.stationIndex)
+              : "",
+          value,
+        });
+      }
+
+      if (!CONSULTAS_POST_STOCK_FIXED_DATES.includes(isoDate)) {
+        return;
+      }
+
+      totalsByDate[isoDate] = (totalsByDate[isoDate] || 0) + value;
+      presenceByDate[isoDate] = true;
+      sourceMeta.rowsInRange += 1;
+    });
+
+    const series = buildConsultasPostStockSeries(
+      totalsByDate,
+      presenceByDate,
+      todayIsoDate,
+    );
+    const total = series.reduce((acc, item) => {
+      return acc + (isFiniteMetric(item.value) ? Number(item.value) : 0);
+    }, 0);
+
+    sourceMeta.usable = true;
+    sourceMeta.total = total;
+    sourceMeta.isEmpty = total === 0 && !series.some((item) => item.hasData);
+    sourceMeta.emptyState = sourceMeta.isEmpty ? "no-data" : "ready";
+
+    console.info(KPI_LOG_PREFIX + " consultasPostStock parseado.", {
+      headers: sourceMeta.headers,
+      rowCount: sourceMeta.rowCount,
+      rowsParsed: sourceMeta.rowsParsed,
+      rowsInRange: sourceMeta.rowsInRange,
+      dateColumnIndex: sourceMeta.dateColumnIndex,
+      valueColumnIndex: sourceMeta.valueColumnIndex,
+      series,
+      total,
+      sampleRows: sourceMeta.sampleRows,
+    });
+
+    return {
+      total,
+      series,
+      sourceMeta,
+    };
+  }
+
+  function resolveConsultasPostStockColumnIndexes(headers, matrix) {
+    const sampleRow = Array.isArray(matrix?.[1]) ? matrix[1] : [];
+    let dateIndex = findHeaderIndex(headers, ["fecha", "consulta"]);
+    if (dateIndex < 0) {
+      dateIndex = headers.findIndex((header) => header.includes("fecha"));
+    }
+    if (dateIndex < 0 && parseSheetDateToIso(getCell(sampleRow, 0))) {
+      dateIndex = 0;
+    }
+
+    let valueIndex = headers.findIndex((header, index) => {
+      return (
+        index !== dateIndex &&
+        header.includes("numero") &&
+        header.includes("personas") &&
+        header.includes("consult")
+      );
+    });
+    if (valueIndex < 0) {
+      valueIndex = headers.findIndex((header, index) => {
+        return (
+          index !== dateIndex &&
+          header.includes("consult") &&
+          header.includes("agot")
+        );
+      });
+    }
+    if (valueIndex < 0) {
+      valueIndex = sampleRow.findIndex((cell, index) => {
+        return index !== dateIndex && looksLikeCountCell(cell);
+      });
+    }
+
+    let stationIndex = headers.findIndex((header, index) => {
+      return index !== dateIndex && index !== valueIndex && header.includes("estacion");
+    });
+    if (stationIndex < 0 && getCell(sampleRow, 1)) {
+      stationIndex = 1;
+    }
+
+    return {
+      dateIndex,
+      stationIndex,
+      valueIndex,
+    };
+  }
+
+  function buildConsultasPostStockSeries(totalsByDate, presenceByDate, todayIsoDate) {
+    return CONSULTAS_POST_STOCK_FIXED_DATES.map((isoDate) => {
+      const hasData = Boolean(presenceByDate[isoDate]);
+      const isFuture = isoDate > todayIsoDate;
+      const value = hasData
+        ? Number(totalsByDate[isoDate] || 0)
+        : isFuture
+          ? null
+          : 0;
+
+      return {
+        isoDate,
+        label: formatShortIsoDate(isoDate),
+        value,
+        isFuture,
+        hasData,
+        fullLabel: formatLongIsoDate(isoDate),
+      };
+    });
+  }
+
   function renderDashboard(root, model) {
     const totals = model.totals;
     const flow = model.fitFlowTotals;
@@ -1585,6 +1814,9 @@
         ].join("");
       })
       .join("");
+    const consultasPostStockSection = renderConsultasPostStockSection(
+      model.consultasPostStock,
+    );
 
     root.innerHTML = [
       '<div class="kpiDash__reportRoot" data-kpi-report-root>',
@@ -1633,12 +1865,53 @@
       stockRows,
       "</ul>",
       "</section>",
+      consultasPostStockSection,
       "</div>",
       "</div>",
     ].join("");
     bindReportHeaderActions(root);
     bindTrkGaugeTooltips(root);
     renderParticipantSankey(model);
+  }
+
+  function renderConsultasPostStockSection(consultasPostStock) {
+    const sectionModel =
+      consultasPostStock && typeof consultasPostStock === "object"
+        ? consultasPostStock
+        : {
+            total: 0,
+            sourceMeta: { isEmpty: true },
+          };
+    const sourceMeta =
+      sectionModel.sourceMeta && typeof sectionModel.sourceMeta === "object"
+        ? sectionModel.sourceMeta
+        : {};
+
+    return [
+      '<section class="kpiDash__consultasPostStock" aria-label="' +
+        escapeHtml(CONSULTAS_POST_STOCK_TITLE) +
+        '">',
+      '<header class="kpiDash__panelHeader kpiDash__consultasPostStockHeader">',
+      '<div class="kpiDash__consultasPostStockIntro">',
+      "<h4>" + escapeHtml(CONSULTAS_POST_STOCK_TITLE) + "</h4>",
+      "<p>" + escapeHtml(CONSULTAS_POST_STOCK_SUBTITLE) + "</p>",
+      "</div>",
+      '<div class="kpiDash__consultasPostStockTotal" aria-label="Total de consultas del rango">',
+      '<span class="kpiDash__consultasPostStockLabel">Total del rango</span>',
+      '<strong class="kpiDash__consultasPostStockValue">' +
+        formatMetric(sectionModel.total) +
+        "</strong>",
+      '<span class="kpiDash__consultasPostStockMeta">consultas</span>',
+      sourceMeta.isEmpty
+        ? '<span class="kpiDash__consultasPostStockHint">Sin registros en el rango</span>'
+        : '<span class="kpiDash__consultasPostStockHint">Fuente live consolidada</span>',
+      "</div>",
+      "</header>",
+      '<div class="kpiDash__consultasPostStockChartWrap">',
+      '<div class="kpiDash__chart kpiDash__chart--consultasPostStock" data-kpi-chart-consultas-post-stock></div>',
+      "</div>",
+      "</section>",
+    ].join("");
   }
 
   function buildParticipantSankeyData(model) {
@@ -2381,6 +2654,8 @@
       "charts-row": "[data-kpi-report-root] .kpiDash__charts",
       funnel: "[data-kpi-report-root] .kpiDash__funnel",
       stock: "[data-kpi-report-root] .kpiDash__stock",
+      "consultas-post-stock":
+        "[data-kpi-report-root] .kpiDash__consultasPostStock",
     };
     const includedBlocks = KPI_PRINT_INCLUDED_BLOCKS.filter((blockId) => {
       const selector = blockSelectors[blockId];
@@ -2605,6 +2880,7 @@
       ".kpiDash__pdfCaptureRoot .kpiDash__panel,",
       ".kpiDash__pdfCaptureRoot .kpiDash__funnel,",
       ".kpiDash__pdfCaptureRoot .kpiDash__stock,",
+      ".kpiDash__pdfCaptureRoot .kpiDash__consultasPostStock,",
       ".kpiDash__pdfCaptureRoot .kpiDash__tableWrap,",
       ".kpiDash__pdfCaptureRoot .kpiDash__chart,",
       ".kpiDash__pdfCaptureRoot .ppccr-sankey {",
@@ -3239,6 +3515,7 @@
     const barsEl = root.querySelector(SELECTORS.bars);
     const sankeyEl = root.querySelector(SELECTORS.sankey);
     const posnegEl = root.querySelector(SELECTORS.posneg);
+    const consultasPostStockEl = root.querySelector(SELECTORS.consultasPostStock);
     const chartPalette = {
       blueDark: "#0C4E8D",
       blueMid: "#3C7FC3",
@@ -3262,6 +3539,9 @@
         : null;
       const posnegChart = posnegEl
         ? echarts.init(posnegEl, null, { renderer: "canvas" })
+        : null;
+      const consultasPostStockChart = consultasPostStockEl
+        ? echarts.init(consultasPostStockEl, null, { renderer: "canvas" })
         : null;
       let syncSankeySvgViewBox = function () {};
 
@@ -3694,6 +3974,28 @@
       const negatives = model.fitFlowTotals.negativos;
       const hasPosNegData = positives !== null && negatives !== null;
       const posNegTotal = hasPosNegData ? positives + negatives : 0;
+      const consultasPostStockSeries =
+        model && model.consultasPostStock && Array.isArray(model.consultasPostStock.series)
+          ? model.consultasPostStock.series
+          : buildConsultasPostStockSeries({}, {}, currentLocalIsoDate());
+      const consultasPostStockMeta =
+        model && model.consultasPostStock && model.consultasPostStock.sourceMeta
+          ? model.consultasPostStock.sourceMeta
+          : {};
+      const consultasPostStockSourceStatus =
+        model &&
+        model.sourceStatus &&
+        typeof model.sourceStatus.consultasPostStock === "string"
+          ? model.sourceStatus.consultasPostStock
+          : "unknown";
+      const consultasPostStockMaxValue = consultasPostStockSeries.reduce(
+        (maxValue, point) => {
+          return isFiniteMetric(point.value)
+            ? Math.max(maxValue, Number(point.value))
+            : maxValue;
+        },
+        0,
+      );
 
       const buildPosNegOption = (viewMode) => {
         const isMobile = viewMode === "mobile";
@@ -3769,6 +4071,142 @@
         };
       };
 
+      const buildConsultasPostStockOption = (viewMode) => {
+        const isMobile = viewMode === "mobile";
+        const isTablet = viewMode === "tablet";
+        const graphicText =
+          consultasPostStockSourceStatus === "error"
+            ? "No se pudo leer la fuente live"
+            : consultasPostStockMeta.isEmpty
+              ? "Sin consultas registradas\nen el rango"
+              : "";
+        const yAxis = {
+          type: "value",
+          min: 0,
+          minInterval: 1,
+          splitNumber: 4,
+          axisLabel: {
+            color: chartPalette.axisText,
+            fontSize: isMobile ? 10 : 10.5,
+          },
+          axisLine: { show: false },
+          axisTick: { show: false },
+          splitLine: {
+            lineStyle: {
+              color: chartPalette.gridLine,
+              type: "dashed",
+            },
+          },
+        };
+
+        if (consultasPostStockMaxValue <= 0) {
+          yAxis.max = 1;
+        }
+
+        return {
+          animationDuration: 0,
+          color: [chartPalette.blueMid],
+          tooltip: {
+            trigger: "axis",
+            axisPointer: {
+              type: "shadow",
+              shadowStyle: { color: "rgba(0, 75, 143, 0.04)" },
+            },
+            backgroundColor: "rgba(255, 255, 255, 0.97)",
+            borderColor: "rgba(95, 115, 147, 0.18)",
+            borderWidth: 1,
+            extraCssText:
+              "box-shadow: 0 10px 24px rgba(19,41,75,0.12); border-radius: 10px; padding: 8px 10px;",
+            textStyle: {
+              color: chartPalette.tooltipText,
+              fontSize: 11,
+              fontWeight: 500,
+            },
+            formatter: function (params) {
+              if (!Array.isArray(params) || params.length === 0) {
+                return "";
+              }
+
+              const point = consultasPostStockSeries[params[0].dataIndex];
+              if (!point) {
+                return "";
+              }
+
+              const valueLabel =
+                point.value === null || point.value === undefined
+                  ? "Sin dato disponible todavía"
+                  : formatNumber(point.value);
+
+              return point.fullLabel + "<br/>Consultas: " + valueLabel;
+            },
+          },
+          grid: {
+            left: isMobile ? 34 : 44,
+            right: isMobile ? 10 : 18,
+            top: 24,
+            bottom: isMobile ? 50 : 38,
+          },
+          xAxis: {
+            type: "category",
+            data: consultasPostStockSeries.map((point) => point.label),
+            axisLabel: {
+              color: chartPalette.axisText,
+              fontSize: isMobile ? 10 : isTablet ? 10.2 : 10.5,
+              fontWeight: 500,
+              interval: 0,
+              margin: 12,
+            },
+            axisTick: { show: false },
+            axisLine: { lineStyle: { color: chartPalette.axisLine } },
+          },
+          yAxis,
+          graphic: graphicText
+            ? [
+                {
+                  type: "text",
+                  left: "center",
+                  top: "middle",
+                  silent: true,
+                  style: {
+                    text: graphicText,
+                    textAlign: "center",
+                    fill: chartPalette.axisText,
+                    fontSize: isMobile ? 11 : 12,
+                    fontWeight: 500,
+                    lineHeight: isMobile ? 15 : 17,
+                  },
+                },
+              ]
+            : [],
+          series: [
+            {
+              name: "Consultas",
+              type: "bar",
+              barMaxWidth: isMobile ? 22 : isTablet ? 30 : 36,
+              data: consultasPostStockSeries.map((point) => point.value),
+              itemStyle: {
+                borderRadius: [8, 8, 0, 0],
+              },
+              label: {
+                show: true,
+                position: "top",
+                distance: 6,
+                color: chartPalette.axisText,
+                fontSize: isMobile ? 10 : 10.5,
+                fontWeight: 600,
+                fontFamily: KPI_CHART_FONT_FAMILY,
+                formatter: function (params) {
+                  return params.value === null || params.value === undefined
+                    ? ""
+                    : formatNumber(params.value);
+                },
+              },
+              emphasis: { focus: "series" },
+            },
+          ],
+        };
+      };
+
       const applyChartsForViewport = () => {
         const nextMode = getKpiDashboardViewportMode(root);
         const nextSankeyWidth = sankeyEl ? Math.round(sankeyEl.clientWidth || 0) : 0;
@@ -3777,6 +4215,12 @@
           barChart.setOption(buildBarOption(nextMode), true);
           if (posnegChart) {
             posnegChart.setOption(buildPosNegOption(nextMode), true);
+          }
+          if (consultasPostStockChart) {
+            consultasPostStockChart.setOption(
+              buildConsultasPostStockOption(nextMode),
+              true,
+            );
           }
         }
 
@@ -3801,6 +4245,9 @@
         }
         if (posnegChart) {
           posnegChart.resize();
+        }
+        if (consultasPostStockChart) {
+          consultasPostStockChart.resize();
         }
         applyChartsForViewport();
       };
@@ -3829,6 +4276,10 @@
       if (posnegEl) {
         posnegEl.innerHTML =
           '<div class="kpiDash__chartFallback">No se pudo inicializar el donut de resultados.</div>';
+      }
+      if (consultasPostStockEl) {
+        consultasPostStockEl.innerHTML =
+          '<div class="kpiDash__chartFallback">No se pudo inicializar el gráfico de consultas posteriores al stock.</div>';
       }
     }
   }
@@ -3899,6 +4350,80 @@
     }
 
     return normalized.replace(/\s+/g, "_");
+  }
+
+  function parseSheetDateToIso(value) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "";
+    }
+
+    const datePart = raw.split(/\s+/)[0];
+    let match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      return match[1] + "-" + match[2] + "-" + match[3];
+    }
+
+    match = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match) {
+      return "";
+    }
+
+    return match[3] + "-" + pad2(match[2]) + "-" + pad2(match[1]);
+  }
+
+  function currentLocalIsoDate() {
+    const now = new Date();
+    return [
+      now.getFullYear(),
+      pad2(now.getMonth() + 1),
+      pad2(now.getDate()),
+    ].join("-");
+  }
+
+  function pad2(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function formatShortIsoDate(isoDate) {
+    const match = String(isoDate || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      return String(isoDate || "");
+    }
+
+    const monthMap = {
+      "01": "ene",
+      "02": "feb",
+      "03": "mar",
+      "04": "abr",
+      "05": "may",
+      "06": "jun",
+      "07": "jul",
+      "08": "ago",
+      "09": "sep",
+      "10": "oct",
+      "11": "nov",
+      "12": "dic",
+    };
+
+    return match[3] + " " + (monthMap[match[2]] || match[2]);
+  }
+
+  function formatLongIsoDate(isoDate) {
+    const match = String(isoDate || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      return String(isoDate || "");
+    }
+
+    return match[3] + "/" + match[2] + "/" + match[1];
+  }
+
+  function looksLikeCountCell(value) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return false;
+    }
+    return /^-?\d+(?:[.,]\d+)?$/.test(raw);
   }
 
   function findHeaderIndex(headers, tokens) {

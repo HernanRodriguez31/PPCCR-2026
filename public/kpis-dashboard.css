@@ -300,6 +300,7 @@
 .kpiDash__pdfSnapshot .kpiDash__panel,
 .kpiDash__pdfSnapshot .kpiDash__funnel,
 .kpiDash__pdfSnapshot .kpiDash__stock,
+.kpiDash__pdfSnapshot .kpiDash__consultasPostStock,
 .kpiDash__pdfSnapshot .kpiDash__tableWrap,
 .kpiDash__pdfSnapshot .kpiDash__chart,
 .kpiDash__pdfSnapshot .ppccr-sankey {
@@ -461,6 +462,7 @@
 .kpiDash__reportRoot.kpiDash--pdfV2 .kpiDash__panel,
 .kpiDash__reportRoot.kpiDash--pdfV2 .kpiDash__funnel,
 .kpiDash__reportRoot.kpiDash--pdfV2 .kpiDash__stock,
+.kpiDash__reportRoot.kpiDash--pdfV2 .kpiDash__consultasPostStock,
 .kpiDash__reportRoot.kpiDash--pdfV2 .kpiDash__tableWrap,
 .kpiDash__reportRoot.kpiDash--pdfV2 .kpiDash__chart,
 .kpiDash__reportRoot.kpiDash--pdfV2 .ppccr-sankey {
@@ -489,6 +491,7 @@
 .kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__panel,
 .kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__funnel,
 .kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__stock,
+.kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__consultasPostStock,
 .kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__tableWrap,
 .kpiDash__reportRoot.kpiDash--pdfV3 .kpiDash__chart,
 .kpiDash__reportRoot.kpiDash--pdfV3 .ppccr-sankey {
@@ -1975,7 +1978,8 @@
 }
 
 .kpiDash__funnel,
-.kpiDash__stock {
+.kpiDash__stock,
+.kpiDash__consultasPostStock {
   border: 1px solid var(--kpi-border-soft);
   border-radius: var(--kpi-radius-md);
   background: var(--kpi-card);
@@ -1985,7 +1989,8 @@
 
 /* Congela la apariencia de estas dos secciones aunque el resto use tokens ejecutivos. */
 .kpiDash__funnel[aria-label="Flujo FIT por estación"],
-.kpiDash__stock {
+.kpiDash__stock,
+.kpiDash__consultasPostStock {
   --kpi-blue-900: #004b8f;
   --kpi-blue-700: #1e6fbf;
   --kpi-blue-500: #3c7fc3;
@@ -2477,6 +2482,62 @@
   font-size: 0.79rem;
 }
 
+.kpiDash__consultasPostStockHeader {
+  align-items: flex-start;
+  margin-bottom: 0.8rem;
+}
+
+.kpiDash__consultasPostStockIntro {
+  min-width: 0;
+}
+
+.kpiDash__consultasPostStockTotal {
+  min-width: 220px;
+  border: 1px solid rgba(12, 78, 141, 0.1);
+  border-radius: 14px;
+  background: linear-gradient(150deg, rgba(234, 243, 255, 0.78), #ffffff);
+  padding: 0.76rem 0.86rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  display: grid;
+  justify-items: end;
+  gap: 0.1rem;
+}
+
+.kpiDash__consultasPostStockLabel {
+  font-size: 0.71rem;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--kpi-muted);
+}
+
+.kpiDash__consultasPostStockValue {
+  font-size: clamp(1.78rem, 3.2vw, 2.22rem);
+  line-height: 1;
+  font-weight: 720;
+  color: var(--kpi-blue-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiDash__consultasPostStockMeta,
+.kpiDash__consultasPostStockHint {
+  font-size: 0.77rem;
+  line-height: 1.25;
+  color: var(--kpi-muted);
+}
+
+.kpiDash__consultasPostStockHint {
+  margin-top: 0.08rem;
+}
+
+.kpiDash__consultasPostStockChartWrap {
+  position: relative;
+}
+
+.kpiDash__chart--consultasPostStock {
+  min-height: 304px;
+}
+
 .kpiDash__badge {
   font-size: 0.7rem;
   letter-spacing: 0.02em;
@@ -2514,7 +2575,8 @@
   .kpiDash__charts,
   .kpiDash__funnel--avance,
   .kpiDash__funnel[aria-label="Flujo FIT por estación"],
-  .kpiDash__stock {
+  .kpiDash__stock,
+  .kpiDash__consultasPostStock {
     grid-column: 1 / -1;
   }
 
@@ -2657,6 +2719,7 @@
   .kpiDash__fitFlow,
   .kpiDash__funnel,
   .kpiDash__stock,
+  .kpiDash__consultasPostStock,
   .kpiDash__reportHeader {
     padding: 0.96rem;
   }
@@ -2677,8 +2740,20 @@
   .kpiDash__fitFlow,
   .kpiDash__funnel,
   .kpiDash__stock,
+  .kpiDash__consultasPostStock,
   .kpiDash__reportHeader {
     padding: 0.82rem;
+  }
+
+  .kpiDash__consultasPostStockHeader {
+    flex-direction: column;
+    gap: 0.72rem;
+  }
+
+  .kpiDash__consultasPostStockTotal {
+    width: 100%;
+    min-width: 0;
+    justify-items: start;
   }
 
   .kpiDash__summaryCard {
@@ -2845,6 +2920,7 @@
   .kpiDash__panel,
   .kpiDash__funnel,
   .kpiDash__stock,
+  .kpiDash__consultasPostStock,
   .kpiDash__tableWrap {
     break-inside: avoid;
     page-break-inside: avoid;

@@ -2,7 +2,7 @@
 
 (() => {
   if (!("serviceWorker" in navigator)) return;
-  const swUrl = "/sw.js?v=20260326-stock-badge-hide1";
+  const swUrl = "/sw.js?v=20260328-consultas-post-stock-v1";
   const isLocalDevHost =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1";
