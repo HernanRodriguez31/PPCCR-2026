@@ -23,6 +23,41 @@ const POSTER_DEFAULT_JPEG_QUALITY = 0.92;
 const POSTER_HOST_ID = "ppccr-pdf-poster-host";
 const POSTER_HOST_DASHBOARD_ID = "ppccr-pdf-poster-dashboard";
 const POSTER_HOST_SCOPE_ID = "ppccr-pdf-poster-scope";
+const TRUE_LIVE_SNAPSHOT_FRAME_CLASS = "kpiDash__trueLiveSnapshotFrame";
+const TRUE_LIVE_SNAPSHOT_SOURCE = "live-iframe:index.html#kpis";
+const TRUE_LIVE_SNAPSHOT_QUERY_KEY = "ppccr_snapshot";
+const TRUE_LIVE_SNAPSHOT_QUERY_VALUE = "panels-live";
+const TRUE_LIVE_SNAPSHOT_TIMEOUT_MS = 45000;
+const TRUE_LIVE_SNAPSHOT_FRAME_WIDTH_PX = 1460;
+const TRUE_LIVE_SNAPSHOT_FRAME_HEIGHT_PX = 2200;
+const TRUE_LIVE_SNAPSHOT_SESSION_SEED = Object.freeze({
+  ppccr_auth: "1",
+  ppccr_auth_ok: "1",
+  ppccr_station_id: "saavedra",
+  ppccr_station: JSON.stringify({
+    id: "saavedra",
+    name: "Parque Saavedra",
+  }),
+  ppccr_auth_user: "saavedra",
+});
+const DEFAULT_PANEL_SNAPSHOT_SELECTORS = Object.freeze([
+  Object.freeze({
+    selector: ".kpiDash__summary.kpiDash__execPanel",
+    scale: 4,
+    fitToTarget: true,
+    label: "participants-panel",
+  }),
+  Object.freeze({
+    selector: ".kpiDash__fitFlowPanel--trk",
+    scale: 5,
+    fitToTarget: true,
+    label: "trk-panel",
+  }),
+]);
+const DEFAULT_SNAPSHOT_SELECTORS = DEFAULT_PANEL_SNAPSHOT_SELECTORS.concat([
+  ".kpiDash__trkGaugeWrap",
+  ".ppccr-sankey svg",
+]);
 
 const DEFAULT_OPTIONS = {
   headerSelector: "#top",
@@ -46,7 +81,7 @@ const DEFAULT_OPTIONS = {
   preferLegibilityOverSinglePage: false,
   repeatHeaderOnEachPage: true,
   enableSnapshotSwap: true,
-  snapshotSelectors: [".kpiDash__trkGaugeWrap", ".ppccr-sankey svg"],
+  snapshotSelectors: DEFAULT_SNAPSHOT_SELECTORS,
   includeSectionHeader: true,
   pageStrategy: "single-page-poster",
   pdfPageSizeMode: "custom",
@@ -115,6 +150,9 @@ export async function exportPPCCRToPdf(options = {}) {
     captureMode: cfg.pageStrategy === "single-page-poster" ? "single-page-poster" : "block-layout",
     usedTiles: false,
     renderWidthMm: null,
+    renderHeightMm: null,
+    imageXmm: null,
+    imageYmm: null,
     exportedScope: null,
     pageBreaks: [],
     softBudgetHit: false,
@@ -168,6 +206,8 @@ export async function exportPPCCRToPdf(options = {}) {
     canvasReport: [],
     headerCaptureScale: null,
     dashboardCaptureScale: null,
+    posterLayoutMetrics: null,
+    snapshotReplacementStats: null,
     pageBreaks: [],
     warnings: [],
   };
@@ -212,6 +252,26 @@ export async function exportPPCCRToPdf(options = {}) {
           debug: cfg.debug,
         })
       : [];
+    const panelSnapshotBlocks = snapshotReplacements
+      .filter((replacement) => replacement && replacement.label)
+      .map((replacement) => replacement.label)
+      .filter((label) => label === "participants-panel" || label === "trk-panel");
+    resultMeta.snapshotReplacementStats = {
+      total: snapshotReplacements.length,
+      labels: Array.from(
+        new Set(
+          snapshotReplacements
+            .map((replacement) => replacement.label || replacement.selector || "")
+            .filter(Boolean),
+        ),
+      ),
+      panelBlocks: Array.from(new Set(panelSnapshotBlocks)),
+      panelCount: panelSnapshotBlocks.length,
+      mode:
+        panelSnapshotBlocks.length > 0
+          ? "true-live-source-panel-snapshot"
+          : "css-only",
+    };
     timings.snapshotPrepMs = round2(nowMs() - snapshotStart);
 
     const pageMetrics = createPageMetrics(cfg);
@@ -299,6 +359,9 @@ export async function exportPPCCRToPdf(options = {}) {
       captureMode: chosenVariant.captureMode,
       usedTiles: chosenVariant.usedTiles,
       renderWidthMm: chosenVariant.renderWidthMm,
+      renderHeightMm: chosenVariant.renderHeightMm || null,
+      imageXmm: chosenVariant.imageXmm || null,
+      imageYmm: chosenVariant.imageYmm || null,
       exportedScope: {
         headerSelector: cfg.headerSelector,
         exportScopeSelector: cfg.exportScopeSelector,
@@ -318,6 +381,27 @@ export async function exportPPCCRToPdf(options = {}) {
       usedCustomPageSize: Boolean(chosenVariant.usedCustomPageSize),
       singlePageSatisfied: Boolean(chosenVariant.singlePageSatisfied),
       visualBlocksIncluded: chosenVariant.visualBlocksIncluded || [],
+      posterReportRootLeftPx: resultMeta.posterLayoutMetrics
+        ? resultMeta.posterLayoutMetrics.reportRootLeftPx
+        : null,
+      posterReportRootRightPx: resultMeta.posterLayoutMetrics
+        ? resultMeta.posterLayoutMetrics.reportRootRightPx
+        : null,
+      posterReportRootCenterDeltaPx: resultMeta.posterLayoutMetrics
+        ? resultMeta.posterLayoutMetrics.reportRootCenterDeltaPx
+        : null,
+      snapshotReplacementMode: resultMeta.snapshotReplacementStats
+        ? resultMeta.snapshotReplacementStats.mode
+        : "css-only",
+      snapshotReplacementTotal: resultMeta.snapshotReplacementStats
+        ? resultMeta.snapshotReplacementStats.total
+        : 0,
+      snapshotReplacementLabels: resultMeta.snapshotReplacementStats
+        ? resultMeta.snapshotReplacementStats.labels
+        : [],
+      panelSnapshotBlocks: resultMeta.snapshotReplacementStats
+        ? resultMeta.snapshotReplacementStats.panelBlocks
+        : [],
       warnings: resultMeta.warnings.slice(),
       timings: {
         ...timings,
@@ -333,12 +417,16 @@ export async function exportPPCCRToPdf(options = {}) {
       console.log("fallbackTilesUsed:", resultMeta.fallbackTilesUsed);
       console.log("tilesCount:", resultMeta.tilesCount);
       console.log("snapshotReplacements:", snapshotReplacements.length);
+      console.log("snapshotReplacementStats:", resultMeta.snapshotReplacementStats);
       console.log("chosenPreset:", chosenVariant.chosenPreset);
       console.log("blobSizeBytes:", chosenVariant.blobSizeBytes);
       console.log("layoutMode:", chosenVariant.layoutMode);
       console.log("pageBreaks:", chosenVariant.pageBreaks);
       console.log("posterCanvasPx:", chosenVariant.posterCanvasPx);
+      console.log("posterLayoutMetrics:", resultMeta.posterLayoutMetrics);
       console.log("pdfPageMm:", chosenVariant.pdfPageMm);
+      console.log("imageXmm:", chosenVariant.imageXmm);
+      console.log("imageYmm:", chosenVariant.imageYmm);
       console.log("selectedCodecPerBlock:", chosenVariant.selectedCodecPerBlock);
       console.log("finalPosterCodec:", chosenVariant.finalPosterCodec);
       console.groupEnd();
@@ -365,9 +453,32 @@ export async function exportPPCCRToPdf(options = {}) {
       finalBlobBytes: chosenVariant.blobSizeBytes,
       posterCanvasPx: chosenVariant.posterCanvasPx || null,
       pdfPageMm: chosenVariant.pdfPageMm || null,
+      imageXmm: chosenVariant.imageXmm || null,
+      imageYmm: chosenVariant.imageYmm || null,
       usedCustomPageSize: Boolean(chosenVariant.usedCustomPageSize),
       singlePageSatisfied: Boolean(chosenVariant.singlePageSatisfied),
       visualBlocksIncluded: chosenVariant.visualBlocksIncluded || [],
+      posterReportRootLeftPx: resultMeta.posterLayoutMetrics
+        ? resultMeta.posterLayoutMetrics.reportRootLeftPx
+        : null,
+      posterReportRootRightPx: resultMeta.posterLayoutMetrics
+        ? resultMeta.posterLayoutMetrics.reportRootRightPx
+        : null,
+      posterReportRootCenterDeltaPx: resultMeta.posterLayoutMetrics
+        ? resultMeta.posterLayoutMetrics.reportRootCenterDeltaPx
+        : null,
+      snapshotReplacementMode: resultMeta.snapshotReplacementStats
+        ? resultMeta.snapshotReplacementStats.mode
+        : "css-only",
+      snapshotReplacementTotal: resultMeta.snapshotReplacementStats
+        ? resultMeta.snapshotReplacementStats.total
+        : 0,
+      snapshotReplacementLabels: resultMeta.snapshotReplacementStats
+        ? resultMeta.snapshotReplacementStats.labels
+        : [],
+      panelSnapshotBlocks: resultMeta.snapshotReplacementStats
+        ? resultMeta.snapshotReplacementStats.panelBlocks
+        : [],
       softBudgetHit: chosenVariant.softBudgetHit,
       hardBudgetHit: chosenVariant.hardBudgetHit,
     };
@@ -741,6 +852,37 @@ async function ensureExportLibs() {
   }
 
   return window.__ppccrPdfExportLibsPromise;
+}
+
+async function ensureHtml2CanvasLib() {
+  const html2canvasFn = resolveHtml2Canvas();
+  if (html2canvasFn) {
+    return html2canvasFn;
+  }
+
+  if (!window.__ppccrHtml2CanvasPromise) {
+    window.__ppccrHtml2CanvasPromise = (async () => {
+      try {
+        await loadScript(HTML2CANVAS_CDN, () => Boolean(resolveHtml2Canvas()));
+      } catch (primaryError) {
+        await loadScript(
+          HTML2PDF_BUNDLE_CDN,
+          () => Boolean(resolveHtml2Canvas()),
+        );
+      }
+
+      const resolved = resolveHtml2Canvas();
+      if (!resolved) {
+        throw new Error("No se pudo inicializar html2canvas para snapshots de print.");
+      }
+      return resolved;
+    })().catch((error) => {
+      window.__ppccrHtml2CanvasPromise = null;
+      throw error;
+    });
+  }
+
+  return window.__ppccrHtml2CanvasPromise;
 }
 
 function resolveHtml2Canvas() {
@@ -1590,7 +1732,7 @@ function buildPosterSnapshotStyles(cfg) {
     "  --desktop-shell-max: 1280px;",
     "  --desktop-reading-max: 1120px;",
     "  --desktop-wide-max: 1380px;",
-    "  --desktop-gutter: clamp(24px, 2.4vw, 40px);",
+    "  --desktop-gutter: 18px;",
     "  --desktop-section-gap: clamp(36px, 4vw, 64px);",
     "  --desktop-card-gap: clamp(18px, 1.8vw, 28px);",
     "  --desktop-panel-radius: 30px;",
@@ -1600,11 +1742,37 @@ function buildPosterSnapshotStyles(cfg) {
     "  print-color-adjust: exact !important;",
     "}",
     ".kpiDash__posterSnapshot .container {",
-    "  width: min(calc(100% - (var(--desktop-gutter) * 2)), var(--desktop-wide-max)) !important;",
+    "  width: calc(100% - (var(--desktop-gutter) * 2)) !important;",
+    "  max-width: none !important;",
+    "  margin-inline: auto !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__posterScope,",
+    ".kpiDash__posterSnapshot .kpiDash__posterDashboard {",
+    "  width: calc(100% - (var(--desktop-gutter) * 2)) !important;",
+    "  max-width: none !important;",
+    "  margin-inline: auto !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__posterScope {",
+    "  padding-left: 0 !important;",
+    "  padding-right: 0 !important;",
+    "  box-sizing: border-box !important;",
+    "}",
+    ".kpiDash__posterSnapshot #ppccr-pdf-poster-dashboard,",
+    ".kpiDash__posterSnapshot .kpiDash__posterDashboard,",
+    ".kpiDash__posterSnapshot [data-kpi-dashboard] {",
+    "  margin-inline: auto !important;",
+    "  padding-inline: 12px !important;",
+    "  box-sizing: border-box !important;",
+    "}",
+    ".kpiDash__posterSnapshot [data-ppccr-poster-report-root],",
+    ".kpiDash__posterSnapshot [data-kpi-report-root] {",
+    "  width: 100% !important;",
+    "  max-width: none !important;",
     "  margin-inline: auto !important;",
     "}",
     ".kpiDash__posterSnapshot .partners-bar .container {",
-    "  width: min(calc(100% - (var(--desktop-gutter) * 2)), 1120px) !important;",
+    "  width: calc(100% - (var(--desktop-gutter) * 2)) !important;",
+    "  max-width: none !important;",
     "}",
     ".kpiDash__posterSnapshot .site-header {",
     "  position: static !important;",
@@ -1616,9 +1784,13 @@ function buildPosterSnapshotStyles(cfg) {
     ".kpiDash__posterSnapshot .site-topbar,",
     ".kpiDash__posterSnapshot .topbar,",
     ".kpiDash__posterSnapshot .site-topbar__inner {",
-    "  width: min(calc(100% - (var(--desktop-gutter) * 2)), var(--desktop-wide-max)) !important;",
-    "  max-width: var(--desktop-wide-max) !important;",
+    "  width: 100% !important;",
+    "  max-width: none !important;",
+    "}",
+    ".kpiDash__posterSnapshot .site-topbar__inner {",
+    "  width: calc(100% - (var(--desktop-gutter) * 2)) !important;",
     "  margin-inline: auto !important;",
+    "  background: transparent !important;",
     "}",
     ".kpiDash__posterSnapshot .site-nav,",
     ".kpiDash__posterSnapshot #mobileDockWrap,",
@@ -1703,6 +1875,62 @@ function buildPosterSnapshotStyles(cfg) {
     "  font-size: 0.76rem !important;",
     "  line-height: 1.32 !important;",
     "}",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStockHeader {",
+    "  grid-template-columns: minmax(0, 1fr) minmax(198px, 214px) !important;",
+    "  align-items: center !important;",
+    "  column-gap: 0.88rem !important;",
+    "  row-gap: 0.6rem !important;",
+    "  margin-bottom: 0.72rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStockIntro,",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStockSubtitle,",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStockNarrativeGroup {",
+    "  max-width: none !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStockNarrativeGroup {",
+    "  row-gap: 0.12rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStockNarrativeLine {",
+    "  font-size: 0.74rem !important;",
+    "  line-height: 1.28 !important;",
+    "  white-space: nowrap !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStockTotal {",
+    "  width: 214px !important;",
+    "  min-height: 118px !important;",
+    "  border: 1px solid rgba(12, 86, 156, 0.28) !important;",
+    "  border-radius: 16px !important;",
+    "  background: #1768b6 !important;",
+    "  padding: 0.88rem 0.94rem 0.92rem !important;",
+    "  box-shadow: 0 10px 18px rgba(8, 58, 112, 0.12) !important;",
+    "  justify-self: center !important;",
+    "  justify-items: center !important;",
+    "  align-content: center !important;",
+    "  text-align: center !important;",
+    "  grid-template-rows: auto auto !important;",
+    "  gap: 0.44rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStockLabel {",
+    "  max-width: 18.4ch !important;",
+    "  font-size: 0.59rem !important;",
+    "  line-height: 1.08 !important;",
+    "  letter-spacing: 0.029em !important;",
+    "  font-weight: 600 !important;",
+    "  text-align: center !important;",
+    "  text-wrap: balance !important;",
+    "  transform: translateX(-6px) !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStockLabelLine {",
+    "  white-space: nowrap !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStockValue {",
+    "  font-size: 2.12rem !important;",
+    "  line-height: 0.96 !important;",
+    "  letter-spacing: -0.04em !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__consultasPostStockMeta {",
+    "  display: none !important;",
+    "}",
     ".kpiDash__posterSnapshot .kpiDash__exec {",
     "  display: grid !important;",
     "  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;",
@@ -1720,6 +1948,105 @@ function buildPosterSnapshotStyles(cfg) {
     ".kpiDash__posterSnapshot .kpiDash__execHeader p {",
     "  font-size: 0.76rem !important;",
     "  line-height: 1.32 !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryHeadTotal {",
+    "  font-size: 2.24rem !important;",
+    "  letter-spacing: -0.028em !important;",
+    "  line-height: 0.9 !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryDistribution {",
+    "  gap: 0.82rem !important;",
+    "  padding-top: 0.74rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryBar {",
+    "  height: 13px !important;",
+    "  box-shadow: inset 0 0 0 1px rgba(115, 160, 208, 0.14) !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryBarSegment--fit {",
+    "  background: linear-gradient(92deg, #0b4d8d, #2f7ec8) !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryBarSegment--outside {",
+    "  background: linear-gradient(92deg, #69a7e1, #9bc8f2) !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summarySplit {",
+    "  gap: 0.82rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryMainMetric {",
+    "  column-gap: 0.5rem !important;",
+    "  row-gap: 0.12rem !important;",
+    "  padding: 0.3rem 0 0.2rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryMainLabel {",
+    "  font-size: 0.79rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryMainValue {",
+    "  font-size: 1.18rem !important;",
+    "  width: 3.25ch !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryMainMeta {",
+    "  font-size: 0.74rem !important;",
+    "  line-height: 1.28 !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryReasons {",
+    "  gap: 0.8rem !important;",
+    "  padding-top: 0.82rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryBadge {",
+    "  min-height: 86px !important;",
+    "  padding: 0.7rem 0.74rem !important;",
+    "  box-shadow: 0 5px 14px rgba(18, 72, 128, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.84) !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryBadgeLabel {",
+    "  font-size: 0.75rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryBadgeValue {",
+    "  font-size: 1.08rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__summaryBadgePct {",
+    "  font-size: 0.73rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__trkBody {",
+    "  padding: 0.78rem 0.9rem !important;",
+    "  gap: 0.8rem !important;",
+    "  background: linear-gradient(160deg, #ffffff, rgba(241, 247, 253, 0.96)) !important;",
+    "  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84), 0 7px 16px rgba(18, 72, 128, 0.09) !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__trkTitle {",
+    "  font-size: 0.98rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__trkSub {",
+    "  font-size: 0.66rem !important;",
+    "  line-height: 1.22 !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__trkValue {",
+    "  font-size: 1.48rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__trkTarget {",
+    "  font-size: 0.68rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__trkGap {",
+    "  font-size: 0.75rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__trkFactLine {",
+    "  font-size: 0.74rem !important;",
+    "  line-height: 1.22 !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__trkFactLine strong {",
+    "  font-size: 0.9rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__trkGaugeWrap {",
+    "  justify-items: center !important;",
+    "  min-width: 98px !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__trkGauge {",
+    "  width: 106px !important;",
+    "  height: 106px !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__trkGaugeValue {",
+    "  font-size: 0.9rem !important;",
+    "}",
+    ".kpiDash__posterSnapshot .kpiDash__trkGaugeGoal {",
+    "  font-size: 0.56rem !important;",
     "}",
     ".kpiDash__posterSnapshot .kpiDash__charts {",
     "  display: grid !important;",
@@ -1810,8 +2137,10 @@ function snapshotCanvasNodesToImages({ sourceRoot, targetRoot }) {
 
 function applySnapshotReplacementsToRoot({ targetRoot, replacements }) {
   if (!targetRoot || !Array.isArray(replacements) || replacements.length === 0) {
-    return;
+    return [];
   }
+
+  const applied = [];
 
   replacements
     .slice()
@@ -1825,22 +2154,66 @@ function applySnapshotReplacementsToRoot({ targetRoot, replacements }) {
       const widthPx = Number(replacement.width) > 0 ? Number(replacement.width) : target.offsetWidth;
       const heightPx =
         Number(replacement.height) > 0 ? Number(replacement.height) : target.offsetHeight;
+      const fitToTarget = replacement.fitToTarget === true;
+      const targetRect = target.getBoundingClientRect ? target.getBoundingClientRect() : null;
+      const renderedWidth = fitToTarget
+        ? Math.max(1, Math.round((targetRect && targetRect.width) || target.offsetWidth || widthPx || 1))
+        : widthPx;
+      const renderedHeight = fitToTarget
+        ? Math.max(
+            1,
+            Math.round((targetRect && targetRect.height) || target.offsetHeight || heightPx || 1),
+          )
+        : heightPx;
+      const targetClass =
+        typeof target.getAttribute === "function"
+          ? target.getAttribute("class") || ""
+          : String(target.className || "").trim();
+      const targetStyle =
+        typeof window !== "undefined" && typeof window.getComputedStyle === "function"
+          ? window.getComputedStyle(target)
+          : null;
 
       const img = document.createElement("img");
       img.src = replacement.dataUrl;
       img.alt = "";
       img.decoding = "sync";
       img.setAttribute("aria-hidden", "true");
-      img.className = "kpiDash__pdfSwapImage";
+      img.className = [targetClass, "kpiDash__pdfSwapImage"].filter(Boolean).join(" ");
+      img.setAttribute(
+        "data-ppccr-pdf-snapshot",
+        String(replacement.label || replacement.selector || "snapshot"),
+      );
       img.style.display = "inline-block";
-      img.style.width = widthPx > 0 ? widthPx + "px" : "100%";
-      img.style.height = heightPx > 0 ? heightPx + "px" : "auto";
+      img.style.width = renderedWidth > 0 ? renderedWidth + "px" : "100%";
+      img.style.height = renderedHeight > 0 ? renderedHeight + "px" : "auto";
       img.style.maxWidth = "100%";
       img.style.objectFit = "contain";
       img.style.verticalAlign = "middle";
+      img.style.boxSizing = "border-box";
+      img.style.border = "0";
+      img.style.padding = "0";
+      img.style.background = "transparent";
+      img.style.overflow = "visible";
+      if (targetStyle) {
+        if (targetStyle.borderRadius && targetStyle.borderRadius !== "0px") {
+          img.style.borderRadius = targetStyle.borderRadius;
+        }
+        if (targetStyle.boxShadow && targetStyle.boxShadow !== "none") {
+          img.style.boxShadow = targetStyle.boxShadow;
+        }
+      }
 
       target.parentElement.replaceChild(img, target);
+      applied.push({
+        label: String(replacement.label || replacement.selector || "snapshot"),
+        width: renderedWidth,
+        height: renderedHeight,
+        element: img,
+      });
     });
+
+  return applied;
 }
 
 async function replaceSvgNodesWithSnapshots({
@@ -1858,8 +2231,11 @@ async function replaceSvgNodesWithSnapshots({
   const seenPaths = new Set();
 
   for (let i = 0; i < selectors.length; i += 1) {
-    const selector = selectors[i];
-    const sourceNodes = Array.from(sourceRoot.querySelectorAll(selector));
+    const selectorEntry = normalizeSnapshotSelectorEntry(selectors[i]);
+    if (!selectorEntry) {
+      continue;
+    }
+    const sourceNodes = Array.from(sourceRoot.querySelectorAll(selectorEntry.selector));
 
     for (let index = 0; index < sourceNodes.length; index += 1) {
       const sourceNode = sourceNodes[index];
@@ -1887,7 +2263,7 @@ async function replaceSvgNodesWithSnapshots({
         const canvas = await captureLiveNodeSnapshot({
           node: sourceNode,
           html2canvas,
-          scale,
+          scale: selectorEntry.scale || scale,
           debug,
         });
         const img = document.createElement("img");
@@ -1895,7 +2271,15 @@ async function replaceSvgNodesWithSnapshots({
         img.alt = "";
         img.decoding = "sync";
         img.setAttribute("aria-hidden", "true");
-        img.className = "kpiDash__pdfSwapImage";
+        const targetClass =
+          typeof targetNode.getAttribute === "function"
+            ? targetNode.getAttribute("class") || ""
+            : String(targetNode.className || "").trim();
+        img.className = [targetClass, "kpiDash__pdfSwapImage"].filter(Boolean).join(" ");
+        img.setAttribute(
+          "data-ppccr-pdf-snapshot",
+          String(selectorEntry.label || selectorEntry.selector),
+        );
         img.style.display = "block";
         img.style.width = rect.width + "px";
         img.style.height = rect.height + "px";
@@ -2024,6 +2408,14 @@ async function buildSinglePagePosterPdfVariant({
   posterAssetCache,
 }) {
   const layout = computePosterLayoutMetrics(blocks);
+  resultMeta.posterLayoutMetrics = {
+    reportRootLeftPx: layout.reportRootLeftPx,
+    reportRootRightPx: layout.reportRootRightPx,
+    reportRootCenterDeltaPx: layout.reportRootCenterDeltaPx,
+    reportRootWidthPx: layout.reportRootWidthPx,
+    widthPx: layout.widthPx,
+    heightPx: layout.heightPx,
+  };
   const posterCanvas = await composePosterCanvas({
     blocks,
     layout,
@@ -2101,6 +2493,9 @@ async function buildSinglePagePosterPdfVariant({
     captureMode: "single-page-poster",
     usedTiles: Boolean(resultMeta.fallbackTilesUsed),
     renderWidthMm: round2(renderWidthMm),
+    renderHeightMm: round2(renderHeightMm),
+    imageXmm: round2(imageXmm),
+    imageYmm: round2(imageYmm),
     layoutMode: pages === 1
       ? useCustomPageSize
         ? "single-page-poster-custom"
@@ -2313,6 +2708,13 @@ function computePosterLayoutMetrics(blocks) {
       1,
       round2(reportRootRect ? reportRootRect.width : union.right - union.left),
     ),
+    reportRootLeftPx: reportRootRect ? round2(reportRootRect.left - union.left) : 0,
+    reportRootRightPx: reportRootRect ? round2(union.right - reportRootRect.right) : 0,
+    reportRootCenterDeltaPx: reportRootRect
+      ? round2(
+          Math.abs((reportRootRect.left - union.left) - (union.right - reportRootRect.right)),
+        )
+      : 0,
     blocks: rects.map((entry) => {
       return {
         id: entry.id,
@@ -3390,6 +3792,9 @@ function initPdfDebugState() {
     captureMode: null,
     usedTiles: false,
     renderWidthMm: null,
+    renderHeightMm: null,
+    imageXmm: null,
+    imageYmm: null,
     exportedScope: null,
     pageBreaks: [],
     softBudgetHit: false,
@@ -3405,6 +3810,13 @@ function initPdfDebugState() {
     usedCustomPageSize: false,
     singlePageSatisfied: false,
     visualBlocksIncluded: [],
+    posterReportRootLeftPx: null,
+    posterReportRootRightPx: null,
+    posterReportRootCenterDeltaPx: null,
+    snapshotReplacementMode: "css-only",
+    snapshotReplacementTotal: 0,
+    snapshotReplacementLabels: [],
+    panelSnapshotBlocks: [],
     warnings: [],
     timings: {},
   };
@@ -3555,8 +3967,11 @@ async function captureSnapshotReplacements({
   const seenPaths = new Set();
 
   for (let s = 0; s < selectors.length; s += 1) {
-    const selector = selectors[s];
-    const nodes = Array.from(root.querySelectorAll(selector));
+    const selectorEntry = normalizeSnapshotSelectorEntry(selectors[s]);
+    if (!selectorEntry) {
+      continue;
+    }
+    const nodes = Array.from(root.querySelectorAll(selectorEntry.selector));
 
     for (let i = 0; i < nodes.length; i += 1) {
       const node = nodes[i];
@@ -3579,20 +3994,26 @@ async function captureSnapshotReplacements({
         const canvas = await captureLiveNodeSnapshot({
           node,
           html2canvas,
-          scale,
+          scale: selectorEntry.scale || scale,
           debug,
         });
         replacements.push({
-          selector,
+          selector: selectorEntry.selector,
+          label: selectorEntry.label || selectorEntry.selector,
           path,
           width: rect.width,
           height: rect.height,
+          fitToTarget: selectorEntry.fitToTarget === true,
           dataUrl: canvas.toDataURL("image/png", 1),
         });
         seenPaths.add(pathKey);
       } catch (error) {
         if (debug) {
-          console.warn("[PPCCR PDF] Snapshot selectivo omitido:", selector, error);
+          console.warn(
+            "[PPCCR PDF] Snapshot selectivo omitido:",
+            selectorEntry.selector,
+            error,
+          );
         }
       }
     }
@@ -3601,10 +4022,535 @@ async function captureSnapshotReplacements({
   return replacements;
 }
 
+function normalizePanelSnapshotSelectors(selectors) {
+  const source =
+    Array.isArray(selectors) && selectors.length > 0
+      ? selectors
+      : DEFAULT_PANEL_SNAPSHOT_SELECTORS;
+
+  return source
+    .map((entry) => normalizeSnapshotSelectorEntry(entry))
+    .filter((entry) => Boolean(entry && entry.fitToTarget === true));
+}
+
+function resolveSnapshotRoot(root) {
+  if (!root) {
+    return null;
+  }
+
+  if (root.matches && root.matches("[data-kpi-report-root]")) {
+    return root;
+  }
+
+  if (root.querySelector) {
+    return root.querySelector("[data-kpi-report-root]") || root;
+  }
+
+  return null;
+}
+
+async function waitForSnapshotImages(images) {
+  const targets = (Array.isArray(images) ? images : []).filter(Boolean);
+  await Promise.all(
+    targets.map((img) => {
+      if (!img || img.complete) {
+        if (img && typeof img.decode === "function") {
+          return img.decode().catch(() => undefined);
+        }
+        return Promise.resolve();
+      }
+
+      return new Promise((resolve) => {
+        const done = () => resolve();
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+      });
+    }),
+  );
+}
+
+function nextFrame() {
+  if (typeof window === "undefined" || typeof window.requestAnimationFrame !== "function") {
+    return new Promise((resolve) => setTimeout(resolve, 16));
+  }
+
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+}
+
+async function waitForStableSnapshotLayout(doc) {
+  const documentRef = doc || document;
+  if (documentRef && documentRef.fonts && typeof documentRef.fonts.ready === "object") {
+    try {
+      await documentRef.fonts.ready;
+    } catch (error) {
+      // ignore font readiness failures and continue with best effort capture
+    }
+  }
+
+  await nextFrame();
+  await nextFrame();
+}
+
+function buildTrueLiveSnapshotUrl(version) {
+  const url = new URL("index.html", window.location.href);
+  url.searchParams.set(TRUE_LIVE_SNAPSHOT_QUERY_KEY, TRUE_LIVE_SNAPSHOT_QUERY_VALUE);
+  if (version) {
+    url.searchParams.set("cb", String(version));
+  }
+  url.hash = "kpis";
+  return url.href;
+}
+
+function createTrueLiveSnapshotFrame() {
+  const iframe = document.createElement("iframe");
+  iframe.className = TRUE_LIVE_SNAPSHOT_FRAME_CLASS;
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.setAttribute("tabindex", "-1");
+  iframe.setAttribute("title", "PPCCR KPI live snapshot source");
+  iframe.style.width = TRUE_LIVE_SNAPSHOT_FRAME_WIDTH_PX + "px";
+  iframe.style.height = TRUE_LIVE_SNAPSHOT_FRAME_HEIGHT_PX + "px";
+  iframe.src = "about:blank";
+  document.body.appendChild(iframe);
+  return iframe;
+}
+
+function cleanupTrueLiveSnapshotFrame(frame) {
+  if (frame && frame.parentNode) {
+    frame.parentNode.removeChild(frame);
+  }
+}
+
+function waitForFrameLoad(iframe, timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    if (!iframe) {
+      reject(new Error("No se pudo crear el iframe de snapshot live."));
+      return;
+    }
+
+    const currentDoc = iframe.contentDocument;
+    if (currentDoc && currentDoc.readyState === "complete") {
+      resolve();
+      return;
+    }
+
+    let done = false;
+    const timer = window.setTimeout(() => {
+      if (done) {
+        return;
+      }
+      done = true;
+      reject(new Error("Timeout esperando load del iframe live."));
+    }, Math.max(1000, Number(timeoutMs) || 15000));
+
+    const finish = (error) => {
+      if (done) {
+        return;
+      }
+      done = true;
+      window.clearTimeout(timer);
+      iframe.removeEventListener("load", handleLoad);
+      iframe.removeEventListener("error", handleError);
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    };
+
+    const handleLoad = () => finish();
+    const handleError = () =>
+      finish(new Error("Error cargando el iframe live para snapshots KPI."));
+
+    iframe.addEventListener("load", handleLoad);
+    iframe.addEventListener("error", handleError);
+  });
+}
+
+function seedTrueLiveSnapshotSession(iframe) {
+  const frameWindow = iframe && iframe.contentWindow;
+  if (!frameWindow || !frameWindow.sessionStorage) {
+    throw new Error("No se pudo acceder al sessionStorage del iframe live.");
+  }
+
+  const storage = frameWindow.sessionStorage;
+  const previousValues = {};
+  Object.keys(TRUE_LIVE_SNAPSHOT_SESSION_SEED).forEach((key) => {
+    previousValues[key] = window.sessionStorage.getItem(key);
+    storage.setItem(key, TRUE_LIVE_SNAPSHOT_SESSION_SEED[key]);
+  });
+
+  return () => {
+    Object.keys(TRUE_LIVE_SNAPSHOT_SESSION_SEED).forEach((key) => {
+      const previousValue = previousValues[key];
+      if (typeof previousValue === "string") {
+        window.sessionStorage.setItem(key, previousValue);
+        return;
+      }
+      window.sessionStorage.removeItem(key);
+    });
+  };
+}
+
+function escapeHtmlAttribute(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+async function injectTrueLiveSnapshotDocument({
+  iframe,
+  sourceUrl,
+}) {
+  if (!iframe || !sourceUrl) {
+    throw new Error("Faltan datos para inyectar el source live en iframe.");
+  }
+
+  const response = await fetch(sourceUrl, {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("No se pudo descargar index.html para snapshot live.");
+  }
+
+  const html = await response.text();
+  const frameDocument = iframe.contentDocument;
+  if (!frameDocument) {
+    throw new Error("No se pudo acceder al documento del iframe live.");
+  }
+
+  const baseHref = new URL(".", sourceUrl).href;
+  const bootstrapScript = [
+    "<script>",
+    "(function(){",
+    "try{",
+    "history.replaceState({}, '', " + JSON.stringify(sourceUrl) + ");",
+    Object.keys(TRUE_LIVE_SNAPSHOT_SESSION_SEED)
+      .map((key) => {
+        return (
+          "sessionStorage.setItem(" +
+          JSON.stringify(key) +
+          ", " +
+          JSON.stringify(TRUE_LIVE_SNAPSHOT_SESSION_SEED[key]) +
+          ");"
+        );
+      })
+      .join(""),
+    "}catch(error){console.warn('[PPCCR PDF] No se pudo bootstrapear iframe live.', error);}",
+    "})();",
+    "</script>",
+  ].join("");
+
+  let patchedHtml = html;
+  if (/<head[^>]*>/i.test(patchedHtml)) {
+    patchedHtml = patchedHtml.replace(
+      /<head([^>]*)>/i,
+      '<head$1><base href="' +
+        escapeHtmlAttribute(baseHref) +
+        '">' +
+        bootstrapScript,
+    );
+  } else {
+    patchedHtml =
+      "<!doctype html><html><head><base href=\"" +
+      escapeHtmlAttribute(baseHref) +
+      "\">" +
+      bootstrapScript +
+      "</head><body>" +
+      patchedHtml +
+      "</body></html>";
+  }
+
+  frameDocument.open();
+  frameDocument.write(patchedHtml);
+  frameDocument.close();
+}
+
+async function waitForElementImagesReady(root) {
+  const images = Array.from((root && root.querySelectorAll ? root.querySelectorAll("img") : []) || []);
+  await Promise.all(
+    images.map((img) => {
+      if (img.complete && img.naturalWidth > 0) {
+        return Promise.resolve();
+      }
+      return new Promise((resolve) => {
+        let done = false;
+        const finish = () => {
+          if (done) {
+            return;
+          }
+          done = true;
+          resolve();
+        };
+        img.addEventListener("load", finish, { once: true });
+        img.addEventListener("error", finish, { once: true });
+        window.setTimeout(finish, 2500);
+      });
+    }),
+  );
+}
+
+async function waitForTrueLiveSnapshotSourceReady({
+  iframe,
+  timeoutMs = TRUE_LIVE_SNAPSHOT_TIMEOUT_MS,
+}) {
+  const start = nowMs();
+
+  while (nowMs() - start < timeoutMs) {
+    const frameWindow = iframe && iframe.contentWindow;
+    const frameDocument = iframe && iframe.contentDocument;
+    const reportRoot =
+      frameDocument && frameDocument.querySelector
+        ? frameDocument.querySelector("[data-kpi-report-root]")
+        : null;
+    const debugState =
+      frameWindow && typeof frameWindow === "object" ? frameWindow.__PPCCR_KPI_DEBUG__ : null;
+    const loadingShell =
+      frameDocument && frameDocument.querySelector
+        ? frameDocument.querySelector(".kpiDash__loadingShell")
+        : null;
+    const totalEl = reportRoot ? reportRoot.querySelector(".kpiDash__summaryHeadTotal") : null;
+    const trkValueEl = reportRoot ? reportRoot.querySelector(".kpiDash__trkValue") : null;
+    const trkGaugeEl = reportRoot ? reportRoot.querySelector(".kpiDash__trkGauge") : null;
+
+    if (
+      reportRoot &&
+      totalEl &&
+      trkValueEl &&
+      trkGaugeEl &&
+      !loadingShell &&
+      debugState &&
+      debugState.stage === "rendered"
+    ) {
+      if (
+        frameDocument.fonts &&
+        typeof frameDocument.fonts.ready === "object"
+      ) {
+        try {
+          await Promise.race([
+            frameDocument.fonts.ready,
+            sleep(2500),
+          ]);
+        } catch (error) {
+          // best effort
+        }
+      }
+
+      await waitForElementImagesReady(reportRoot);
+      await waitForStableSnapshotLayout(frameDocument);
+
+      if (!frameDocument.querySelector(".kpiDash__loadingShell")) {
+        return {
+          frameWindow,
+          frameDocument,
+          reportRoot,
+        };
+      }
+    }
+
+    await sleep(120);
+  }
+
+  throw new Error("Timeout esperando que index.html#kpis estabilice Participantes/TRK en iframe.");
+}
+
+export async function prepareTrueLivePanelSnapshots({
+  targetRoot,
+  selectors = DEFAULT_PANEL_SNAPSHOT_SELECTORS,
+  debug = false,
+  version = "",
+} = {}) {
+  const resolvedTargetRoot = resolveSnapshotRoot(targetRoot);
+  const sourceUrl = buildTrueLiveSnapshotUrl(version);
+  if (!resolvedTargetRoot) {
+    return {
+      mode: "true-live-source-failed",
+      source: TRUE_LIVE_SNAPSHOT_SOURCE,
+      sourceUrl,
+      format: null,
+      labels: [],
+      scales: {},
+      panels: [],
+      total: 0,
+    };
+  }
+
+  const snapshotSelectors = normalizePanelSnapshotSelectors(selectors);
+  if (snapshotSelectors.length === 0) {
+    return {
+      mode: "true-live-source-failed",
+      source: TRUE_LIVE_SNAPSHOT_SOURCE,
+      sourceUrl,
+      format: null,
+      labels: [],
+      scales: {},
+      panels: [],
+      total: 0,
+    };
+  }
+
+  const html2canvas = await ensureHtml2CanvasLib();
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let iframe = null;
+    let restoreSession = null;
+
+    try {
+      iframe = createTrueLiveSnapshotFrame();
+      await waitForFrameLoad(iframe, 5000);
+      restoreSession = seedTrueLiveSnapshotSession(iframe);
+      await injectTrueLiveSnapshotDocument({
+        iframe,
+        sourceUrl,
+      });
+
+      const liveContext = await waitForTrueLiveSnapshotSourceReady({
+        iframe,
+        timeoutMs: TRUE_LIVE_SNAPSHOT_TIMEOUT_MS,
+      });
+
+      const replacements = await captureSnapshotReplacements({
+        root: liveContext.reportRoot,
+        html2canvas,
+        selectors: snapshotSelectors,
+        scale: DEFAULT_OPTIONS.snapshotScale,
+        debug,
+      });
+
+      const applied = applySnapshotReplacementsToRoot({
+        targetRoot: resolvedTargetRoot,
+        replacements,
+      }).map((entry) => {
+        entry.element.setAttribute("data-kpi-print-snapshot", entry.label);
+        entry.element.setAttribute("data-kpi-print-snapshot-source", "live-iframe");
+        entry.element.setAttribute("data-kpi-print-snapshot-format", "image/png");
+        entry.element.style.display = "block";
+        return entry;
+      });
+
+      await waitForSnapshotImages(applied.map((entry) => entry.element));
+
+      const labels = Array.from(
+        new Set(
+          applied
+            .map((entry) => String(entry.label || ""))
+            .filter(Boolean),
+        ),
+      );
+      const scales = snapshotSelectors.reduce((acc, selectorEntry) => {
+        const key = String(selectorEntry.label || selectorEntry.selector || "");
+        if (key) {
+          acc[key] = Number(selectorEntry.scale) || DEFAULT_OPTIONS.snapshotScale;
+        }
+        return acc;
+      }, {});
+
+      if (applied.length === 0) {
+        throw new Error("No se aplicaron snapshots hi-DPI desde iframe live.");
+      }
+
+      return {
+        mode: "true-live-source-hi-dpi",
+        source: TRUE_LIVE_SNAPSHOT_SOURCE,
+        sourceUrl,
+        format: "image/png",
+        labels,
+        scales,
+        total: applied.length,
+        panels: applied.map((entry) => ({
+          label: entry.label,
+          width: round2(entry.width),
+          height: round2(entry.height),
+        })),
+      };
+    } catch (error) {
+      lastError = error;
+      if (debug) {
+        console.warn("[PPCCR PDF] Snapshot iframe live falló.", {
+          attempt: attempt + 1,
+          error,
+        });
+      }
+      if (attempt < 1) {
+        await sleep(180);
+      }
+    } finally {
+      if (typeof restoreSession === "function") {
+        restoreSession();
+      }
+      cleanupTrueLiveSnapshotFrame(iframe);
+    }
+  }
+
+  if (debug && lastError) {
+    console.warn("[PPCCR PDF] Snapshot iframe live agotó reintentos.", lastError);
+  }
+
+  return {
+    mode: "true-live-source-failed",
+    source: TRUE_LIVE_SNAPSHOT_SOURCE,
+    sourceUrl,
+    format: null,
+    labels: [],
+    scales: {},
+    panels: [],
+    total: 0,
+  };
+}
+
+export async function prepareKpiPrintPanelSnapshots({
+  root,
+  selectors = DEFAULT_PANEL_SNAPSHOT_SELECTORS,
+  debug = false,
+  version = "",
+} = {}) {
+  const reportRoot = resolveSnapshotRoot(root);
+  if (!reportRoot) {
+    return {
+      mode: "true-live-source-failed",
+      source: TRUE_LIVE_SNAPSHOT_SOURCE,
+      sourceUrl: buildTrueLiveSnapshotUrl(version),
+      format: null,
+      labels: [],
+      scales: {},
+      panels: [],
+      total: 0,
+    };
+  }
+
+  const snapshotSelectors = normalizePanelSnapshotSelectors(selectors);
+  if (snapshotSelectors.length === 0) {
+    return {
+      mode: "true-live-source-failed",
+      source: TRUE_LIVE_SNAPSHOT_SOURCE,
+      sourceUrl: buildTrueLiveSnapshotUrl(version),
+      format: null,
+      labels: [],
+      scales: {},
+      panels: [],
+      total: 0,
+    };
+  }
+
+  return prepareTrueLivePanelSnapshots({
+    targetRoot: reportRoot,
+    selectors: snapshotSelectors,
+    debug,
+    version,
+  });
+}
+
 async function captureLiveNodeSnapshot({ node, html2canvas, scale, debug }) {
   const isTrkNode = Boolean(
     node &&
-      (node.matches(".kpiDash__trkGauge, .kpiDash__trkGaugeWrap, .apexcharts-canvas, .apexcharts-svg") ||
+      (node.matches(
+        ".kpiDash__trkGauge, .kpiDash__trkGaugeWrap, .kpiDash__fitFlowPanel--trk, .apexcharts-canvas, .apexcharts-svg",
+      ) ||
         node.closest(".kpiDash__trk")),
   );
   const resolvedScale = isTrkNode
@@ -3685,22 +4631,37 @@ function applySnapshotReplacements({
       clonedDoc.defaultView && target
         ? clonedDoc.defaultView.getComputedStyle(target)
         : null;
+    const fitToTarget = replacement.fitToTarget === true;
     const widthPx = Number(replacement.width) > 0 ? Number(replacement.width) : target.offsetWidth;
     const heightPx = Number(replacement.height) > 0
       ? Number(replacement.height)
       : target.offsetHeight;
+    const renderedWidth = fitToTarget
+      ? Math.max(1, Math.round(target.offsetWidth || widthPx || 1))
+      : widthPx;
+    const renderedHeight = fitToTarget
+      ? Math.max(1, Math.round(target.offsetHeight || heightPx || 1))
+      : heightPx;
+    const targetClass =
+      typeof target.getAttribute === "function"
+        ? target.getAttribute("class") || ""
+        : String(target.className || "").trim();
 
     const img = clonedDoc.createElement("img");
     img.src = replacement.dataUrl;
     img.alt = "";
     img.setAttribute("aria-hidden", "true");
-    img.className = "kpiDash__pdfSwapImage";
+    img.className = [targetClass, "kpiDash__pdfSwapImage"].filter(Boolean).join(" ");
+    img.setAttribute(
+      "data-ppccr-pdf-snapshot",
+      String(replacement.label || replacement.selector || "snapshot"),
+    );
     img.style.display =
       targetStyle && targetStyle.display && targetStyle.display !== "inline"
         ? targetStyle.display
         : "inline-block";
-    img.style.width = widthPx > 0 ? widthPx + "px" : "100%";
-    img.style.height = heightPx > 0 ? heightPx + "px" : "auto";
+    img.style.width = renderedWidth > 0 ? renderedWidth + "px" : "100%";
+    img.style.height = renderedHeight > 0 ? renderedHeight + "px" : "auto";
     img.style.maxWidth = "100%";
     img.style.objectFit = "contain";
     img.style.verticalAlign = "middle";
@@ -3713,6 +4674,34 @@ function applySnapshotReplacements({
   if (debug) {
     console.log("[PPCCR PDF] Snapshot replacements aplicados:", ordered.length);
   }
+}
+
+function normalizeSnapshotSelectorEntry(entry) {
+  if (typeof entry === "string") {
+    const selector = entry.trim();
+    return selector ? { selector, scale: null, fitToTarget: false, label: selector } : null;
+  }
+
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const selector = String(entry.selector || "")
+    .trim();
+  if (!selector) {
+    return null;
+  }
+
+  const parsedScale = Number(entry.scale);
+  return {
+    selector,
+    scale: Number.isFinite(parsedScale) && parsedScale > 0 ? parsedScale : null,
+    fitToTarget: entry.fitToTarget === true,
+    label:
+      typeof entry.label === "string" && entry.label.trim().length > 0
+        ? entry.label.trim()
+        : selector,
+  };
 }
 
 function getNodePathWithinRoot(node, root) {

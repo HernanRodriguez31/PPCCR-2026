@@ -2,7 +2,7 @@
 
 (() => {
   if (!("serviceWorker" in navigator)) return;
-  const swUrl = "/sw.js?v=20260328-registro-botones-v1";
+  const swUrl = "/sw.js?v=20260329-pdf-live-body-snapshot-v1";
   const isLocalDevHost =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1";
@@ -41,6 +41,14 @@
         cachesRemoved: removedCaches,
       });
     } catch (error) {
+      if (
+        error &&
+        typeof error === "object" &&
+        (error.name === "InvalidStateError" ||
+          String(error.message || "").includes("invalid state"))
+      ) {
+        return;
+      }
       console.warn(
         "[pwa] No se pudo limpiar service workers o caches en localhost.",
         error,

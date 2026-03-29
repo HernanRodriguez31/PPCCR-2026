@@ -9,8 +9,14 @@
     "Consultas realizadas posteriormente a finalizar stock";
   const CONSULTAS_POST_STOCK_SUBTITLE =
     "Evolución diaria consolidada del 27 mar al 03 abr";
-  const CONSULTAS_POST_STOCK_NARRATIVE =
-    "Tras finalizar el stock de kits de FIT, se continuó activamente con las acciones de prevención. A cada participante se le brindó orientación y consejos sobre la importancia del cuidado y la salud colorrectal.";
+  const CONSULTAS_POST_STOCK_CARD_LABEL_LINES = Object.freeze([
+    "TOTAL DE CONSULTAS",
+    "POST FINALIZAR STOCK FIT",
+  ]);
+  const CONSULTAS_POST_STOCK_NARRATIVE_LINES = Object.freeze([
+    "Tras finalizar el stock de kits de FIT, se continuó activamente con las acciones de prevención.",
+    "A cada participante se le brindó orientación y consejos sobre la importancia del cuidado y la salud colorrectal.",
+  ]);
   const CONSULTAS_POST_STOCK_FIXED_DATES = Object.freeze([
     "2026-03-27",
     "2026-03-28",
@@ -99,7 +105,39 @@
   const KPI_PRINT_PAGE_SELECTOR = "#kpi-print-page";
   const KPI_PRINT_PAGE_INNER_SELECTOR = "#kpi-print-pageInner";
   const KPI_PRINT_DOCUMENT_SELECTOR = "#kpi-print-document";
-  const KPI_PRINT_VERSION = "20260328-consultas-post-stock-v3";
+  const KPI_PRINT_VERSION = "20260329-pdf-live-body-snapshot-v1";
+  const HTML2CANVAS_CDN =
+    "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+  const KPI_PRINT_LIVE_BODY_SNAPSHOT_FRAME_CLASS = "kpiDash__trueLiveSnapshotFrame";
+  const KPI_PRINT_LIVE_BODY_SNAPSHOT_SOURCE = "live-iframe:index.html#kpis";
+  const KPI_PRINT_LIVE_BODY_SNAPSHOT_WIDTH = 1460;
+  const KPI_PRINT_LIVE_BODY_SNAPSHOT_HEIGHT = 2200;
+  const KPI_PRINT_LIVE_BODY_SNAPSHOT_MAX_BYTES = 10 * 1024 * 1024;
+  const KPI_PRINT_LIVE_BODY_SNAPSHOT_SCALES = Object.freeze([4, 3]);
+  const KPI_PRINT_LIVE_BODY_SNAPSHOT_SESSION = Object.freeze({
+    ppccr_auth: "1",
+    ppccr_auth_ok: "1",
+    ppccr_station_id: "saavedra",
+    ppccr_station: JSON.stringify({
+      id: "saavedra",
+      name: "Parque Saavedra",
+    }),
+    ppccr_auth_user: "saavedra",
+  });
+  const KPI_PRINT_PANEL_SNAPSHOT_SELECTORS = Object.freeze([
+    Object.freeze({
+      selector: ".kpiDash__summary.kpiDash__execPanel",
+      scale: 4,
+      fitToTarget: true,
+      label: "participants-panel",
+    }),
+    Object.freeze({
+      selector: ".kpiDash__fitFlowPanel--trk",
+      scale: 5,
+      fitToTarget: true,
+      label: "trk-panel",
+    }),
+  ]);
   const KPI_PRINT_INCLUDED_BLOCKS = Object.freeze([
     "branding-top",
     "section-header",
@@ -112,6 +150,17 @@
   ]);
   let kpiPrintLayoutRaf = 0;
   let kpiPrintResizeBound = false;
+  let kpiPrintBodySnapshotPromise = null;
+  let kpiPrintBodySnapshotState = {
+    mode: "not-requested",
+    source: "live-dom",
+    sourceUrl: null,
+    format: null,
+    scale: null,
+    bytes: 0,
+    naturalWidthPx: 0,
+    naturalHeightPx: 0,
+  };
 
   function ensureKpiDebugState() {
     if (typeof window === "undefined") {
@@ -225,18 +274,78 @@
     return Boolean(document.body && document.body.classList.contains("page-kpi-print"));
   }
 
+  function isKpiPrintServerBodyOverlayMode() {
+    if (typeof window === "undefined" || !window.location) {
+      return false;
+    }
+
+    const params = new URLSearchParams(String(window.location.search || ""));
+    return params.get("ppccr_pdf_body_snapshot") === "1";
+  }
+
+  function isKpiPrintLiveBodyPreviewMode() {
+    if (typeof window === "undefined" || !window.location) {
+      return false;
+    }
+
+    const params = new URLSearchParams(String(window.location.search || ""));
+    return params.get("ppccr_live_body_preview") === "1";
+  }
+
   function resetKpiPrintState() {
     if (typeof window === "undefined") {
       return null;
     }
+
+    kpiPrintBodySnapshotPromise = null;
+    kpiPrintBodySnapshotState = {
+      mode: isKpiPrintPage()
+        ? isKpiPrintServerBodyOverlayMode()
+          ? "server-body-overlay-bypass"
+          : "pending"
+        : "not-requested",
+      source: isKpiPrintServerBodyOverlayMode()
+        ? "server-side-live-body-overlay"
+        : KPI_PRINT_LIVE_BODY_SNAPSHOT_SOURCE,
+      sourceUrl: null,
+      format: null,
+      scale: null,
+      bytes: 0,
+      naturalWidthPx: 0,
+      naturalHeightPx: 0,
+    };
 
     const initialState = {
       ready: false,
       scale: 1,
       naturalWidth: 0,
       naturalHeight: 0,
+      scaledWidth: 0,
+      scaledHeight: 0,
       pageWidthPx: 0,
       pageHeightPx: 0,
+      offsetLeft: 0,
+      offsetTop: 0,
+      headerUsefulWidthPx: 0,
+      bodyUsefulWidthPx: 0,
+      bodyLeftPx: 0,
+      bodyRightPx: 0,
+      bodyCenterDeltaPx: 0,
+      bodySnapshotMode: kpiPrintBodySnapshotState.mode,
+      bodySnapshotSource: kpiPrintBodySnapshotState.source,
+      bodySnapshotSourceUrl: kpiPrintBodySnapshotState.sourceUrl,
+      bodySnapshotScale: kpiPrintBodySnapshotState.scale,
+      bodySnapshotFormat: kpiPrintBodySnapshotState.format,
+      bodySnapshotBytes: kpiPrintBodySnapshotState.bytes,
+      bodySnapshotNaturalWidthPx: kpiPrintBodySnapshotState.naturalWidthPx,
+      bodySnapshotNaturalHeightPx: kpiPrintBodySnapshotState.naturalHeightPx,
+      panelSnapshotMode: "not-used",
+      panelSnapshotSource: null,
+      panelSnapshotSourceUrl: null,
+      panelSnapshotLabels: [],
+      panelSnapshotScale: {},
+      panelSnapshotFormat: null,
+      panelSnapshots: [],
       includedBlocks: [],
       missingBlocks: KPI_PRINT_INCLUDED_BLOCKS.slice(),
     };
@@ -453,7 +562,10 @@
       preferLegibilityOverSinglePage: false,
       pageOrientation: "portrait",
       blockLayoutMode: "wysiwyg-v5-single-page-a4",
-      snapshotSelectors: [".kpiDash__trkGaugeWrap", ".ppccr-sankey svg"],
+      snapshotSelectors: KPI_PRINT_PANEL_SNAPSHOT_SELECTORS.concat([
+        ".kpiDash__trkGaugeWrap",
+        ".ppccr-sankey svg",
+      ]),
       debug: false,
       debugPdf: Boolean(window.__PPCCR_ENABLE_PDF_DEBUG__),
     });
@@ -581,8 +693,11 @@
           sourceStatus: model.sourceStatus || payload.status || {},
         });
         renderDashboard(root, model);
-        return renderCharts(root, model).then(() => {
+        return renderCharts(root, model).then(async () => {
           updateKpiDebugState({ stage: "rendered" });
+          if (isKpiPrintPage()) {
+            await prepareKpiPrintBodySnapshot(root);
+          }
           scheduleKpiPrintLayoutSync(root);
           bindKpiPrintLayoutListeners(root);
         });
@@ -1884,6 +1999,20 @@
             total: 0,
             sourceMeta: { isEmpty: true },
           };
+    const narrativeMarkup = CONSULTAS_POST_STOCK_NARRATIVE_LINES.map((line) => {
+      return (
+        '<p class="kpiDash__consultasPostStockNarrativeLine">' +
+        escapeHtml(line) +
+        "</p>"
+      );
+    }).join("");
+    const cardLabelMarkup = CONSULTAS_POST_STOCK_CARD_LABEL_LINES.map((line) => {
+      return (
+        '<span class="kpiDash__consultasPostStockLabelLine">' +
+        escapeHtml(line) +
+        "</span>"
+      );
+    }).join("");
 
     return [
       '<section class="kpiDash__consultasPostStock" aria-label="' +
@@ -1895,16 +2024,15 @@
       '<p class="kpiDash__consultasPostStockSubtitle">' +
         escapeHtml(CONSULTAS_POST_STOCK_SUBTITLE) +
         "</p>",
-      '<p class="kpiDash__consultasPostStockNarrative">' +
-        escapeHtml(CONSULTAS_POST_STOCK_NARRATIVE) +
-        "</p>",
+      '<div class="kpiDash__consultasPostStockNarrativeGroup" aria-label="Descripción del seguimiento preventivo posterior al stock">',
+      narrativeMarkup,
       "</div>",
-      '<div class="kpiDash__consultasPostStockTotal" aria-label="Total de consultas del rango">',
-      '<span class="kpiDash__consultasPostStockLabel">TOTAL DEL RANGO</span>',
+      "</div>",
+      '<div class="kpiDash__consultasPostStockTotal" aria-label="Total de consultas post finalizar stock FIT">',
+      '<span class="kpiDash__consultasPostStockLabel">' + cardLabelMarkup + "</span>",
       '<strong class="kpiDash__consultasPostStockValue">' +
         formatMetric(sectionModel.total) +
         "</strong>",
-      '<span class="kpiDash__consultasPostStockMeta">consultas</span>',
       "</div>",
       "</header>",
       '<div class="kpiDash__consultasPostStockChartWrap">',
@@ -2567,6 +2695,113 @@
     return window.__ppccrPdfModulePromise;
   }
 
+  async function prepareKpiPrintBodySnapshot(root) {
+    if (!isKpiPrintPage()) {
+      return {
+        mode: "not-requested",
+      };
+    }
+
+    if (isKpiPrintServerBodyOverlayMode()) {
+      kpiPrintBodySnapshotState = {
+        mode: "server-body-overlay-bypass",
+        source: "server-side-live-body-overlay",
+        sourceUrl: null,
+        format: null,
+        scale: null,
+        bytes: 0,
+        naturalWidthPx: 0,
+        naturalHeightPx: 0,
+      };
+      updateKpiPrintState({
+        bodySnapshotMode: kpiPrintBodySnapshotState.mode,
+        bodySnapshotSource: kpiPrintBodySnapshotState.source,
+        bodySnapshotSourceUrl: kpiPrintBodySnapshotState.sourceUrl,
+        bodySnapshotScale: kpiPrintBodySnapshotState.scale,
+        bodySnapshotFormat: kpiPrintBodySnapshotState.format,
+        bodySnapshotBytes: kpiPrintBodySnapshotState.bytes,
+        bodySnapshotNaturalWidthPx: kpiPrintBodySnapshotState.naturalWidthPx,
+        bodySnapshotNaturalHeightPx: kpiPrintBodySnapshotState.naturalHeightPx,
+      });
+      return kpiPrintBodySnapshotState;
+    }
+
+    const reportRoot = root ? root.querySelector(SELECTORS.reportRoot) : null;
+    if (!reportRoot) {
+      kpiPrintBodySnapshotState = {
+        mode: "true-live-body-snapshot-failed",
+        source: KPI_PRINT_LIVE_BODY_SNAPSHOT_SOURCE,
+        sourceUrl: null,
+        format: null,
+        scale: null,
+        bytes: 0,
+        naturalWidthPx: 0,
+        naturalHeightPx: 0,
+      };
+      updateKpiPrintState({
+        bodySnapshotMode: kpiPrintBodySnapshotState.mode,
+        bodySnapshotSource: kpiPrintBodySnapshotState.source,
+        bodySnapshotSourceUrl: kpiPrintBodySnapshotState.sourceUrl,
+        bodySnapshotScale: kpiPrintBodySnapshotState.scale,
+        bodySnapshotFormat: kpiPrintBodySnapshotState.format,
+        bodySnapshotBytes: kpiPrintBodySnapshotState.bytes,
+        bodySnapshotNaturalWidthPx: kpiPrintBodySnapshotState.naturalWidthPx,
+        bodySnapshotNaturalHeightPx: kpiPrintBodySnapshotState.naturalHeightPx,
+      });
+      return kpiPrintBodySnapshotState;
+    }
+
+    if (reportRoot.querySelector("img[data-kpi-print-body-snapshot]")) {
+      updateKpiPrintState({
+        bodySnapshotMode: kpiPrintBodySnapshotState.mode,
+        bodySnapshotSource: kpiPrintBodySnapshotState.source,
+        bodySnapshotSourceUrl: kpiPrintBodySnapshotState.sourceUrl,
+        bodySnapshotScale: kpiPrintBodySnapshotState.scale,
+        bodySnapshotFormat: kpiPrintBodySnapshotState.format,
+        bodySnapshotBytes: kpiPrintBodySnapshotState.bytes,
+        bodySnapshotNaturalWidthPx: kpiPrintBodySnapshotState.naturalWidthPx,
+        bodySnapshotNaturalHeightPx: kpiPrintBodySnapshotState.naturalHeightPx,
+      });
+      return kpiPrintBodySnapshotState;
+    }
+
+    if (!kpiPrintBodySnapshotPromise) {
+      kpiPrintBodySnapshotPromise = (async () => {
+        try {
+          return await captureTrueLiveBodySnapshot(reportRoot, KPI_PRINT_VERSION);
+        } catch (error) {
+          console.warn(
+            KPI_LOG_PREFIX + " No se pudo preparar el body snapshot hi-DPI para print.",
+            error,
+          );
+          return {
+            mode: "true-live-body-snapshot-failed",
+            source: KPI_PRINT_LIVE_BODY_SNAPSHOT_SOURCE,
+            sourceUrl: buildKpiLiveBodySnapshotUrl(KPI_PRINT_VERSION),
+            format: null,
+            scale: null,
+            bytes: 0,
+            naturalWidthPx: 0,
+            naturalHeightPx: 0,
+          };
+        }
+      })();
+    }
+
+    kpiPrintBodySnapshotState = await kpiPrintBodySnapshotPromise;
+    updateKpiPrintState({
+      bodySnapshotMode: kpiPrintBodySnapshotState.mode,
+      bodySnapshotSource: kpiPrintBodySnapshotState.source,
+      bodySnapshotSourceUrl: kpiPrintBodySnapshotState.sourceUrl,
+      bodySnapshotScale: kpiPrintBodySnapshotState.scale,
+      bodySnapshotFormat: kpiPrintBodySnapshotState.format,
+      bodySnapshotBytes: kpiPrintBodySnapshotState.bytes,
+      bodySnapshotNaturalWidthPx: kpiPrintBodySnapshotState.naturalWidthPx,
+      bodySnapshotNaturalHeightPx: kpiPrintBodySnapshotState.naturalHeightPx,
+    });
+    return kpiPrintBodySnapshotState;
+  }
+
   async function downloadPDF(reportRoot, controls) {
     return exportarReportePDF(controls);
   }
@@ -2638,13 +2873,35 @@
     const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
     const scaledWidth = naturalWidth * safeScale;
     const scaledHeight = naturalHeight * safeScale;
-    const offsetLeft = Math.max(0, Math.round((pageWidthPx - scaledWidth) / 2));
-    const offsetTop = Math.max(0, Math.round((pageHeightPx - scaledHeight) / 2));
+    const offsetLeft = Math.max(0, (pageWidthPx - scaledWidth) / 2);
+    const offsetTop = Math.max(0, (pageHeightPx - scaledHeight) / 2);
 
     documentEl.style.transformOrigin = "top left";
     documentEl.style.transform = "scale(" + safeScale + ")";
-    documentEl.style.left = offsetLeft + "px";
-    documentEl.style.top = offsetTop + "px";
+    documentEl.style.left = offsetLeft.toFixed(2) + "px";
+    documentEl.style.top = offsetTop.toFixed(2) + "px";
+
+    const pageInnerRect = pageInnerEl.getBoundingClientRect
+      ? pageInnerEl.getBoundingClientRect()
+      : null;
+    const headerMeasureEl =
+      document.querySelector("#top .site-topbar__inner") ||
+      document.querySelector(".site-topbar__inner");
+    const headerRect =
+      headerMeasureEl && headerMeasureEl.getBoundingClientRect
+        ? headerMeasureEl.getBoundingClientRect()
+        : null;
+    const reportRect =
+      reportRoot && reportRoot.getBoundingClientRect ? reportRoot.getBoundingClientRect() : null;
+    const headerUsefulWidthPx = headerRect ? Number(headerRect.width.toFixed(2)) : 0;
+    const bodyUsefulWidthPx = reportRect ? Number(reportRect.width.toFixed(2)) : 0;
+    const bodyLeftPx =
+      pageInnerRect && reportRect ? Number((reportRect.left - pageInnerRect.left).toFixed(2)) : 0;
+    const bodyRightPx =
+      pageInnerRect && reportRect
+        ? Number((pageInnerRect.right - reportRect.right).toFixed(2))
+        : 0;
+    const bodyCenterDeltaPx = Number(Math.abs(bodyLeftPx - bodyRightPx).toFixed(2));
 
     const blockSelectors = {
       "branding-top": "#top",
@@ -2657,17 +2914,28 @@
       "consultas-post-stock":
         "[data-kpi-report-root] .kpiDash__consultasPostStock",
     };
-    const includedBlocks = KPI_PRINT_INCLUDED_BLOCKS.filter((blockId) => {
-      const selector = blockSelectors[blockId];
-      return Boolean(selector && document.querySelector(selector));
-    });
-    const missingBlocks = KPI_PRINT_INCLUDED_BLOCKS.filter(
-      (blockId) => includedBlocks.indexOf(blockId) === -1,
-    );
+    const usingBodySnapshotPreview =
+      kpiPrintBodySnapshotState.mode === "true-live-body-preview-hi-dpi" &&
+      Boolean(reportRoot.querySelector("img[data-kpi-print-body-snapshot]"));
+    const includedBlocks = usingBodySnapshotPreview
+      ? KPI_PRINT_INCLUDED_BLOCKS.slice()
+      : KPI_PRINT_INCLUDED_BLOCKS.filter((blockId) => {
+          const selector = blockSelectors[blockId];
+          return Boolean(selector && document.querySelector(selector));
+        });
+    const missingBlocks = usingBodySnapshotPreview
+      ? []
+      : KPI_PRINT_INCLUDED_BLOCKS.filter(
+          (blockId) => includedBlocks.indexOf(blockId) === -1,
+        );
     const ready =
       updateKpiDebugState({}) &&
       window[KPI_DEBUG_KEY] &&
       window[KPI_DEBUG_KEY].stage === "rendered" &&
+      (
+        kpiPrintBodySnapshotState.mode === "true-live-body-preview-hi-dpi" ||
+        kpiPrintBodySnapshotState.mode === "server-body-overlay-bypass"
+      ) &&
       !document.querySelector(".kpiDash__loadingShell") &&
       missingBlocks.length === 0 &&
       safeScale > 0;
@@ -2677,8 +2945,32 @@
       scale: Number(safeScale.toFixed(5)),
       naturalWidth,
       naturalHeight,
+      scaledWidth: Number(scaledWidth.toFixed(2)),
+      scaledHeight: Number(scaledHeight.toFixed(2)),
       pageWidthPx,
       pageHeightPx,
+      offsetLeft: Number(offsetLeft.toFixed(2)),
+      offsetTop: Number(offsetTop.toFixed(2)),
+      headerUsefulWidthPx,
+      bodyUsefulWidthPx,
+      bodyLeftPx,
+      bodyRightPx,
+      bodyCenterDeltaPx,
+      bodySnapshotMode: kpiPrintBodySnapshotState.mode,
+      bodySnapshotSource: kpiPrintBodySnapshotState.source,
+      bodySnapshotSourceUrl: kpiPrintBodySnapshotState.sourceUrl,
+      bodySnapshotScale: kpiPrintBodySnapshotState.scale,
+      bodySnapshotFormat: kpiPrintBodySnapshotState.format,
+      bodySnapshotBytes: kpiPrintBodySnapshotState.bytes,
+      bodySnapshotNaturalWidthPx: kpiPrintBodySnapshotState.naturalWidthPx,
+      bodySnapshotNaturalHeightPx: kpiPrintBodySnapshotState.naturalHeightPx,
+      panelSnapshotMode: "not-used",
+      panelSnapshotSource: null,
+      panelSnapshotSourceUrl: null,
+      panelSnapshotLabels: [],
+      panelSnapshotScale: {},
+      panelSnapshotFormat: null,
+      panelSnapshots: [],
       includedBlocks,
       missingBlocks,
     });
@@ -3057,6 +3349,28 @@
     });
   }
 
+  function ensureHtml2CanvasLibrary() {
+    if (typeof window.html2canvas === "function") {
+      return Promise.resolve(window.html2canvas);
+    }
+
+    if (window.__kpiDashHtml2CanvasPromise) {
+      return window.__kpiDashHtml2CanvasPromise;
+    }
+
+    window.__kpiDashHtml2CanvasPromise = loadExternalScript(
+      HTML2CANVAS_CDN,
+      () => typeof window.html2canvas === "function",
+    ).then(() => {
+      if (typeof window.html2canvas !== "function") {
+        throw new Error("html2canvas no se cargó correctamente.");
+      }
+      return window.html2canvas;
+    });
+
+    return window.__kpiDashHtml2CanvasPromise;
+  }
+
   function buildPdfFilename(date) {
     const safeDate = date instanceof Date ? date : new Date();
     const day = String(safeDate.getDate()).padStart(2, "0");
@@ -3072,6 +3386,410 @@
     await new Promise((resolve) => raf(resolve));
     await new Promise((resolve) => raf(resolve));
     await new Promise((resolve) => window.setTimeout(resolve, 80));
+  }
+
+  function buildKpiLiveBodySnapshotUrl(version) {
+    const url = new URL("index.html", window.location.href);
+    url.searchParams.set("ppccr_snapshot", "body-overlay");
+    if (version) {
+      url.searchParams.set("cb", String(version));
+    }
+    url.hash = "kpis";
+    return url.href;
+  }
+
+  function createKpiLiveBodySnapshotFrame() {
+    const iframe = document.createElement("iframe");
+    iframe.className = KPI_PRINT_LIVE_BODY_SNAPSHOT_FRAME_CLASS;
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.setAttribute("tabindex", "-1");
+    iframe.setAttribute("title", "PPCCR KPI live body snapshot source");
+    iframe.style.position = "fixed";
+    iframe.style.left = "-24000px";
+    iframe.style.top = "0";
+    iframe.style.width = KPI_PRINT_LIVE_BODY_SNAPSHOT_WIDTH + "px";
+    iframe.style.height = KPI_PRINT_LIVE_BODY_SNAPSHOT_HEIGHT + "px";
+    iframe.style.opacity = "0";
+    iframe.style.pointerEvents = "none";
+    iframe.style.border = "0";
+    iframe.style.background = "#ffffff";
+    iframe.style.zIndex = "-1";
+    iframe.src = "about:blank";
+    document.body.appendChild(iframe);
+    return iframe;
+  }
+
+  function cleanupKpiLiveBodySnapshotFrame(iframe) {
+    if (iframe && iframe.parentNode) {
+      iframe.parentNode.removeChild(iframe);
+    }
+  }
+
+  function waitForKpiSnapshotFrameLoad(iframe, timeoutMs) {
+    return new Promise((resolve, reject) => {
+      if (!iframe) {
+        reject(new Error("No se pudo crear el iframe de snapshot KPI."));
+        return;
+      }
+
+      const currentDoc = iframe.contentDocument;
+      if (currentDoc && currentDoc.readyState === "complete") {
+        resolve();
+        return;
+      }
+
+      let settled = false;
+      const timer = window.setTimeout(() => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        reject(new Error("Timeout esperando load del iframe KPI."));
+      }, Math.max(1000, Number(timeoutMs) || 15000));
+
+      const finish = (error) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        window.clearTimeout(timer);
+        iframe.removeEventListener("load", handleLoad);
+        iframe.removeEventListener("error", handleError);
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      };
+
+      const handleLoad = () => finish();
+      const handleError = () =>
+        finish(new Error("Error cargando el iframe live para snapshot KPI."));
+
+      iframe.addEventListener("load", handleLoad);
+      iframe.addEventListener("error", handleError);
+    });
+  }
+
+  function seedKpiLiveBodySnapshotSession(iframe) {
+    const frameWindow = iframe && iframe.contentWindow;
+    if (!frameWindow || !frameWindow.sessionStorage) {
+      throw new Error("No se pudo acceder al sessionStorage del iframe KPI live.");
+    }
+
+    const previousValues = {};
+    Object.keys(KPI_PRINT_LIVE_BODY_SNAPSHOT_SESSION).forEach((key) => {
+      previousValues[key] = frameWindow.sessionStorage.getItem(key);
+      frameWindow.sessionStorage.setItem(
+        key,
+        KPI_PRINT_LIVE_BODY_SNAPSHOT_SESSION[key],
+      );
+    });
+
+    return () => {
+      Object.keys(KPI_PRINT_LIVE_BODY_SNAPSHOT_SESSION).forEach((key) => {
+        const previousValue = previousValues[key];
+        if (typeof previousValue === "string") {
+          frameWindow.sessionStorage.setItem(key, previousValue);
+          return;
+        }
+        frameWindow.sessionStorage.removeItem(key);
+      });
+    };
+  }
+
+  function escapeHtmlAttribute(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  async function injectKpiLiveBodySnapshotDocument(iframe, sourceUrl) {
+    if (!iframe || !sourceUrl) {
+      throw new Error("Faltan datos para inyectar el body live source.");
+    }
+
+    const response = await fetch(sourceUrl, {
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error("No se pudo descargar index.html para body live snapshot.");
+    }
+
+    const html = await response.text();
+    const frameDocument = iframe.contentDocument;
+    if (!frameDocument) {
+      throw new Error("No se pudo acceder al documento del iframe KPI live.");
+    }
+
+    const baseHref = new URL(".", sourceUrl).href;
+    const bootstrapScript = [
+      "<script>",
+      "(function(){",
+      "try{",
+      "history.replaceState({}, '', " + JSON.stringify(sourceUrl) + ");",
+      Object.keys(KPI_PRINT_LIVE_BODY_SNAPSHOT_SESSION)
+        .map((key) => {
+          return (
+            "sessionStorage.setItem(" +
+            JSON.stringify(key) +
+            ", " +
+            JSON.stringify(KPI_PRINT_LIVE_BODY_SNAPSHOT_SESSION[key]) +
+            ");"
+          );
+        })
+        .join(""),
+      "}catch(error){console.warn('[KPI Dashboard] No se pudo bootstrapear iframe live body.', error);}",
+      "})();",
+      "</script>",
+    ].join("");
+
+    let patchedHtml = html;
+    if (/<head[^>]*>/i.test(patchedHtml)) {
+      patchedHtml = patchedHtml.replace(
+        /<head([^>]*)>/i,
+        '<head$1><base href="' +
+          escapeHtmlAttribute(baseHref) +
+          '">' +
+          bootstrapScript,
+      );
+    } else {
+      patchedHtml =
+        "<!doctype html><html><head><base href=\"" +
+        escapeHtmlAttribute(baseHref) +
+        "\">" +
+        bootstrapScript +
+        "</head><body>" +
+        patchedHtml +
+        "</body></html>";
+    }
+
+    frameDocument.open();
+    frameDocument.write(patchedHtml);
+    frameDocument.close();
+  }
+
+  async function waitForImagesReady(root) {
+    const images = Array.from(
+      (root && root.querySelectorAll ? root.querySelectorAll("img") : []) || [],
+    );
+    await Promise.all(
+      images.map((img) => {
+        if (img.complete && img.naturalWidth > 0) {
+          return Promise.resolve();
+        }
+        return new Promise((resolve) => {
+          let done = false;
+          const finish = () => {
+            if (done) {
+              return;
+            }
+            done = true;
+            resolve();
+          };
+          img.addEventListener("load", finish, { once: true });
+          img.addEventListener("error", finish, { once: true });
+          window.setTimeout(finish, 2500);
+        });
+      }),
+    );
+  }
+
+  async function waitForKpiLiveBodySnapshotSourceReady(iframe) {
+    const start = Date.now();
+
+    while (Date.now() - start < 45000) {
+      const frameWindow = iframe && iframe.contentWindow;
+      const frameDocument = iframe && iframe.contentDocument;
+      const reportRoot =
+        frameDocument && frameDocument.querySelector
+          ? frameDocument.querySelector(SELECTORS.reportRoot)
+          : null;
+      const debugState =
+        frameWindow && typeof frameWindow === "object"
+          ? frameWindow[KPI_DEBUG_KEY]
+          : null;
+      const sankeySvg =
+        frameDocument && frameDocument.querySelector
+          ? frameDocument.querySelector("#ppccrSankeyParticipantes svg")
+          : null;
+      const consultasChart =
+        frameDocument && frameDocument.querySelector
+          ? frameDocument.querySelector(
+              "[data-kpi-chart-consultas-post-stock] canvas, [data-kpi-chart-consultas-post-stock] svg",
+            )
+          : null;
+
+      if (
+        reportRoot &&
+        debugState &&
+        debugState.stage === "rendered" &&
+        !frameDocument.querySelector(".kpiDash__loadingShell") &&
+        reportRoot.querySelector(".kpiDash__exec") &&
+        reportRoot.querySelector(".kpiDash__charts") &&
+        reportRoot.querySelector(".kpiDash__funnel") &&
+        reportRoot.querySelector(".kpiDash__stock") &&
+        reportRoot.querySelector(".kpiDash__consultasPostStock") &&
+        sankeySvg &&
+        consultasChart
+      ) {
+        try {
+          if (frameDocument.fonts && typeof frameDocument.fonts.ready === "object") {
+            await Promise.race([
+              frameDocument.fonts.ready,
+              new Promise((resolve) => window.setTimeout(resolve, 2500)),
+            ]);
+          }
+        } catch (_error) {
+          // best effort
+        }
+
+        await waitForImagesReady(reportRoot);
+        await waitForUiStable();
+
+        if (!frameDocument.querySelector(".kpiDash__loadingShell")) {
+          return {
+            frameWindow,
+            frameDocument,
+            reportRoot,
+          };
+        }
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
+    }
+
+    throw new Error("Timeout esperando el body KPI live en iframe.");
+  }
+
+  function canvasToPngBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      if (!canvas || typeof canvas.toBlob !== "function") {
+        reject(new Error("Canvas inválido para PNG body snapshot."));
+        return;
+      }
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error("No se pudo serializar el body snapshot a PNG."));
+          return;
+        }
+        resolve(blob);
+      }, "image/png");
+    });
+  }
+
+  async function captureTrueLiveBodySnapshot(root, version) {
+    const targetRoot = root && root.matches && root.matches(SELECTORS.reportRoot)
+      ? root
+      : root && root.querySelector
+        ? root.querySelector(SELECTORS.reportRoot)
+        : null;
+
+    if (!targetRoot) {
+      throw new Error("No se encontró el root KPI para el body snapshot.");
+    }
+
+    const html2canvas = await ensureHtml2CanvasLibrary();
+    const sourceUrl = buildKpiLiveBodySnapshotUrl(version);
+    let lastError = null;
+
+    for (let index = 0; index < KPI_PRINT_LIVE_BODY_SNAPSHOT_SCALES.length; index += 1) {
+      const scale = KPI_PRINT_LIVE_BODY_SNAPSHOT_SCALES[index];
+      let iframe = null;
+      let restoreSession = null;
+
+      try {
+        iframe = createKpiLiveBodySnapshotFrame();
+        await waitForKpiSnapshotFrameLoad(iframe, 5000);
+        restoreSession = seedKpiLiveBodySnapshotSession(iframe);
+        await injectKpiLiveBodySnapshotDocument(iframe, sourceUrl);
+
+        const liveContext = await waitForKpiLiveBodySnapshotSourceReady(iframe);
+        const canvas = await html2canvas(liveContext.reportRoot, {
+          backgroundColor: "#ffffff",
+          scale,
+          useCORS: true,
+          allowTaint: true,
+          logging: Boolean(window.__PPCCR_ENABLE_PDF_DEBUG__),
+          foreignObjectRendering: false,
+          removeContainer: true,
+        });
+        const blob = await canvasToPngBlob(canvas);
+        if (
+          scale > 3 &&
+          blob.size > KPI_PRINT_LIVE_BODY_SNAPSHOT_MAX_BYTES
+        ) {
+          throw new Error(
+            "Body snapshot live excede el tamaño máximo permitido a " + scale + "x.",
+          );
+        }
+
+        const dataUrl = canvas.toDataURL("image/png");
+
+        const originalHeight = Math.max(1, Math.round(targetRoot.getBoundingClientRect().height || 1));
+        targetRoot.setAttribute("data-kpi-print-body-snapshot-active", "true");
+        targetRoot.style.overflow = "hidden";
+        targetRoot.style.height = originalHeight + "px";
+        targetRoot.style.minHeight = originalHeight + "px";
+        targetRoot.innerHTML = "";
+
+        const img = document.createElement("img");
+        img.src = dataUrl;
+        img.alt = "";
+        img.setAttribute("aria-hidden", "true");
+        img.setAttribute("data-kpi-print-body-snapshot", "kpi-body");
+        img.setAttribute("data-kpi-print-body-snapshot-source", "live-iframe");
+        img.setAttribute("data-kpi-print-body-snapshot-format", "image/png");
+        img.style.display = "block";
+        img.style.width = "100%";
+        img.style.height = "100%";
+        img.style.maxWidth = "100%";
+        img.style.objectFit = "fill";
+        img.style.boxSizing = "border-box";
+        targetRoot.appendChild(img);
+
+        await new Promise((resolve) => {
+          if (img.complete) {
+            if (typeof img.decode === "function") {
+              img.decode().catch(() => undefined).finally(resolve);
+              return;
+            }
+            resolve();
+            return;
+          }
+          const finish = () => resolve();
+          img.addEventListener("load", finish, { once: true });
+          img.addEventListener("error", finish, { once: true });
+        });
+
+        return {
+          mode: "true-live-body-preview-hi-dpi",
+          source: KPI_PRINT_LIVE_BODY_SNAPSHOT_SOURCE,
+          sourceUrl,
+          format: "image/png",
+          scale,
+          bytes: blob.size,
+          naturalWidthPx: canvas.width,
+          naturalHeightPx: canvas.height,
+        };
+      } catch (error) {
+        lastError = error;
+      } finally {
+        if (typeof restoreSession === "function") {
+          restoreSession();
+        }
+        cleanupKpiLiveBodySnapshotFrame(iframe);
+      }
+    }
+
+    throw (
+      lastError ||
+      new Error("No se pudo capturar el body KPI live para preview.")
+    );
   }
 
   function bindTrkGaugeTooltips(root) {

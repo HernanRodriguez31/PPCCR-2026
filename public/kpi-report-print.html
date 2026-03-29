@@ -12,7 +12,7 @@
     />
     <link
       rel="stylesheet"
-      href="kpis-dashboard.css?v=20260328-consultas-post-stock-v3"
+      href="kpis-dashboard.css?v=20260329-pdf-live-body-snapshot-v1"
     />
     <link
       rel="stylesheet"
@@ -28,6 +28,7 @@
         --kpi-print-page-height: 1754px;
         --kpi-print-page-padding: 34px;
         --kpi-print-natural-width: 1440px;
+        --kpi-print-side-gutter: 18px;
       }
 
       html,
@@ -74,6 +75,7 @@
         width: var(--kpi-print-natural-width);
         transform-origin: top left;
         background: #ffffff;
+        will-change: transform, left, top;
       }
 
       .page-kpi-print .site-header.site-topbar {
@@ -82,11 +84,48 @@
         left: auto !important;
         right: auto !important;
         box-shadow: none !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin-inline: 0 !important;
       }
 
-      .page-kpi-print .site-topbar__inner {
-        width: min(calc(100% - (var(--desktop-gutter) * 2)), var(--desktop-wide-max));
+      .page-kpi-print .topbar,
+      .page-kpi-print .site-topbar__inner,
+      .page-kpi-print .partners-bar,
+      .page-kpi-print .logo-strip.partners-bar {
+        width: 100% !important;
+        max-width: none !important;
+      }
+
+      .page-kpi-print .site-topbar__inner,
+      .page-kpi-print .partners-bar .container,
+      .page-kpi-print #kpis > .container {
+        width: calc(100% - (var(--kpi-print-side-gutter) * 2)) !important;
+        max-width: none !important;
         margin-inline: auto;
+      }
+
+      .page-kpi-print #kpis > .container {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        box-sizing: border-box !important;
+      }
+
+      .page-kpi-print #kpi-dashboard-ppccr,
+      .page-kpi-print [data-kpi-dashboard] {
+        margin-inline: auto !important;
+        padding-inline: 12px !important;
+        box-sizing: border-box !important;
+      }
+
+      .page-kpi-print [data-kpi-report-root] {
+        width: 100% !important;
+        max-width: none !important;
+        margin-inline: auto !important;
+      }
+
+      .page-kpi-print .partners-bar .container {
+        padding-inline: 0 !important;
       }
 
       .page-kpi-print .site-nav,
@@ -116,9 +155,8 @@
         padding-top: 18px;
       }
 
-      .page-kpi-print #kpis .container {
-        width: min(calc(100% - (var(--desktop-gutter) * 2)), var(--desktop-wide-max));
-        margin-inline: auto;
+      .page-kpi-print #siteTopbar.site-topbar__inner {
+        background: transparent !important;
       }
 
       .page-kpi-print .kpiDash__reportActions,
@@ -129,6 +167,11 @@
 
       .page-kpi-print .kpiDash__reportRoot {
         background: #ffffff;
+      }
+
+      .page-kpi-print .kpiDash__consultasPostStockTotal {
+        background: #1768b6 !important;
+        box-shadow: 0 10px 18px rgba(8, 58, 112, 0.12) !important;
       }
 
       .page-kpi-print .kpiDash__reportHeader,
@@ -157,7 +200,7 @@
       defer
     ></script>
     <script
-      src="kpis-dashboard.js?v=20260328-consultas-post-stock-v3"
+      src="kpis-dashboard.js?v=20260329-pdf-live-body-snapshot-v1"
       defer
     ></script>
   </head>
