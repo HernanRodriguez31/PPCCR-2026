@@ -85,6 +85,7 @@
 
   const SELECTORS = {
     root: "[data-kpi-dashboard]",
+    reportExportScope: "#kpis > .container",
     reportRoot: "[data-kpi-report-root]",
     reportExportedAt: "[data-kpi-exported-at]",
     bars: "[data-kpi-chart-bars]",
@@ -105,7 +106,7 @@
   const KPI_PRINT_PAGE_SELECTOR = "#kpi-print-page";
   const KPI_PRINT_PAGE_INNER_SELECTOR = "#kpi-print-pageInner";
   const KPI_PRINT_DOCUMENT_SELECTOR = "#kpi-print-document";
-  const KPI_PRINT_VERSION = "20260329-pdf-live-body-snapshot-v1";
+  const KPI_PRINT_VERSION = "20260330-pdf-live-body-snapshot-v3";
   const HTML2CANVAS_CDN =
     "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
   const KPI_PRINT_LIVE_BODY_SNAPSHOT_FRAME_CLASS = "kpiDash__trueLiveSnapshotFrame";
@@ -297,16 +298,23 @@
       return null;
     }
 
+    const serverBodyOverlayMode = isKpiPrintServerBodyOverlayMode();
+    const liveBodyPreviewMode = isKpiPrintLiveBodyPreviewMode();
+
     kpiPrintBodySnapshotPromise = null;
     kpiPrintBodySnapshotState = {
       mode: isKpiPrintPage()
-        ? isKpiPrintServerBodyOverlayMode()
+        ? serverBodyOverlayMode
           ? "server-body-overlay-bypass"
-          : "pending"
+          : liveBodyPreviewMode
+            ? "pending"
+            : "live-dom-print"
         : "not-requested",
-      source: isKpiPrintServerBodyOverlayMode()
+      source: serverBodyOverlayMode
         ? "server-side-live-body-overlay"
-        : KPI_PRINT_LIVE_BODY_SNAPSHOT_SOURCE,
+        : liveBodyPreviewMode
+          ? KPI_PRINT_LIVE_BODY_SNAPSHOT_SOURCE
+          : "live-dom",
       sourceUrl: null,
       format: null,
       scale: null,
@@ -468,8 +476,6 @@
 
   function resolveKpiPdfExportStrategy() {
     const forceLegacyExporter = Boolean(window.__PPCCR_ENABLE_LEGACY_PDF_EXPORT__);
-    const localRuntime = isLocalHostRuntime();
-    const hostingEmulator = isFirebaseHostingEmulatorRuntime();
 
     if (forceLegacyExporter) {
       return {
@@ -479,29 +485,10 @@
       };
     }
 
-    if (!localRuntime || hostingEmulator) {
-      return {
-        mode: "server-side-primary",
-        buttonLabel: "Generando PDF A4...",
-        attempts: [{ type: "server-side", reason: "default-server-side" }],
-      };
-    }
-
-    if (isHttpsRuntime()) {
-      return {
-        mode: "localhost-legacy-primary",
-        buttonLabel: "Generando PDF...",
-        attempts: [{ type: "legacy", reason: "local-https-contingency" }],
-      };
-    }
-
     return {
-      mode: "localhost-server-side-then-legacy",
-      buttonLabel: "Generando PDF...",
-      attempts: [
-        { type: "server-side", reason: "local-http-primary" },
-        { type: "legacy", reason: "local-http-contingency" },
-      ],
+      mode: "server-side-primary",
+      buttonLabel: "Generando PDF A4...",
+      attempts: [{ type: "server-side", reason: "authoritative-server-side" }],
     };
   }
 
@@ -2726,8 +2713,38 @@
       return kpiPrintBodySnapshotState;
     }
 
-    const reportRoot = root ? root.querySelector(SELECTORS.reportRoot) : null;
-    if (!reportRoot) {
+    if (!isKpiPrintLiveBodyPreviewMode()) {
+      kpiPrintBodySnapshotState = {
+        mode: "live-dom-print",
+        source: "live-dom",
+        sourceUrl: null,
+        format: null,
+        scale: null,
+        bytes: 0,
+        naturalWidthPx: 0,
+        naturalHeightPx: 0,
+      };
+      updateKpiPrintState({
+        bodySnapshotMode: kpiPrintBodySnapshotState.mode,
+        bodySnapshotSource: kpiPrintBodySnapshotState.source,
+        bodySnapshotSourceUrl: kpiPrintBodySnapshotState.sourceUrl,
+        bodySnapshotScale: kpiPrintBodySnapshotState.scale,
+        bodySnapshotFormat: kpiPrintBodySnapshotState.format,
+        bodySnapshotBytes: kpiPrintBodySnapshotState.bytes,
+        bodySnapshotNaturalWidthPx: kpiPrintBodySnapshotState.naturalWidthPx,
+        bodySnapshotNaturalHeightPx: kpiPrintBodySnapshotState.naturalHeightPx,
+      });
+      return kpiPrintBodySnapshotState;
+    }
+
+    const exportScope = root && root.matches && root.matches(SELECTORS.reportExportScope)
+      ? root
+      : (
+        root && root.querySelector
+          ? root.querySelector(SELECTORS.reportExportScope)
+          : null
+      ) || document.querySelector(SELECTORS.reportExportScope);
+    if (!exportScope) {
       kpiPrintBodySnapshotState = {
         mode: "true-live-body-snapshot-failed",
         source: KPI_PRINT_LIVE_BODY_SNAPSHOT_SOURCE,
@@ -2751,7 +2768,7 @@
       return kpiPrintBodySnapshotState;
     }
 
-    if (reportRoot.querySelector("img[data-kpi-print-body-snapshot]")) {
+    if (exportScope.querySelector("img[data-kpi-print-body-snapshot]")) {
       updateKpiPrintState({
         bodySnapshotMode: kpiPrintBodySnapshotState.mode,
         bodySnapshotSource: kpiPrintBodySnapshotState.source,
@@ -2768,7 +2785,7 @@
     if (!kpiPrintBodySnapshotPromise) {
       kpiPrintBodySnapshotPromise = (async () => {
         try {
-          return await captureTrueLiveBodySnapshot(reportRoot, KPI_PRINT_VERSION);
+          return await captureTrueLiveBodySnapshot(exportScope, KPI_PRINT_VERSION);
         } catch (error) {
           console.warn(
             KPI_LOG_PREFIX + " No se pudo preparar el body snapshot hi-DPI para print.",
@@ -2934,7 +2951,8 @@
       window[KPI_DEBUG_KEY].stage === "rendered" &&
       (
         kpiPrintBodySnapshotState.mode === "true-live-body-preview-hi-dpi" ||
-        kpiPrintBodySnapshotState.mode === "server-body-overlay-bypass"
+        kpiPrintBodySnapshotState.mode === "server-body-overlay-bypass" ||
+        kpiPrintBodySnapshotState.mode === "live-dom-print"
       ) &&
       !document.querySelector(".kpiDash__loadingShell") &&
       missingBlocks.length === 0 &&
@@ -2992,6 +3010,7 @@
     const host = document.createElement("div");
     host.id = "kpiDash__pdfCaptureRoot";
     host.className = "kpiDash__pdfCaptureRoot";
+    host.setAttribute("data-pdf-helper", "true");
     host.setAttribute("aria-hidden", "true");
     host.style.position = "fixed";
     host.style.left = "-10000px";
@@ -3401,6 +3420,7 @@
   function createKpiLiveBodySnapshotFrame() {
     const iframe = document.createElement("iframe");
     iframe.className = KPI_PRINT_LIVE_BODY_SNAPSHOT_FRAME_CLASS;
+    iframe.setAttribute("data-pdf-helper", "true");
     iframe.setAttribute("aria-hidden", "true");
     iframe.setAttribute("tabindex", "-1");
     iframe.setAttribute("title", "PPCCR KPI live body snapshot source");
@@ -3608,6 +3628,10 @@
         frameDocument && frameDocument.querySelector
           ? frameDocument.querySelector(SELECTORS.reportRoot)
           : null;
+      const captureRoot =
+        frameDocument && frameDocument.querySelector
+          ? frameDocument.querySelector(SELECTORS.reportExportScope)
+          : null;
       const debugState =
         frameWindow && typeof frameWindow === "object"
           ? frameWindow[KPI_DEBUG_KEY]
@@ -3624,6 +3648,7 @@
           : null;
 
       if (
+        captureRoot &&
         reportRoot &&
         debugState &&
         debugState.stage === "rendered" &&
@@ -3654,6 +3679,7 @@
           return {
             frameWindow,
             frameDocument,
+            captureRoot,
             reportRoot,
           };
         }
@@ -3683,10 +3709,10 @@
   }
 
   async function captureTrueLiveBodySnapshot(root, version) {
-    const targetRoot = root && root.matches && root.matches(SELECTORS.reportRoot)
+    const targetRoot = root && root.matches && root.matches(SELECTORS.reportExportScope)
       ? root
       : root && root.querySelector
-        ? root.querySelector(SELECTORS.reportRoot)
+        ? root.querySelector(SELECTORS.reportExportScope)
         : null;
 
     if (!targetRoot) {
@@ -3709,7 +3735,7 @@
         await injectKpiLiveBodySnapshotDocument(iframe, sourceUrl);
 
         const liveContext = await waitForKpiLiveBodySnapshotSourceReady(iframe);
-        const canvas = await html2canvas(liveContext.reportRoot, {
+        const canvas = await html2canvas(liveContext.captureRoot, {
           backgroundColor: "#ffffff",
           scale,
           useCORS: true,
@@ -3748,8 +3774,9 @@
         img.style.width = "100%";
         img.style.height = "100%";
         img.style.maxWidth = "100%";
-        img.style.objectFit = "fill";
+        img.style.objectFit = "contain";
         img.style.boxSizing = "border-box";
+        img.style.background = "#ffffff";
         targetRoot.appendChild(img);
 
         await new Promise((resolve) => {

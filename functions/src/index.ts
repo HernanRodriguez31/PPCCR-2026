@@ -8,12 +8,14 @@ import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import chromium from "@sparticuz/chromium";
 import ExcelJS from "exceljs";
 import jwt from "jsonwebtoken";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, rgb } from "pdf-lib";
 import { chromium as playwrightChromium } from "playwright-core";
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
+
+chromium.setGraphicsMode = false;
 
 const STAGE1_MIN_AGE_DEFAULT = 45;
 const STAGE1_MIN_AGE_PARAM = defineString("PPCCR_STAGE1_MIN_AGE", {
@@ -44,11 +46,103 @@ const KPI_PRINT_VIEWPORT = Object.freeze({
   height: 2200,
   deviceScaleFactor: 2,
 });
+const KPI_LIVE_BODY_VIEWPORT = Object.freeze({
+  width: 1440,
+  height: 2500,
+});
 const KPI_PDF_A4_PAGE = Object.freeze({
   widthPt: 595.2755905511812,
   heightPt: 841.8897637795277,
 });
 const KPI_PDF_JPEG_FALLBACK_QUALITY = 97;
+const KPI_PDF_EXPORT_VERSION = "20260330-pdf-live-body-snapshot-v3";
+const KPI_PDF_ROUTE_FULL_BODY = "live-full-body";
+const KPI_PDF_ROUTE_PRINT_BASE = "print-shell-debug";
+const KPI_LIVE_BODY_SNAPSHOT_SOURCE = "live-index-body";
+const KPI_LIVE_SNAPSHOT_SESSION = Object.freeze({
+  ppccr_auth: "1",
+  ppccr_auth_ok: "1",
+  ppccr_station_id: "saavedra",
+  ppccr_station: JSON.stringify({
+    id: "saavedra",
+    name: "Parque Saavedra",
+  }),
+  ppccr_auth_user: "saavedra",
+});
+const KPI_LIVE_BODY_SNAPSHOT = Object.freeze({
+  label: "kpi-body",
+  containerSelector: "#kpis > .container",
+  sectionHeaderSelector: "#kpis .section-header",
+  reportSelector: "[data-kpi-report-root]",
+  preferredDeviceScaleFactor: 5,
+  fallbackDeviceScaleFactor: 4,
+  maxBytes: 10 * 1024 * 1024,
+  maxRasterWidthPx: 7600,
+  maxRasterHeightPx: 9600,
+  maxRasterAreaPx: 64_000_000,
+});
+const KPI_CAPTURE_FREEZE_STYLE = [
+  "*, *::before, *::after {",
+  "  animation: none !important;",
+  "  transition: none !important;",
+  "  caret-color: transparent !important;",
+  "  scroll-behavior: auto !important;",
+  "}",
+].join("\n");
+const KPI_CAPTURE_BODY_STYLE = [
+  "html, body {",
+  "  background: #ffffff !important;",
+  "}",
+  "body.page-home .section.section-anchor:not(#kpis),",
+  "body.page-home .brand-seal,",
+  "body.page-home .site-footer,",
+  "body.page-home .mobile-fixed-dock,",
+  "body.page-home .back-to-top,",
+  "body.page-home .modal,",
+  "body.page-home .telemodal,",
+  "body.page-home .teletoast,",
+  "body.page-home .toast,",
+  "body.page-home .snackbar,",
+  "body.page-home .tooltip,",
+  "body.page-home .tippy-box,",
+  "body.page-home .auth-gate,",
+  "body.page-home #auth-gate,",
+  "body.page-home .auth-gate-backdrop,",
+  "body.page-home .loading-overlay {",
+  "  display: none !important;",
+  "}",
+  "body.page-home iframe.kpiDash__trueLiveSnapshotFrame,",
+  "body.page-home .kpiDash__livePanelSnapshotHost,",
+  "body.page-home .kpiDash__posterSnapshot,",
+  "body.page-home .kpiDash__pdfCaptureRoot,",
+  "body.page-home .kpiDash__pdfSwapImage,",
+  "body.page-home [data-pdf-helper],",
+  "body.page-home [data-kpi-print-snapshot],",
+  "body.page-home [data-kpi-print-body-snapshot],",
+  "body.page-home [data-kpi-print-body-snapshot-active] {",
+  "  display: none !important;",
+  "}",
+  "body.page-home .site-nav,",
+  "body.page-home #mobileDockWrap,",
+  "body.page-home .nav-toggle,",
+  "body.page-home .mobile-fixed-dock,",
+  "body.page-home .back-to-top,",
+  "body.page-home .kpiDash__reportActions,",
+  "body.page-home .kpiDash__reportBtn,",
+  "body.page-home [data-kpi-action=\"download-pdf\"],",
+  "body.page-home [data-kpi-action=\"refresh\"] {",
+  "  display: none !important;",
+  "}",
+  "body.page-home .site-main {",
+  "  padding-bottom: 0 !important;",
+  "}",
+  "body.page-home #kpis {",
+  "  margin: 0 !important;",
+  "  padding-top: 18px !important;",
+  "}",
+].join("\n");
+const KPI_LIVE_BODY_STABLE_FRAME_COUNT = 3;
+const KPI_LIVE_BODY_STABLE_TIMEOUT_MS = 4000;
 
 const SHEETS_SERVICE_ACCOUNT_EMAIL_SECRET = defineSecret(
   "PPCCR_GOOGLE_SERVICE_ACCOUNT_EMAIL",
@@ -156,6 +250,58 @@ type SheetsResult = {
   status: SheetsStatus;
   message?: string;
   row?: number;
+};
+
+type KpiLiveBodyCapture = {
+  imageBuffer: Buffer;
+  sourceUrl: string;
+  scale: number;
+  bytes: number;
+  naturalWidthPx: number;
+  naturalHeightPx: number;
+  clipPx: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+};
+
+type KpiPdfBodyOverlayMetrics = {
+  pageWidthPx: number;
+  pageHeightPx: number;
+  bodyLeftPx: number;
+  bodyRightPx: number;
+  bodyCenterDeltaPx: number;
+  bodyBoxPx: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    right: number;
+    bottom: number;
+  };
+  bodyBoxPt: {
+    xPt: number;
+    yPt: number;
+    widthPt: number;
+    heightPt: number;
+  };
+};
+
+type KpiPdfRectPt = {
+  xPt: number;
+  yPt: number;
+  widthPt: number;
+  heightPt: number;
+};
+
+type KpiPrintBasePdfCapture = {
+  snapshotUrl: string;
+  pdfBuffer: Buffer;
+  screenshotBuffer: Buffer;
+  imageFormat: "png" | "jpeg";
+  printMetrics: KpiPdfBodyOverlayMetrics;
 };
 
 const STATIONS = Object.freeze<readonly StationDefinition[]>([
@@ -504,6 +650,30 @@ async function resolvePlaywrightExecutablePath(): Promise<{
   );
 }
 
+function resolvePlaywrightLaunchOptions(executable: {
+  executablePath: string;
+  args: string[];
+  source: string;
+}): {
+  executablePath: string;
+  args: string[];
+  headless: boolean;
+} {
+  if (executable.source === "sparticuz") {
+    return {
+      executablePath: executable.executablePath,
+      args: executable.args.filter((arg) => !arg.startsWith("--headless")),
+      headless: false,
+    };
+  }
+
+  return {
+    executablePath: executable.executablePath,
+    args: executable.args,
+    headless: true,
+  };
+}
+
 function findPlaywrightChromiumBinary(cacheRoot: string): string {
   if (!cacheRoot || !fileExists(cacheRoot)) return "";
 
@@ -649,6 +819,566 @@ async function buildPdfFromScreenshot(
 
 function buildKpiPdfFilename(date: Date): string {
   return `${KPI_PDF_FILENAME_PREFIX}_${formatFilenameTimestampAR(date)}.pdf`;
+}
+
+function buildKpiPrintSnapshotUrl(baseUrl: string): string {
+  const url = new URL(KPI_PRINT_SNAPSHOT_PATH, `${baseUrl}/`);
+  url.searchParams.set("ppccr_pdf_body_snapshot", "1");
+  url.searchParams.set("cb", KPI_PDF_EXPORT_VERSION);
+  return url.toString();
+}
+
+function buildKpiLiveBodySnapshotUrl(baseUrl: string): string {
+  const url = new URL("/index.html", `${baseUrl}/`);
+  url.searchParams.set("ppccr_snapshot", "body-overlay");
+  url.searchParams.set("cb", KPI_PDF_EXPORT_VERSION);
+  url.hash = "kpis";
+  return url.toString();
+}
+
+function getRequestQueryValue(
+  req: { query?: Record<string, unknown> },
+  key: string,
+): string {
+  const raw = req.query?.[key];
+  if (Array.isArray(raw)) {
+    return String(raw[0] || "").trim();
+  }
+  return String(raw || "").trim();
+}
+
+async function seedKpiLiveSnapshotSession(context: {
+  addInitScript: (fn: (sessionState: Record<string, string>) => void, arg: Record<string, string>) => Promise<void>;
+}): Promise<void> {
+  await context.addInitScript((sessionState) => {
+    try {
+      Object.keys(sessionState || {}).forEach((key) => {
+        sessionStorage.setItem(key, String(sessionState[key] || ""));
+      });
+    } catch (_error) {
+      // best effort
+    }
+  }, KPI_LIVE_SNAPSHOT_SESSION);
+}
+
+async function freezeKpiCapturePage(page: {
+  addStyleTag: (options: { content: string }) => Promise<unknown>;
+}): Promise<void> {
+  await page.addStyleTag({
+    content: KPI_CAPTURE_FREEZE_STYLE,
+  });
+}
+
+async function applyKpiBodyCaptureMode(page: {
+  addStyleTag: (options: { content: string }) => Promise<unknown>;
+  evaluate: <T>(fn: () => T | Promise<T>) => Promise<T>;
+}): Promise<void> {
+  await page.addStyleTag({
+    content: KPI_CAPTURE_BODY_STYLE,
+  });
+  await page.evaluate(() => {
+    window.scrollTo(0, 0);
+  });
+}
+
+async function waitForDocumentImagesReady(page: {
+  evaluate: (...args: unknown[]) => Promise<unknown>;
+}): Promise<void> {
+  await page.evaluate(async () => {
+    const pendingImages = Array.from(document.images || []).filter((image) => {
+      return !(image.complete && image.naturalWidth > 0);
+    });
+
+    await Promise.all(
+      pendingImages.map((image) => {
+        return new Promise<void>((resolve) => {
+          image.addEventListener("load", () => resolve(), { once: true });
+          image.addEventListener("error", () => resolve(), { once: true });
+          window.setTimeout(() => resolve(), 2000);
+        });
+      }),
+    );
+  });
+}
+
+async function waitForKpiLiveBodyStableFrames(page: {
+  evaluate: (...args: unknown[]) => Promise<unknown>;
+}): Promise<void> {
+  await page.evaluate(
+    async ({ containerSelector, reportSelector, stableFrames, timeoutMs }) => {
+      const containerEl = document.querySelector(
+        containerSelector,
+      ) as HTMLElement | null;
+      const reportEl = document.querySelector(reportSelector) as HTMLElement | null;
+      if (!containerEl || !reportEl) {
+        throw new Error("No se encontró la superficie live del body para estabilizar.");
+      }
+
+      const nextFrame = () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        });
+
+      const snapshot = () => {
+        const containerRect = containerEl.getBoundingClientRect();
+        const canvases = Array.from(
+          reportEl.querySelectorAll("canvas"),
+        ) as HTMLCanvasElement[];
+        const svgs = Array.from(
+          reportEl.querySelectorAll("svg"),
+        ) as SVGElement[];
+
+        return {
+          x: Number(containerRect.left.toFixed(2)),
+          y: Number(containerRect.top.toFixed(2)),
+          width: Number(containerRect.width.toFixed(2)),
+          height: Number(containerRect.height.toFixed(2)),
+          canvasCount: canvases.length,
+          svgCount: svgs.length,
+          canvasesReady: canvases.every((canvas) => {
+            const canvasRect = canvas.getBoundingClientRect();
+            return (
+              canvas.width > 0 &&
+              canvas.height > 0 &&
+              canvasRect.width > 0 &&
+              canvasRect.height > 0
+            );
+          }),
+          svgsReady: svgs.every((svg) => {
+            const svgRect = svg.getBoundingClientRect();
+            return svgRect.width > 0 && svgRect.height > 0;
+          }),
+        };
+      };
+
+      let previous: ReturnType<typeof snapshot> | null = null;
+      let stableCount = 0;
+      const start = performance.now();
+
+      while (performance.now() - start < timeoutMs) {
+        await nextFrame();
+        const current = snapshot();
+        const sameAsPrevious = Boolean(
+          previous &&
+            previous.x === current.x &&
+            previous.y === current.y &&
+            previous.width === current.width &&
+            previous.height === current.height &&
+            previous.canvasCount === current.canvasCount &&
+            previous.svgCount === current.svgCount,
+        );
+
+        stableCount = sameAsPrevious ? stableCount + 1 : 1;
+        previous = current;
+
+        if (
+          stableCount >= stableFrames &&
+          current.canvasesReady &&
+          current.svgsReady
+        ) {
+          return;
+        }
+      }
+
+      throw new Error(
+        "Timeout esperando frames estables del body KPI live.",
+      );
+    },
+    {
+      containerSelector: KPI_LIVE_BODY_SNAPSHOT.containerSelector,
+      reportSelector: KPI_LIVE_BODY_SNAPSHOT.reportSelector,
+      stableFrames: KPI_LIVE_BODY_STABLE_FRAME_COUNT,
+      timeoutMs: KPI_LIVE_BODY_STABLE_TIMEOUT_MS,
+    },
+  );
+}
+
+async function waitForKpiLiveBodyReady(page: {
+  waitForFunction: (...args: unknown[]) => Promise<unknown>;
+  waitForTimeout: (ms: number) => Promise<void>;
+  evaluate: (...args: unknown[]) => Promise<unknown>;
+}): Promise<void> {
+  await page.waitForFunction(
+    ({ containerSelector, reportSelector }) => {
+      const debugState = (window as typeof window & {
+        __PPCCR_KPI_DEBUG__?: { stage?: string };
+      }).__PPCCR_KPI_DEBUG__;
+      const containerEl = document.querySelector(containerSelector);
+      const reportRoot = document.querySelector(reportSelector);
+      const sankeySvg = document.querySelector("#ppccrSankeyParticipantes svg");
+      const consultasChart = document.querySelector(
+        "[data-kpi-chart-consultas-post-stock] canvas, [data-kpi-chart-consultas-post-stock] svg",
+      );
+
+      return Boolean(
+        debugState &&
+          debugState.stage === "rendered" &&
+          !document.querySelector(".kpiDash__loadingShell") &&
+          containerEl &&
+          reportRoot &&
+          reportRoot.querySelector(".kpiDash__exec") &&
+          reportRoot.querySelector(".kpiDash__charts") &&
+          reportRoot.querySelector(".kpiDash__funnel") &&
+          reportRoot.querySelector(".kpiDash__stock") &&
+          reportRoot.querySelector(".kpiDash__consultasPostStock") &&
+          sankeySvg &&
+          consultasChart,
+      );
+    },
+    {
+      containerSelector: KPI_LIVE_BODY_SNAPSHOT.containerSelector,
+      reportSelector: KPI_LIVE_BODY_SNAPSHOT.reportSelector,
+    },
+    {
+      timeout: KPI_PRINT_READY_TIMEOUT_MS,
+    },
+  );
+
+  await page.evaluate(async () => {
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+  });
+
+  await waitForDocumentImagesReady(page);
+  await waitForKpiLiveBodyStableFrames(page);
+  await page.waitForTimeout(150);
+}
+
+async function measureKpiLiveBodyClip(page: {
+  evaluate: <T, A>(fn: (args: A) => T, arg: A) => Promise<T>;
+}): Promise<{
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}> {
+  return page.evaluate(({ containerSelector }) => {
+    const containerEl = document.querySelector(containerSelector);
+
+    if (!containerEl) {
+      throw new Error("No se pudo medir el rect del body KPI live.");
+    }
+
+    const containerRect = containerEl.getBoundingClientRect();
+    const left = Math.max(0, Math.floor(containerRect.left + window.scrollX));
+    const top = Math.max(0, Math.floor(containerRect.top + window.scrollY));
+    const right = Math.ceil(containerRect.right + window.scrollX);
+    const bottom = Math.ceil(containerRect.bottom + window.scrollY);
+
+    return {
+      x: left,
+      y: top,
+      width: Math.max(1, right - left),
+      height: Math.max(1, bottom - top),
+    };
+  }, {
+    containerSelector: KPI_LIVE_BODY_SNAPSHOT.containerSelector,
+  });
+}
+
+async function measureKpiPrintBodyMetrics(page: {
+  evaluate: <T, A>(fn: (args: A) => T, arg: A) => Promise<T>;
+}): Promise<KpiPdfBodyOverlayMetrics> {
+  return page.evaluate(({ pageWidthPt, pageHeightPt }) => {
+    const pageEl = document.querySelector("#kpi-print-page");
+    const containerEl = document.querySelector("#kpi-print-document #kpis > .container");
+
+    if (!pageEl || !containerEl) {
+      throw new Error("No se pudo medir la superficie exportable KPI en la print page.");
+    }
+
+    const pageRect = pageEl.getBoundingClientRect();
+    const targetRect = containerEl.getBoundingClientRect();
+
+    const left = targetRect.left - pageRect.left;
+    const top = targetRect.top - pageRect.top;
+    const width = targetRect.width;
+    const height = targetRect.height;
+    const right = pageRect.right - targetRect.right;
+    const bottom = pageRect.bottom - targetRect.bottom;
+
+    const ptPerCssPxX = pageWidthPt / pageRect.width;
+    const ptPerCssPxY = pageHeightPt / pageRect.height;
+    const xPt = left * ptPerCssPxX;
+    const widthPt = width * ptPerCssPxX;
+    const heightPt = height * ptPerCssPxY;
+    const yPt = pageHeightPt - ((top + height) * ptPerCssPxY);
+
+    return {
+      pageWidthPx: Number(pageRect.width.toFixed(2)),
+      pageHeightPx: Number(pageRect.height.toFixed(2)),
+      bodyLeftPx: Number(left.toFixed(2)),
+      bodyRightPx: Number(right.toFixed(2)),
+      bodyCenterDeltaPx: Number(Math.abs(left - right).toFixed(2)),
+      bodyBoxPx: {
+        left: Number(left.toFixed(2)),
+        top: Number(top.toFixed(2)),
+        width: Number(width.toFixed(2)),
+        height: Number(height.toFixed(2)),
+        right: Number(right.toFixed(2)),
+        bottom: Number(bottom.toFixed(2)),
+      },
+      bodyBoxPt: {
+        xPt: Number(xPt.toFixed(4)),
+        yPt: Number(yPt.toFixed(4)),
+        widthPt: Number(widthPt.toFixed(4)),
+        heightPt: Number(heightPt.toFixed(4)),
+      },
+    };
+  }, {
+    pageWidthPt: KPI_PDF_A4_PAGE.widthPt,
+    pageHeightPt: KPI_PDF_A4_PAGE.heightPt,
+  });
+}
+
+function fitKpiBodySnapshotRect(
+  targetRect: KpiPdfRectPt,
+  sourceWidthPx: number,
+  sourceHeightPx: number,
+): KpiPdfRectPt {
+  const safeSourceWidth = Math.max(1, Number(sourceWidthPx) || 1);
+  const safeSourceHeight = Math.max(1, Number(sourceHeightPx) || 1);
+  const sourceAspect = safeSourceWidth / safeSourceHeight;
+  const targetAspect = targetRect.widthPt / Math.max(0.0001, targetRect.heightPt);
+  const aspectDelta = Math.abs(sourceAspect - targetAspect) / Math.max(sourceAspect, 0.0001);
+
+  if (aspectDelta <= 0.015) {
+    return {
+      xPt: Number(targetRect.xPt.toFixed(4)),
+      yPt: Number(targetRect.yPt.toFixed(4)),
+      widthPt: Number(targetRect.widthPt.toFixed(4)),
+      heightPt: Number(targetRect.heightPt.toFixed(4)),
+    };
+  }
+
+  let drawWidthPt = targetRect.widthPt;
+  let drawHeightPt = targetRect.heightPt;
+
+  if (sourceAspect > targetAspect) {
+    drawHeightPt = drawWidthPt / sourceAspect;
+  } else {
+    drawWidthPt = drawHeightPt * sourceAspect;
+  }
+
+  return {
+    xPt: Number((targetRect.xPt + (targetRect.widthPt - drawWidthPt) / 2).toFixed(4)),
+    yPt: Number((targetRect.yPt + (targetRect.heightPt - drawHeightPt) / 2).toFixed(4)),
+    widthPt: Number(drawWidthPt.toFixed(4)),
+    heightPt: Number(drawHeightPt.toFixed(4)),
+  };
+}
+
+function getKpiLiveBodyCaptureBudgetError(
+  clipPx: { width: number; height: number },
+  scale: number,
+): string | null {
+  const rasterWidthPx = Math.max(1, Math.round((Number(clipPx.width) || 0) * scale));
+  const rasterHeightPx = Math.max(1, Math.round((Number(clipPx.height) || 0) * scale));
+  const rasterAreaPx = rasterWidthPx * rasterHeightPx;
+
+  if (rasterWidthPx > KPI_LIVE_BODY_SNAPSHOT.maxRasterWidthPx) {
+    return `Body snapshot live excede el ancho raster estable a ${scale}x (${rasterWidthPx}px).`;
+  }
+  if (rasterHeightPx > KPI_LIVE_BODY_SNAPSHOT.maxRasterHeightPx) {
+    return `Body snapshot live excede el alto raster estable a ${scale}x (${rasterHeightPx}px).`;
+  }
+  if (rasterAreaPx > KPI_LIVE_BODY_SNAPSHOT.maxRasterAreaPx) {
+    return `Body snapshot live excede el área raster estable a ${scale}x (${rasterAreaPx}px).`;
+  }
+  return null;
+}
+
+async function captureLiveKpiBody(
+  browser: Awaited<ReturnType<typeof playwrightChromium.launch>>,
+  baseUrl: string,
+): Promise<KpiLiveBodyCapture> {
+  const sourceUrl = buildKpiLiveBodySnapshotUrl(baseUrl);
+  const scales = [
+    KPI_LIVE_BODY_SNAPSHOT.preferredDeviceScaleFactor,
+    KPI_LIVE_BODY_SNAPSHOT.fallbackDeviceScaleFactor,
+  ];
+  let lastError: unknown = null;
+
+  for (let index = 0; index < scales.length; index += 1) {
+    const scale = scales[index];
+    let context:
+      | Awaited<ReturnType<Awaited<ReturnType<typeof playwrightChromium.launch>>["newContext"]>>
+      | null = null;
+
+    try {
+      context = await browser.newContext({
+        viewport: {
+          width: KPI_LIVE_BODY_VIEWPORT.width,
+          height: KPI_LIVE_BODY_VIEWPORT.height,
+        },
+        deviceScaleFactor: scale,
+        locale: "es-AR",
+        serviceWorkers: "block",
+      });
+      await seedKpiLiveSnapshotSession(context);
+
+      const page = await context.newPage();
+      page.setDefaultTimeout(KPI_PRINT_READY_TIMEOUT_MS);
+      await page.emulateMedia({
+        media: "screen",
+        colorScheme: "light",
+        reducedMotion: "reduce",
+      });
+      await page.goto(sourceUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: KPI_PRINT_READY_TIMEOUT_MS,
+      });
+      await freezeKpiCapturePage(page);
+      await applyKpiBodyCaptureMode(page);
+      await waitForKpiLiveBodyReady(page);
+      const clipPx = await measureKpiLiveBodyClip(page);
+      const budgetError = getKpiLiveBodyCaptureBudgetError(clipPx, scale);
+      if (budgetError) {
+        throw new Error(budgetError);
+      }
+      const imageBuffer = await page.screenshot({
+        type: "png",
+        clip: clipPx,
+        animations: "disabled",
+        caret: "hide",
+        omitBackground: false,
+      });
+
+      if (
+        scale > KPI_LIVE_BODY_SNAPSHOT.fallbackDeviceScaleFactor &&
+        imageBuffer.byteLength > KPI_LIVE_BODY_SNAPSHOT.maxBytes
+      ) {
+        throw new Error(
+          `Body snapshot live excede el tamaño máximo permitido a ${scale}x.`,
+        );
+      }
+
+      return {
+        imageBuffer,
+        sourceUrl,
+        scale,
+        bytes: imageBuffer.byteLength,
+        naturalWidthPx: Math.max(1, Math.round(clipPx.width * scale)),
+        naturalHeightPx: Math.max(1, Math.round(clipPx.height * scale)),
+        clipPx,
+      };
+    } catch (error) {
+      lastError = error;
+    } finally {
+      if (context) {
+        await context.close().catch(() => {});
+      }
+    }
+  }
+
+  throw (
+    lastError ||
+    new Error("No se pudo capturar el body KPI live real.")
+  );
+}
+
+async function createKpiPrintBasePdf(
+  browser: Awaited<ReturnType<typeof playwrightChromium.launch>>,
+  baseUrl: string,
+): Promise<KpiPrintBasePdfCapture> {
+  const snapshotUrl = buildKpiPrintSnapshotUrl(baseUrl);
+  let context:
+    | Awaited<ReturnType<Awaited<ReturnType<typeof playwrightChromium.launch>>["newContext"]>>
+    | null = null;
+
+  try {
+    context = await browser.newContext({
+      viewport: {
+        width: KPI_PRINT_VIEWPORT.width,
+        height: KPI_PRINT_VIEWPORT.height,
+      },
+      deviceScaleFactor: KPI_PRINT_VIEWPORT.deviceScaleFactor,
+      locale: "es-AR",
+      serviceWorkers: "block",
+    });
+
+    const page = await context.newPage();
+    page.setDefaultTimeout(KPI_PRINT_READY_TIMEOUT_MS);
+    await page.emulateMedia({
+      media: "screen",
+      colorScheme: "light",
+      reducedMotion: "reduce",
+    });
+    await page.goto(snapshotUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: KPI_PRINT_READY_TIMEOUT_MS,
+    });
+    await freezeKpiCapturePage(page);
+    await waitForKpiPrintReady(page);
+    const printMetrics = await measureKpiPrintBodyMetrics(page);
+
+    let imageFormat: "png" | "jpeg" = "png";
+    let screenshotBuffer = await captureKpiPrintPage(page, "png");
+    let pdfBuffer = await buildPdfFromScreenshot(screenshotBuffer, "png");
+
+    if (pdfBuffer.byteLength > 25 * 1024 * 1024) {
+      imageFormat = "jpeg";
+      screenshotBuffer = await captureKpiPrintPage(page, "jpeg");
+      pdfBuffer = await buildPdfFromScreenshot(screenshotBuffer, "jpeg");
+    }
+
+    return {
+      snapshotUrl,
+      pdfBuffer,
+      screenshotBuffer,
+      imageFormat,
+      printMetrics,
+    };
+  } finally {
+    if (context) {
+      await context.close().catch(() => {});
+    }
+  }
+}
+
+async function overlayKpiBodySnapshotOnBasePdf(params: {
+  basePdfBuffer: Buffer;
+  bodyCapture: KpiLiveBodyCapture;
+  printMetrics: KpiPdfBodyOverlayMetrics;
+}): Promise<{
+  pdfBuffer: Buffer;
+  drawRectPt: KpiPdfRectPt;
+}> {
+  const pdfDoc = await PDFDocument.load(params.basePdfBuffer);
+  const page = pdfDoc.getPages()[0];
+  const image = await pdfDoc.embedPng(params.bodyCapture.imageBuffer);
+  const targetRect = params.printMetrics.bodyBoxPt;
+  const drawRect = fitKpiBodySnapshotRect(
+    targetRect,
+    params.bodyCapture.naturalWidthPx,
+    params.bodyCapture.naturalHeightPx,
+  );
+
+  page.drawRectangle({
+    x: targetRect.xPt,
+    y: targetRect.yPt,
+    width: targetRect.widthPt,
+    height: targetRect.heightPt,
+    color: rgb(1, 1, 1),
+    borderWidth: 0,
+  });
+
+  page.drawImage(image, {
+    x: drawRect.xPt,
+    y: drawRect.yPt,
+    width: drawRect.widthPt,
+    height: drawRect.heightPt,
+  });
+
+  return {
+    pdfBuffer: Buffer.from(
+      await pdfDoc.save({
+        useObjectStreams: false,
+      }),
+    ),
+    drawRectPt: drawRect,
+  };
 }
 
 function parseServiceAccountFromJsonOrFallback(): {
@@ -2049,7 +2779,8 @@ export const exportKpiPdfA4 = onRequest(
   {
     region: "us-central1",
     timeoutSeconds: 120,
-    memory: "2GiB",
+    memory: "4GiB",
+    concurrency: 1,
   },
   async (req, res) => {
     setExportCorsHeaders(res);
@@ -2069,93 +2800,136 @@ export const exportKpiPdfA4 = onRequest(
     }
 
     let browser: Awaited<ReturnType<typeof playwrightChromium.launch>> | null = null;
-    let context: Awaited<ReturnType<Awaited<ReturnType<typeof playwrightChromium.launch>>["newContext"]>> | null =
-      null;
+    let exportStage = "bootstrap";
 
     try {
+      exportStage = "resolve-base-url";
       const baseUrl = resolveKpiSnapshotBaseUrl(req);
-      const snapshotUrl = `${baseUrl}${KPI_PRINT_SNAPSHOT_PATH}`;
+      const responseStage = getRequestQueryValue(req, "ppccr_pdf_stage").toLowerCase();
+      const filename = buildKpiPdfFilename(new Date());
+      exportStage = "resolve-browser";
       const executable = await resolvePlaywrightExecutablePath();
+      const launchOptions = resolvePlaywrightLaunchOptions(executable);
 
+      exportStage = "launch-browser";
       browser = await playwrightChromium.launch({
-        executablePath: executable.executablePath,
-        args: executable.args,
-        headless: true,
+        executablePath: launchOptions.executablePath,
+        args: launchOptions.args,
+        headless: launchOptions.headless,
       });
 
-      context = await browser.newContext({
-        viewport: {
-          width: KPI_PRINT_VIEWPORT.width,
-          height: KPI_PRINT_VIEWPORT.height,
-        },
-        deviceScaleFactor: KPI_PRINT_VIEWPORT.deviceScaleFactor,
-        locale: "es-AR",
-        serviceWorkers: "block",
-      });
+      if (responseStage === "base") {
+        exportStage = "build-base-print-pdf";
+        const baseCapture = await createKpiPrintBasePdf(browser, baseUrl);
+        const basePdfBytes = baseCapture.pdfBuffer.byteLength;
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        res.setHeader("X-PPCCR-PDF-CODEC", baseCapture.imageFormat.toUpperCase());
+        res.setHeader("X-PPCCR-PDF-ROUTE", KPI_PDF_ROUTE_PRINT_BASE);
+        res.setHeader("X-PPCCR-PDF-PAGES", "1");
+        res.setHeader("X-PPCCR-PDF-PAGE-MODE", "A4");
+        res.setHeader("X-PPCCR-PDF-STAGE", "BASE");
+        res.setHeader("X-PPCCR-PDF-SOURCE", "kpi-report-print");
+        res.setHeader("X-PPCCR-PDF-BODY-SNAPSHOT", "0");
+        res.setHeader("X-PPCCR-PDF-BODY-SNAPSHOT-SCALE", "shell");
+        res.setHeader(
+          "X-PPCCR-PDF-BODY-SNAPSHOT-BYTES",
+          String(baseCapture.screenshotBuffer.byteLength),
+        );
+        res.setHeader("X-PPCCR-PDF-BODY-RECT", "");
+        res.setHeader("X-PPCCR-PDF-BYTES", String(basePdfBytes));
+        res.status(200).send(baseCapture.pdfBuffer);
 
-      const page = await context.newPage();
-      page.setDefaultTimeout(KPI_PRINT_READY_TIMEOUT_MS);
-      await page.emulateMedia({
-        media: "screen",
-        colorScheme: "light",
-        reducedMotion: "reduce",
-      });
-      await page.goto(snapshotUrl, {
-        waitUntil: "domcontentloaded",
-        timeout: KPI_PRINT_READY_TIMEOUT_MS,
-      });
-      await page.addStyleTag({
-        content: [
-          "*, *::before, *::after {",
-          "  animation: none !important;",
-          "  transition: none !important;",
-          "  caret-color: transparent !important;",
-          "}",
-        ].join("\n"),
-      });
-      await waitForKpiPrintReady(page);
-
-      let finalImageFormat: "png" | "jpeg" = "png";
-      let screenshotBuffer = await captureKpiPrintPage(page, "png");
-      let pdfBuffer = await buildPdfFromScreenshot(screenshotBuffer, "png");
-
-      if (pdfBuffer.byteLength > 25 * 1024 * 1024) {
-        finalImageFormat = "jpeg";
-        screenshotBuffer = await captureKpiPrintPage(page, "jpeg");
-        pdfBuffer = await buildPdfFromScreenshot(screenshotBuffer, "jpeg");
+        logger.info("PPCCR KPI PDF A4 base generado.", {
+          snapshotUrl: baseCapture.snapshotUrl,
+          baseUrl,
+          route: KPI_PDF_ROUTE_PRINT_BASE,
+          finalImageFormat: baseCapture.imageFormat,
+          pdfBytes: basePdfBytes,
+          bodyBoxPx: baseCapture.printMetrics.bodyBoxPx,
+          bodyBoxPt: baseCapture.printMetrics.bodyBoxPt,
+          bodyCenterDeltaPx: baseCapture.printMetrics.bodyCenterDeltaPx,
+          browserSource: executable.source,
+        });
+        return;
       }
 
-      const filename = buildKpiPdfFilename(new Date());
+      exportStage = "build-base-print-pdf";
+      const baseCapture = await createKpiPrintBasePdf(browser, baseUrl);
+      exportStage = "capture-live-body";
+      const liveBodyCapture = await captureLiveKpiBody(browser, baseUrl);
+      exportStage = "overlay-live-body";
+      const overlayResult = await overlayKpiBodySnapshotOnBasePdf({
+        basePdfBuffer: baseCapture.pdfBuffer,
+        bodyCapture: liveBodyCapture,
+        printMetrics: baseCapture.printMetrics,
+      });
+      const pdfBuffer = overlayResult.pdfBuffer;
+      exportStage = "send-final-pdf";
+
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.setHeader("X-PPCCR-PDF-CODEC", finalImageFormat.toUpperCase());
+      res.setHeader("X-PPCCR-PDF-CODEC", "PNG");
+      res.setHeader("X-PPCCR-PDF-ROUTE", KPI_PDF_ROUTE_FULL_BODY);
       res.setHeader("X-PPCCR-PDF-PAGES", "1");
       res.setHeader("X-PPCCR-PDF-PAGE-MODE", "A4");
+      res.setHeader("X-PPCCR-PDF-STAGE", "FINAL");
+      res.setHeader("X-PPCCR-PDF-SOURCE", KPI_LIVE_BODY_SNAPSHOT_SOURCE);
+      res.setHeader("X-PPCCR-PDF-BODY-SNAPSHOT", "1");
+      res.setHeader(
+        "X-PPCCR-PDF-BODY-SNAPSHOT-SCALE",
+        String(liveBodyCapture.scale),
+      );
+      res.setHeader(
+        "X-PPCCR-PDF-BODY-SNAPSHOT-BYTES",
+        String(liveBodyCapture.bytes),
+      );
+      res.setHeader(
+        "X-PPCCR-PDF-BODY-RECT",
+        [
+          overlayResult.drawRectPt.xPt,
+          overlayResult.drawRectPt.yPt,
+          overlayResult.drawRectPt.widthPt,
+          overlayResult.drawRectPt.heightPt,
+        ].join(","),
+      );
       res.setHeader("X-PPCCR-PDF-BYTES", String(pdfBuffer.byteLength));
       res.status(200).send(pdfBuffer);
 
       logger.info("PPCCR KPI PDF A4 generado.", {
-        snapshotUrl,
-        finalImageFormat,
+        baseUrl,
+        route: KPI_PDF_ROUTE_FULL_BODY,
+        finalImageFormat: "png",
         pdfBytes: pdfBuffer.byteLength,
+        baseSnapshotUrl: baseCapture.snapshotUrl,
+        baseSnapshotFormat: baseCapture.imageFormat,
+        basePdfBytes: baseCapture.pdfBuffer.byteLength,
+        baseBodyBoxPx: baseCapture.printMetrics.bodyBoxPx,
+        baseBodyBoxPt: baseCapture.printMetrics.bodyBoxPt,
+        finalBodyDrawRectPt: overlayResult.drawRectPt,
+        reportSnapshotSource: liveBodyCapture.sourceUrl,
+        reportSnapshotScale: liveBodyCapture.scale,
+        reportSnapshotBytes: liveBodyCapture.bytes,
+        reportSnapshotNaturalWidthPx: liveBodyCapture.naturalWidthPx,
+        reportSnapshotNaturalHeightPx: liveBodyCapture.naturalHeightPx,
+        reportSnapshotClipPx: liveBodyCapture.clipPx,
         browserSource: executable.source,
       });
     } catch (error) {
+      const detail =
+        error instanceof Error && error.message
+          ? error.message
+          : String(error);
       logger.error("No se pudo exportar el PDF KPI A4.", {
+        stage: exportStage,
         error: error instanceof Error ? error.message : String(error),
       });
 
       res.status(500).json({
         ok: false,
-        message:
-          error instanceof Error && error.message
-            ? error.message
-            : "No se pudo generar el PDF KPI A4.",
+        message: `No se pudo generar el PDF KPI A4 (${exportStage}). ${detail}`.trim(),
       });
     } finally {
-      if (context) {
-        await context.close().catch(() => {});
-      }
       if (browser) {
         await browser.close().catch(() => {});
       }
