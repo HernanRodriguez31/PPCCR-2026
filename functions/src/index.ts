@@ -662,8 +662,10 @@ function resolvePlaywrightLaunchOptions(executable: {
   if (executable.source === "sparticuz") {
     return {
       executablePath: executable.executablePath,
-      args: executable.args.filter((arg) => !arg.startsWith("--headless")),
-      headless: false,
+      // The serverless Chromium bundle is intended to run headless in Cloud Run.
+      // Forcing headed mode here makes the browser process exit before newContext().
+      args: executable.args,
+      headless: true,
     };
   }
 
