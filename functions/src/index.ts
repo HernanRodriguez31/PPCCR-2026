@@ -616,6 +616,9 @@ async function resolvePlaywrightExecutablePath(): Promise<{
   }
 
   try {
+    // Disable WebGL acceleration in the serverless Chromium bundle to reduce
+    // crashes in Cloud Run while keeping the same headless capture pipeline.
+    chromium.setGraphicsMode = false;
     const bundledExecutablePath = await chromium.executablePath();
     if (bundledExecutablePath && fileExists(bundledExecutablePath)) {
       return {
