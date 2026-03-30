@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import os from "node:os";
 import path from "node:path";
 import { logger } from "firebase-functions";
 import { defineSecret, defineString } from "firebase-functions/params";
@@ -302,6 +303,20 @@ type KpiPrintBasePdfCapture = {
   screenshotBuffer: Buffer;
   imageFormat: "png" | "jpeg";
   printMetrics: KpiPdfBodyOverlayMetrics;
+};
+
+type KpiPlaywrightRuntime = {
+  source: string;
+  executablePath: string;
+  args: string[];
+  headless: boolean;
+  browser: Awaited<ReturnType<typeof playwrightChromium.launch>> | null;
+};
+
+type KpiCaptureSession = {
+  page: Awaited<ReturnType<Awaited<ReturnType<typeof playwrightChromium.launch>>["newPage"]>>;
+  mode: "browser-context" | "persistent-context";
+  close: () => Promise<void>;
 };
 
 const STATIONS = Object.freeze<readonly StationDefinition[]>([
@@ -676,6 +691,146 @@ function resolvePlaywrightLaunchOptions(executable: {
     executablePath: executable.executablePath,
     args: executable.args,
     headless: true,
+  };
+}
+
+function createKpiPlaywrightRuntime(params: {
+  executable: {
+    executablePath: string;
+    args: string[];
+    source: string;
+  };
+  launchOptions: {
+    executablePath: string;
+    args: string[];
+    headless: boolean;
+  };
+  browser: Awaited<ReturnType<typeof playwrightChromium.launch>> | null;
+}): KpiPlaywrightRuntime {
+  return {
+    source: params.executable.source,
+    executablePath: params.launchOptions.executablePath,
+    args: params.launchOptions.args,
+    headless: params.launchOptions.headless,
+    browser: params.browser,
+  };
+}
+
+function createKpiPersistentUserDataDir(stage: string): string {
+  const stageSlug = String(stage || "capture")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return fs.mkdtempSync(path.join(os.tmpdir(), `ppccr-${stageSlug || "capture"}-`));
+}
+
+async function openKpiCaptureSession(params: {
+  runtime: KpiPlaywrightRuntime;
+  stage: string;
+  viewport: { width: number; height: number };
+  deviceScaleFactor: number;
+  seedSession?: boolean;
+}): Promise<KpiCaptureSession> {
+  const contextOptions = {
+    viewport: {
+      width: params.viewport.width,
+      height: params.viewport.height,
+    },
+    deviceScaleFactor: params.deviceScaleFactor,
+    locale: "es-AR",
+    timezoneId: EXPORT_TIMEZONE,
+    serviceWorkers: "block" as const,
+  };
+
+  const logCaptureSessionTimezone = async (
+    page: {
+      evaluate: <T>(fn: () => T | Promise<T>) => Promise<T>;
+    },
+    mode: KpiCaptureSession["mode"],
+  ): Promise<void> => {
+    try {
+      const resolvedTimeZone = await page.evaluate(
+        () => Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+      );
+      logger.info("PPCCR KPI PDF capture session timezone.", {
+        stage: params.stage,
+        runtimeSource: params.runtime.source,
+        mode,
+        configuredTimeZone: EXPORT_TIMEZONE,
+        resolvedTimeZone,
+      });
+    } catch (error) {
+      logger.warn("PPCCR KPI PDF capture session timezone no disponible.", {
+        stage: params.stage,
+        runtimeSource: params.runtime.source,
+        mode,
+        configuredTimeZone: EXPORT_TIMEZONE,
+        error:
+          error instanceof Error
+            ? {
+                message: error.message,
+                name: error.name,
+              }
+            : String(error),
+      });
+    }
+  };
+
+  if (params.runtime.source === "sparticuz") {
+    const userDataDir = createKpiPersistentUserDataDir(params.stage);
+    let context:
+      | Awaited<ReturnType<typeof playwrightChromium.launchPersistentContext>>
+      | null = null;
+
+    try {
+      context = await playwrightChromium.launchPersistentContext(userDataDir, {
+        executablePath: params.runtime.executablePath,
+        args: params.runtime.args,
+        headless: params.runtime.headless,
+        ...contextOptions,
+      });
+
+      if (params.seedSession) {
+        await seedKpiLiveSnapshotSession(context);
+      }
+
+      const page = context.pages()[0] || (await context.newPage());
+      await logCaptureSessionTimezone(page, "persistent-context");
+
+      return {
+        page,
+        mode: "persistent-context",
+        close: async () => {
+          await context?.close().catch(() => {});
+          fs.rmSync(userDataDir, { recursive: true, force: true });
+        },
+      };
+    } catch (error) {
+      if (context) {
+        await context.close().catch(() => {});
+      }
+      fs.rmSync(userDataDir, { recursive: true, force: true });
+      throw error;
+    }
+  }
+
+  if (!params.runtime.browser) {
+    throw new Error("No hay un browser Playwright activo para abrir la sesión de captura.");
+  }
+
+  const context = await params.runtime.browser.newContext(contextOptions);
+  if (params.seedSession) {
+    await seedKpiLiveSnapshotSession(context);
+  }
+  const page = await context.newPage();
+  await logCaptureSessionTimezone(page, "browser-context");
+
+  return {
+    page,
+    mode: "browser-context",
+    close: async () => {
+      await context.close().catch(() => {});
+    },
   };
 }
 
@@ -1195,7 +1350,7 @@ function getKpiLiveBodyCaptureBudgetError(
 }
 
 async function captureLiveKpiBody(
-  browser: Awaited<ReturnType<typeof playwrightChromium.launch>>,
+  runtime: KpiPlaywrightRuntime,
   baseUrl: string,
 ): Promise<KpiLiveBodyCapture> {
   const sourceUrl = buildKpiLiveBodySnapshotUrl(baseUrl);
@@ -1207,23 +1362,20 @@ async function captureLiveKpiBody(
 
   for (let index = 0; index < scales.length; index += 1) {
     const scale = scales[index];
-    let context:
-      | Awaited<ReturnType<Awaited<ReturnType<typeof playwrightChromium.launch>>["newContext"]>>
-      | null = null;
+    let session: KpiCaptureSession | null = null;
 
     try {
-      context = await browser.newContext({
+      session = await openKpiCaptureSession({
+        runtime,
+        stage: `${KPI_LIVE_BODY_SNAPSHOT.label}-${scale}x`,
         viewport: {
           width: KPI_LIVE_BODY_VIEWPORT.width,
           height: KPI_LIVE_BODY_VIEWPORT.height,
         },
         deviceScaleFactor: scale,
-        locale: "es-AR",
-        serviceWorkers: "block",
+        seedSession: true,
       });
-      await seedKpiLiveSnapshotSession(context);
-
-      const page = await context.newPage();
+      const page = session.page;
       page.setDefaultTimeout(KPI_PRINT_READY_TIMEOUT_MS);
       await page.emulateMedia({
         media: "screen",
@@ -1271,8 +1423,8 @@ async function captureLiveKpiBody(
     } catch (error) {
       lastError = error;
     } finally {
-      if (context) {
-        await context.close().catch(() => {});
+      if (session) {
+        await session.close().catch(() => {});
       }
     }
   }
@@ -1284,26 +1436,23 @@ async function captureLiveKpiBody(
 }
 
 async function createKpiPrintBasePdf(
-  browser: Awaited<ReturnType<typeof playwrightChromium.launch>>,
+  runtime: KpiPlaywrightRuntime,
   baseUrl: string,
 ): Promise<KpiPrintBasePdfCapture> {
   const snapshotUrl = buildKpiPrintSnapshotUrl(baseUrl);
-  let context:
-    | Awaited<ReturnType<Awaited<ReturnType<typeof playwrightChromium.launch>>["newContext"]>>
-    | null = null;
+  let session: KpiCaptureSession | null = null;
 
   try {
-    context = await browser.newContext({
+    session = await openKpiCaptureSession({
+      runtime,
+      stage: "print-shell-base",
       viewport: {
         width: KPI_PRINT_VIEWPORT.width,
         height: KPI_PRINT_VIEWPORT.height,
       },
       deviceScaleFactor: KPI_PRINT_VIEWPORT.deviceScaleFactor,
-      locale: "es-AR",
-      serviceWorkers: "block",
     });
-
-    const page = await context.newPage();
+    const page = session.page;
     page.setDefaultTimeout(KPI_PRINT_READY_TIMEOUT_MS);
     await page.emulateMedia({
       media: "screen",
@@ -1336,8 +1485,8 @@ async function createKpiPrintBasePdf(
       printMetrics,
     };
   } finally {
-    if (context) {
-      await context.close().catch(() => {});
+    if (session) {
+      await session.close().catch(() => {});
     }
   }
 }
@@ -2815,17 +2964,28 @@ export const exportKpiPdfA4 = onRequest(
       exportStage = "resolve-browser";
       const executable = await resolvePlaywrightExecutablePath();
       const launchOptions = resolvePlaywrightLaunchOptions(executable);
+      const shouldLaunchSharedBrowser = executable.source !== "sparticuz";
 
-      exportStage = "launch-browser";
-      browser = await playwrightChromium.launch({
-        executablePath: launchOptions.executablePath,
-        args: launchOptions.args,
-        headless: launchOptions.headless,
+      if (shouldLaunchSharedBrowser) {
+        exportStage = "launch-browser";
+        browser = await playwrightChromium.launch({
+          executablePath: launchOptions.executablePath,
+          args: launchOptions.args,
+          headless: launchOptions.headless,
+        });
+      } else {
+        exportStage = "launch-browser";
+      }
+
+      const runtime = createKpiPlaywrightRuntime({
+        executable,
+        launchOptions,
+        browser,
       });
 
       if (responseStage === "base") {
         exportStage = "build-base-print-pdf";
-        const baseCapture = await createKpiPrintBasePdf(browser, baseUrl);
+        const baseCapture = await createKpiPrintBasePdf(runtime, baseUrl);
         const basePdfBytes = baseCapture.pdfBuffer.byteLength;
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
@@ -2860,9 +3020,9 @@ export const exportKpiPdfA4 = onRequest(
       }
 
       exportStage = "build-base-print-pdf";
-      const baseCapture = await createKpiPrintBasePdf(browser, baseUrl);
+      const baseCapture = await createKpiPrintBasePdf(runtime, baseUrl);
       exportStage = "capture-live-body";
-      const liveBodyCapture = await captureLiveKpiBody(browser, baseUrl);
+      const liveBodyCapture = await captureLiveKpiBody(runtime, baseUrl);
       exportStage = "overlay-live-body";
       const overlayResult = await overlayKpiBodySnapshotOnBasePdf({
         basePdfBuffer: baseCapture.pdfBuffer,
