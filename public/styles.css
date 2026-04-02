@@ -69,6 +69,51 @@
   --tele-radius: 18px;
 }
 
+/* Merck lila wordmark: preserve aspect ratio and rebalance its wider mark. */
+.partner-logo[data-partner="merck"] img,
+.partner-pill[data-partner="merck"] img {
+  width: auto;
+  height: auto;
+  max-width: 118px;
+  max-height: 22px;
+}
+
+.footer-logos img[data-partner="merck"] {
+  width: auto;
+  height: 18px;
+  max-width: 98px;
+}
+
+body.page-home #partner-logos.partners-strip > .partner-logo[data-partner="merck"] img,
+body.page-home #partner-logos.partners-strip > .partner-pill[data-partner="merck"] img,
+body.page-kpi-print #partner-logos.partners-strip > .partner-logo[data-partner="merck"] img,
+body.page-kpi-print #partner-logos.partners-strip > .partner-pill[data-partner="merck"] img,
+body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img,
+body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill[data-partner="merck"] img,
+body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img,
+body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill[data-partner="merck"] img,
+body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img,
+body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill[data-partner="merck"] img {
+  width: auto !important;
+  height: auto !important;
+  max-width: 118px !important;
+  max-height: 22px !important;
+  object-fit: contain;
+  object-position: center;
+}
+
+@media (max-width: 767px) {
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img,
+  body.workflow-page header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill[data-partner="merck"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img,
+  body.page-roles header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill[data-partner="merck"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-logo[data-partner="merck"] img,
+  body.page-kit-fit header.site-header.site-topbar .partners-bar .partners-strip > .partner-pill[data-partner="merck"] img {
+    max-width: 72px !important;
+    max-height: 18px !important;
+  }
+}
+
 *,
 *::before,
 *::after {

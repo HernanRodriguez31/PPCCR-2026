@@ -22,7 +22,12 @@ const CONFIG = {
         alt: "Fundación Enfermeros Protagonistas",
       },
       gedyt: { src: "assets/logo-gedyt.png", alt: "Fundación GEDyT" },
-      merck: { src: "assets/logo-merck.png", alt: "Merck Foundation" },
+      merck: {
+        src: "assets/logo-merck-lila.png?v=20260401-merck-logo-v1",
+        alt: "Merck",
+        width: 250,
+        height: 46,
+      },
       gcba: {
         src: "assets/logo-gcba.png",
         alt: "Gobierno de la Ciudad de Buenos Aires",
@@ -1128,8 +1133,8 @@ function renderPartnerLogos() {
     img.fetchPriority = "high";
     img.decoding = "async";
     // Reserva proporción desde el primer layout en mobile para evitar "pills" vacíos.
-    img.width = 290;
-    img.height = 110;
+    img.width = p.width || 290;
+    img.height = p.height || 110;
     img.dataset.partner = p.key;
 
     const label = document.createElement("span");

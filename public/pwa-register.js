@@ -2,7 +2,7 @@
 
 (() => {
   if (!("serviceWorker" in navigator)) return;
-  const swUrl = "/sw.js?v=20260330-pdf-live-body-snapshot-v3";
+  const swUrl = "/sw.js?v=20260401-merck-logo-v1";
   const isLocalDevHost =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1";
